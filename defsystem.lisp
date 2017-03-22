@@ -23,7 +23,17 @@
     (setf (logical-pathname-translations "aplan")
       `(("home;*.*"	,*aplan-home-directory*)
 	("**;*.*"	,*aplan-wild-directory*)
-	)))
+	))
+    (pushnew (namestring (truename #P"aplan:home;my-logical-pathnames.lisp"))
+	       (logical-pathname-translations-database-pathnames)
+	       :test #'string-equal)      
+      (with-open-file (F #P"aplan:home;my-logical-pathnames.lisp" :direction :output :if-exists :supersede)
+	(format f "~%;;; aplan")
+	(format f "~2%~s" "aplan")
+	(loop for (a b) in (logical-pathname-translations "aplan")
+	  do (format f "~%'(~s ~s)" (namestring a) (namestring b)))
+	(terpri f)
+	))
   )
 
 
