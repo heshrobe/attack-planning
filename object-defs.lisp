@@ -281,20 +281,20 @@
 (defun make-workload-for-os (os-instance)
   (with-atomic-action
       (let* ((os-name (role-name os-instance))
-	     (new-name (gentemp (concatenate 'string (string-upcase "workload") "-" (string os-name) "-")))
-	     (workload (make-object 'os-workload :name new-name)))
-	(tell `[value-of (,workload os) ,os-instance])
-	(tell `[value-of (,workload user-workload os) ,os-instance])
-	(tell `[value-of (,workload server-workload os) ,os-instance])
-	(tell `[value-of (,os-instance workload) ,workload]))))
+             (new-name (gentemp (concatenate 'string (string-upcase "workload") "-" (string os-name) "-")))
+             (workload (make-object 'os-workload :name new-name)))
+        (tell `[value-of (,workload os) ,os-instance])
+        (tell `[value-of (,workload user-workload os) ,os-instance])
+        (tell `[value-of (,workload server-workload os) ,os-instance])
+        (tell `[value-of (,os-instance workload) ,workload]))))
 
 (defun make-user-set-for-os (os-instance)
   (with-atomic-action
       (let* ((os-name (role-name os-instance))
-	     (new-name (gentemp (concatenate 'string (string-upcase "user-set") "-" (string os-name) "-")))
-	     (user-set (make-object 'user-set :name new-name)))
-	(tell `[value-of (,user-set os) ,os-instance])
-	(tell `[value-of (,os-instance user-set) ,user-set]))))
+             (new-name (gentemp (concatenate 'string (string-upcase "user-set") "-" (string os-name) "-")))
+             (user-set (make-object 'user-set :name new-name)))
+        (tell `[value-of (,user-set os) ,os-instance])
+        (tell `[value-of (,os-instance user-set) ,user-set]))))
 
 (defun make-job-launch-queue-for-os (os-instance)
   (with-atomic-action
@@ -315,18 +315,18 @@
 
 (define-object-type operating-system
     :slots (workload user-set superuser authorization-pool job-launch-queue 
-		     (processes :set-valued t))
-  :initializations ((make-workload-for-os self)
-		    (make-user-set-for-os  self)
-		    (make-job-launch-queue-for-os self)
-		    (initialize-os-slots-of-parts self)
-		    )
-  :parts ((scheduler scheduler)
-          (job-admitter os-job-admitter)
-          (logon-controller logon-controller)
-          (access-controller access-controller)
-          (network-monitor network-stack))
-  :included-object-types (print-nicely-mixin))
+                     (processes :set-valued t))
+    :initializations ((make-workload-for-os self)
+                      (make-user-set-for-os  self)
+                      (make-job-launch-queue-for-os self)
+                      (initialize-os-slots-of-parts self)
+                      )
+    :parts ((scheduler scheduler)
+            (job-admitter os-job-admitter)
+            (logon-controller logon-controller)
+            (access-controller access-controller)
+            (network-monitor network-stack))
+    :included-object-types (print-nicely-mixin))
 
 (defmethod initialize-os-slots-of-parts ((os operating-system))
   (ask `[part-of ,os ?part]

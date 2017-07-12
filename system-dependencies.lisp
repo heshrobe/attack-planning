@@ -14,17 +14,91 @@
 
 (in-package :aplan)
 
+;;; the top level queries
+
+
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;;
+;;; the purpose field of the sub-goals
+;;;     All the sub-goals have an extra argument which is the purpose of that subgoal
+;;;     This field is a goal stack being passed down to sub-goals
+;;;     So the format is ((mnemonic . args) . rest-of-stack)
+;;;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;;
+;;; Any desirable property
+;;;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+;;; This is set up to attack a desirable property of any computer resource?
+;;; But the component it goes after is part of the OS.
+;;; So this is one method, not the only.  It's the generic method that says
+;;; go after some piece of the OS that can affect the desirable property of the victim.
+;;; For example, if the victim is a web-server and the goal is to affect its data-privacy
+;;; then one way you might go after this is to get hold of some piece of the os and use
+;;; that to violate the web-server's data-privacy.
+;;; But, there are other methods: for example penetrate some component of the web-server
+;;; and use that to violate data-privacy.
+
 (defattack-method affect-property-by-controlling-impacting-component
-    :to-achieve [affect ?attacker ?desirable-property ?resource ?os-instance]
-    :prerequisites ([object-type-of ?os-instance operating-system]
-		    [object-type-of ?resource computer-resource]
-		    ;; check that the resouce belongs to the same machine as the os
-		    [named-part-of ?computer os ?os-instance]
-		    [value-of (?resource machines) ?computer]
-		    [desirable-property-of ?os-instance ?desirable-property]
-		    [impacts ?component-property ?component ?desirable-property ?resource ?os-instance]
-		    [part-of ?os-instance ?component])
-    :plan (:goal [takes-control-of ?attacker ?component ?component-property ?component] :plan ?control-plan)
+    :to-achieve [affect ?attacker ?desirable-property ?victim]
+    ;; find some component of the OS of a machine that the victim runs on
+    :bindings ([value-of (?victim machines) ?computer]
+               [named-part-of ?computer os ?os-instance]
+               [part-of ?os-instance ?component])
+    :typing ([object-type-of ?victim computer-resource]
+             [object-type-of ?os-instance operating-system])
+    :prerequisites ([impacts ?component-property ?component ?desirable-property ?victim])
+    :plan (:sequential
+           ;; this breaks down into two steps:
+           ;; 1) Get control of some component of the victime
+           ;; 2) Use that control to affect the property of the victim
+           ;; Notice that the first step is oblivous to its purpose
+           ;; This certainly makes things simpler but might lead to getting control in a way
+           ;; that doesn't actually work
+           (:goal [takes-control-of ?attacker ?component] :plan ?control-plan)
+           (:goal [use-control-of-to-affect-resource ?attacker ?component ?desirable-property ?victim] :plan ?modification-plan))
+    )
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;;
+;;; Data Privacy
+;;;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+(defattack-method read-file-property-directly
+    :to-achieve [affect ?attacker data-privacy ?file]
+    :prerequisites ([desirable-property-of ?file data-privacy])
+    :typing ([object-type-of ?file file])
+    :plan (:goal [achieve-knowledge-of-contents ?attacker ?file] :plan ?read-plan)
+    )
+
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;;
+;;; Data Integrity
+;;;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+(defattack-method write-file-property-directly
+    :to-achieve [affect ?attacker data-integrity ?file]
+    :typing ([object-type-of ?file file])
+    :prerequisites ([desirable-property-of ?file data-integrity])
+    :plan (:goal [modify ?attacker contents ?file] :plan ?write-plan)
+    )
+
+;;; To affect the data-integrity of some data-set
+;;; Get control of a process that produces the data-set
+(defattack-method mung-process-output
+    :to-achieve [affect ?attacker data-integrity ?data-set]
+    :bindings ([output-of ?process ?data-set])    
+    :typing ([object-type-of ?process process])
+    :plan (:sequential
+           (:goal [takes-control-of ?attacker ?process] :plan ?control-plan)
+           (:goal [use-control-of-to-affect-resource ?attacker ?process data-integrity ?data-set] :plan ?modify-plan))
     )
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -33,37 +107,42 @@
 ;;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
-
 (defattack-method take-control-of-directly
-    :to-achieve [takes-control-of ?attacker ?component ?property ?target]
-    :plan (:sequential 
-	   (:goal [takes-direct-control-of ?attacker ?component ?property ?target] :plan ?control-plan)
-	   (:goal [uses-control-of-component-to-affect-resource ?attacker ?component ?property ?target] :plan ?impact-plan)))
+    ;; Takes control of a component to ultimately affect some property of the target
+    :to-achieve [takes-control-of ?attacker ?component]
+    :plan (:goal [takes-direct-control-of ?attacker ?component] :plan ?control-plan))
+
+;;; one way to take direct control of a process is to
+;;; first find some way to modify the loadable file so as to affect the property of the target
+;;; and then cause the load of the loadable file of the program that's supposed to run in the process
 
 (defattack-method control-process-through-loadable-files
-    :to-achieve [takes-direct-control-of ?attacker ?thing ?property ?target]
-    :prerequisites ([object-type-of ?thing process]
-		    [value-of (?thing program) ?program]
-		    [object-type-of ?program program]
-		    [value-of (?program load-files) ?file]
-		    [object-type-of ?file dynamically-loadable-code-file])
+    :to-achieve [takes-direct-control-of ?attacker ?thing]
+    :bindings ([value-of (?thing program) ?program]
+               [value-of (?program load-files) ?file])
+    :typing ([object-type-of ?thing process]
+             [object-type-of ?program program]
+             [object-type-of ?file dynamically-loadable-code-file])
     :plan (:sequential 
-	   (:goal [modify ?attacker code ?file ?property ?target] :plan ?code-modification-plan)
-	   ;; Note: the is a hack right now.  Really it should be a gool which would involve
-	   ;; a series of actions to cause the file to get loaded (logging in?, robooting?)
-	   ;; Need to avoid a recursion where you're trying to load the file into the process
-	   ;; in order to control the process but to do the load you post a sub-goal of taking
-	   ;; contro of the process
-	   (:action [load ?attacker ?file ?thing]))
+           (:goal [modify ?attacker contents ?file] :plan ?code-modification-plan)
+           ;; Note: this is a hack right now.  Really it should be a goal which would involve
+           ;; a series of actions to cause the file to get loaded (logging in?, robooting?)
+           ;; Need to avoid a recursion where you're trying to load the file into the process
+           ;; in order to control the process but to do the load you post a sub-goal of taking
+           ;; contro of the process
+           (:action [load-file ?attacker ?file ?thing]))
     )
 
+;;; Fixed:
+;;; This mentions the host-os but it doesn't actually seem to carry through
+;;; to the plan.  Just rationality check, I guess.
 (defattack-method buffer-overflow-can-control-server-processes
-    :to-achieve [takes-direct-control-of ?attacker ?process ?property ?target]
-    :prerequisites (
-		    ;; assumption is that process is known
-		    [object-type-of ?process process]
-		    [value-of (?process host-os) ?os-instance]
-		    (is-vulnerable-to ?process 'buffer-overflow-attack))
+    :to-achieve [takes-direct-control-of ?attacker ?process]
+    ;; :bindings ([value-of (?process host-os) ?os-instance])
+    :typing ([object-type-of ?process process]
+             ;; [object-type-of ?os-instance operating-system]
+             )
+    :prerequisites ((is-vulnerable-to ?process 'buffer-overflow-attack))
     :plan (:action [take-control-with-buffer-overflow ?attacker ?process])
     )
 
@@ -80,7 +159,7 @@
                         (declare (ignore just))
                         (return-from is-vulnerable-to (values t))))
                (loop for his-super in (ji::object-type-supertypes type)
-                     do (do-one-type his-super)))))
+                   do (do-one-type his-super)))))
     (let ((his-type (ji::basic-object-type process)))
       (do-one-type his-type))
     nil))
@@ -100,91 +179,95 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 (defattack-method take-control-of-indirectly
-    :to-achieve [takes-control-of ?attacker ?component ?property ?target]
-    :plan (:goal [takes-indirect-control-of ?attacker ?component ?property ?target] :plan ?indirect-control-plan))
+    :to-achieve [takes-control-of ?attacker ?victim]
+    :plan (:goal [takes-indirect-control-of ?attacker ?victim] :plan ?indirect-control-plan))
 
-;;; find an input of the component that controls the property and modify it
+;;; Find an input of the victim and modify its contents
 (defattack-method control-component-through-input
-    :to-achieve [takes-indirect-control-of ?attacker ?thing ?property ?target]
-      ;; assumption is that we know thing
-    :prerequisites ([input-of ?thing ?input]
-		    [value-of (?thing host-os) ?os-instance]
-		    [impacts ?input-property ?input ?property ?target ?os-instance]
-		    )
-    :plan (:goal [modify ?attacker ?input-property ?input ?property ?target] :PLAN ?INPUT-MODIFICATION-PLAN)
+    :to-achieve [takes-indirect-control-of ?attacker ?victim]
+    ;; assumption is that we know thing
+    :bindings ([input-of ?thing ?input])
+    :plan (:goal [modify ?attacker contents ?input] :plan ?input-modification-plan)
     )
 
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;
-;;;  MODIFICATION 
+;;;  Modification 
 ;;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 
+;;; Note: Should this maybe be broken into two parts:
+;;; 1) achieve ability to modify something
+;;; 2) Modify it in a way that affects the victim's property
 (defattack-method modify-through-part
-    :to-achieve [modify ?attacker ?object-property ?object ?property ?target]
-    :prerequisites ([part-of ?object ?component]
-		    [impacts ?component-property ?component ?object-property ?object ?os-instance]
-		    )
-    :plan (:goal [modify ?attacker ?component-property ?component ?object-property ?object] :plan ?modification-plan)
+    :to-achieve [modify ?attacker ?victim-property ?victim]
+    :bindings ([part-of ?victim ?component])
+    :prerequisites ([impacts ?component-property ?component ?victim-property ?victim])
+    :plan (:goal [modify ?attacker ?component-property ?component] :plan ?modification-plan)
     )
 
-;;; MODIFY A DATA-SET BY CONTROLling a process that controls the data-set
+;;; modify a data-set by controlling a process that controls the data-set
 (defattack-method modify-through-controller
-    :to-achieve [modify ?attacker ?object-property ?object ?property ?target]
-    :prerequisites (;; assumption is that object is known
-		    [process-controls-data-set ?controller ?object])
-    :plan (:goal [takes-control-of ?attacker ?controller ?object-property ?object] :plan ?control-plan)
+    :to-achieve [modify ?attacker ?victim-property ?victim]
+    :typing ([object-type-of ?controller process]
+             [object-type-of ?victim data-set])
+    :prerequisites ([process-controls-data-set ?controller ?victim])
+    :plan (:sequential 
+           (:goal [takes-control-of ?attacker ?controller] :plan ?control-plan)
+           (:goal [use-control-of-to-affect-resource ?attacker ?controller ?victim-property ?victim] :plan ?modification-plan)) 
     )
 
 ;;; NOTE: This should be expressed in a more general way about transforming formats
 ;;; but it will do for now.
-;;; Shouldn't it also say to force the compiled code to get loaded?
 (defattack-method modify-loadable-code
-    :to-achieve [modify ?attacker ?file-property ?object-file ?feature ?target]
+    :to-achieve [modify ?attacker ?file-property ?object-file]
     :prerequisites ([object-type-of ?object-file dynamically-loadable-code-file]
-		    [value-of (?object-file source-file) ?source-file])
-    :plan (:goal [modify ?attacker code ?source-file code ?object-file] :plan ?mung-plan)
+                    [value-of (?object-file source-file) ?source-file])
+    :plan (:sequential (:goal [modify ?attacker code ?source-file] :plan ?modification-plan)
+                       (:goal [force-compilation ?attacker ?source-file ?object-file] :Plan ?compile-plan))
     )
 
-;;; NOTE: Shouldn't it also say that there is a second action that actually makes the modification
 (defattack-method modify-through-available-access-rights
-    :to-achieve [modify ?attacker ?object-property ?object ?property ?ultimate-target]
-    :prerequisites ([value-of (?object machines) ?computer]
-		    ;; assumption is that we know the object
-		    [object-type-of ?computer computer]
-		    [named-part-of ?computer os ?os-instance]
-		    [object-type-of ?os-instance operating-system]
-		    [requires-access-right ?object write ?capability])
-    :plan (:goal [achieve-access-right ?attacker write ?object ?user ?object-property ?object] :plan ?access-plan)
+    :to-achieve [modify ?attacker ?object-property ?object]
+    :bindings ([value-of (?object machines) ?computer])
+    :typing ([object-type-of ?computer computer])
+    :prerequisites ([requires-access-right ?object write ?capability])
+    :plan (:sequential (:goal [achieve-access-right ?attacker write ?object ?user] :plan ?access-plan)
+                       (:goal [use-access-right-to-modify ?attacker write ?user ?object] :plan ?modification-plan))
     )
 
+;;; To increase the size of the active user set of some OS
+;;; Find a user in the authorization pool for the OS
+;;; and make that user a member of the active user set
 (defattack-method modify-active-user-set
-    :to-achieve [modify ?attacker size ?active-user-set ?property ?target]
-    :prerequisites (;; assumption is that we know the active-user-ste
-		    [object-type-of ?active-user-set user-set]
-		    [value-of (?active-user-set os) ?os-instance]
-		    [object-type-of ?os-instance operating-system])
-    :plan (:goal [make-member-of ?attacker ?user ?active-user-set ?property ?target] :plan ?plan)
+    :to-achieve [increase-size ?attacker ?active-user-set]
+    :bindings ([value-of (?active-user-set os) ?os-instance]
+               [value-of (?os-instance authorization-pool) ?authoorization-pool]
+               [value-of (?authorization-pool users) ?user])
+    :typing ([object-type-of ?active-user-set user-set]
+             [object-type-of ?os-instance operating-system]
+             [object-type-of ?authorization-pool authorization-pool]
+             [object-type-of ?user user])
+    :plan (:goal [make-member-of ?attacker ?user ?active-user-set] :plan ?plan)
     )
 
 ;;; NOTE: There are other ways of doing this, e.g. find some logged in user and take over his process
 ;;; in order to submit lots of jobs
 
 (defattack-method modify-job-request-queue
-    :to-achieve [modify ?attacker size ?user-job-launch-queue size ?target]
-    :prerequisites ([object-type-of ?target workload]
-		    [object-type-of ?user-job-launch-queue job-launch-request-queue]
-		    [named-part-of ?full-job-launch-queue user-job-launch-request-queue ?user-job-launch-queue]
-		    [object-type-of ?full-job-launch-queue os-job-launch-request-queue]
-		    [value-of (?full-job-launch-queue os) ?os-instance]
-		    [object-type-of ?os-instance operating-system]
-		    [value-of (?os-instance job-launch-queue) ?full-job-launch-queue]
-		    )
+    :to-achieve [increase-size ?attacker ?user-job-launch-queue]
+    :bindings ([named-part-of ?full-job-launch-queue user-job-launch-request-queue ?user-job-launch-queue]
+               [value-of (?full-job-launch-queue os) ?os-instance]
+               )
+    :typing ([object-type-of ?user-job-launch-queue job-launch-request-queue]
+             [object-type-of ?full-job-launch-queue os-job-launch-request-queue]
+             [object-type-of ?os-instance operating-system])
+    :prerequisites ([value-of (?os-instance job-launch-queue) ?full-job-launch-queue])
     :plan (:sequential
-	   (:goal [logon ?attacker ?user ?os-instance size ?user-job-launch-queue] :plan ?login-plan)
-	   (:repeated-action [submit-user-jobs ?user ?user-job-launch-queue])))
+           (:goal [logon ?attacker ?user ?os-instance] :plan ?login-plan)
+           (:repeated-action [submit-user-jobs ?user ?user-job-launch-queue])))
 		    
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;
@@ -195,62 +278,25 @@
 ;;; If somebody has goined direct control of the job-launcher
 ;;; They can affect performance by adding jobs
 (defattack-method add-jobs-after-job-launcher-is-hacked
-    :to-achieve [uses-control-of-component-to-affect-resource ?attacker ?controller reliable-performance ?target]
-    :prerequisites ([object-type-of ?controller job-admitter]
-		    [named-part-of ?os job-admitter ?controller]
-		    [value-of (?os-instance workload) ?input]
-		    [object-type-of ?input os-workload]
-		    [object-type-of ?target process])
+    :to-achieve [use-control-of-to-affect-resource ?attacker ?controller performance ?target]
+    :bindings ([named-part-of ?os job-admitter ?controller]
+               [value-of (?os-instance workload) ?input])
+    :typing ([object-type-of ?controller job-admitter]
+             [object-type-of ?os operating-system]
+             [object-type-of ?input os-workload]
+             [object-type-of ?target process])
     :plan (:action [add-user-jobs ?attacker ?input]))
 
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;;;
-;;; Data Privacy Specifics
-;;;
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-
-(defattack-method read-file-property-directly
-  :to-achieve [affect ?attacker data-privacy ?file ?os-instance]
-  :prerequisites ([object-type-of ?file file]
-		  [object-type-of ?os-instance operating-system]
-		  [desirable-property-of ?os-instance data-privacy])
-  :plan (:goal [achieve-knowledge-of ?attacker (contents ?file) data-privacy ?file] :plan ?read-plan)
-  )
-
-
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;;;
-;;; Data Integrity Specifics
-;;;
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-
-(defattack-method write-file-property-directly
-    :to-achieve [affect ?attacker data-integrity ?file ?os-instance]
-    :prerequisites ([object-type-of ?file file] 
-		    [desirable-property-of ?os-instance data-integrity])
-    :plan (:goal [modify ?attacker contents ?file data-integrity ?file] :plan ?write-plan)
-    )
-
-;;; To affect the data-integrity of some data-set
-;;; Get control of a process that produces the data-set
-(defattack-method mung-process-output
-    :to-achieve [affect ?attacker data-integrity ?data-set ?os-instance]
-    :prerequisites ([object-type-of ?os-instance operating-system] 
-		    [output-of ?process ?data-set] 
-		    [value-of (?process host-os) ?os-instance])
-    :plan (:sequential
-	   (:goal [takes-direct-control-of ?attacker ?process data-integrity ?data-set] :plan ?control-plan)
-	   (:goal [uses-control-of-component-to-affect-resource ?attacker ?process data-integrity ?data-set] :plan ?modify-plan))
-    )
 
 
 ;;; If you control a process that produces an output
 ;;; you can use that control to mung the data-structure in core
 (defattack-method mung-in-core-data-structures
-    :to-achieve [uses-control-of-component-to-affect-resource ?attacker ?process data-integrity ?data-set]
-    :prerequisites ([object-type-of ?process process]
-		    [output-of ?process ?data-set])
+    :to-achieve [use-control-of-to-affect-resource ?attacker ?process data-integrity ?data-set]
+    :bindings ([output-of ?process ?data-set])
+    :typing ([object-type-of ?process process])
     :plan (:action [modify-in-core-data-structures ?process ?data-set]))
+
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;
@@ -259,46 +305,52 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 (defattack-method how-to-read-a-file
-  :to-achieve [achieve-knowledge-of ?attacker (contents ?file) ?property ?target]
-  :prerequisites ([object-type-of ?file file])
-  :plan (:sequential
-	 (:goal [achieve-access-right ?attacker read ?file ?user ?property ?target] :plan ?plan)
-	 (:action [read-with-rights-of ?attacker ?user ?file]))
-  )
+    :to-achieve [achieve-knowledge-of-contents ?attacker ?file]
+    :typing ([object-type-of ?file file])
+    :plan (:sequential
+           (:goal [achieve-access-right ?attacker read ?file ?user] :plan ?plan)
+           (:action [read-with-rights-of ?attacker ?user ?file]))
+    )
 
-
+;;; The ?user part of this is actually to feed back to the higher
+;;; level that it should read the file with the access rights of the user
+;;; but is that really necessary, why isn't the process enough
 (defattack-method how-to-achieve-access-right
-  :to-achieve [achieve-access-right ?attacker ?right ?object ?user ?property ?target]
-  :prerequisites ([object-type-of ?object computer-resource]
-		  [value-of (?object machines) ?machine]
-		  [object-type-of ?machine computer]
-		  [named-part-of ?machine os ?os-instance]
-		  [object-type-of ?os-instance operating-system]
-		  ;; all this is asking is there a process in the workload with 
-		  ;; useful access rights
-		  [value-of (?os-instance workload) ?os-workload]
-		  [object-type-of ?os-workload os-workload]
-		  [or [value-of (?os-workload server-workload processes) ?the-process]
-		      [value-of (?os-workload user-workload processes) ?the-process]]
-		  [object-type-of ?the-process process]
-		  [runs-with-permissions-of ?the-process ?user]
-		  [has-permission ?the-process ?right ?object])
-  :plan (:goal [takes-direct-control-of ?attacker ?the-process ?property ?target ] :plan ?control-plan)
-  )
+    :to-achieve [achieve-access-right ?attacker ?right ?object ?user]
+    ;; all this is asking is there a process in the workload
+    ;; and if so with which user's permissions is it running
+    :bindings ([value-of (?object machines) ?machine]
+               [named-part-of ?machine os ?os-instance]
+               [value-of (?os-instance workload) ?os-workload]
+               [or [value-of (?os-workload server-workload processes) ?the-process]
+                   [value-of (?os-workload user-workload processes) ?the-process]]
+               [runs-with-permissions-of ?the-process ?user]
+               )
+    :typing ([object-type-of ?object computer-resource]
+             [object-type-of ?machine computer]
+             [object-type-of ?os-instance operating-system]
+             [object-type-of ?os-workload os-workload]
+             [object-type-of ?the-process process]           
+             )
+    ;; This is the key pre-req: The process has the desired right to the object
+    :prerequisites ([has-permission ?the-process ?right ?object])
+    :plan (:goal [takes-direct-control-of ?attacker ?the-process] :plan ?control-plan)
+    )
 
 
 (defattack-method how-to-achieve-access-right-by-password-stealing
-  :to-achieve [achieve-access-right ?attacker ?right ?object ?user ?property ?target]
-  :prerequisites ([object-type-of ?object computer-resource]
-		  [value-of (?object machines) ?machine]
-		  [object-type-of ?machine computer]
-		  [named-part-of ?machine os ?os-instance]
-		  [object-type-of ?os-instance operating-system]
-		  [requires-access-right ?object ?r ?capability]
-		  [object-type-of ?user user]
-		  (has-capability ?user ?capability))
-  :plan (:goal [logon ?attacker ?user ?os-instance ?property ?target] :plan ?password-plan)
-  )
+    :to-achieve [achieve-access-right ?attacker ?right ?object ?user]
+    :bindings ([value-of (?object machines) ?machine]
+               [named-part-of ?machine os ?os-instance]
+               [requires-access-right ?object ?right ?capability])
+    ;; Note: has-capability is a function not an assertion
+    :prerequisites ((has-capability ?user ?capability))
+    :typing ([object-type-of ?object computer-resource]
+             [object-type-of ?machine computer]
+             [object-type-of ?os-instance operating-system]
+             [object-type-of ?user user])
+    :plan (:goal [logon ?attacker ?user ?os-instance] :plan ?password-plan)
+    )
 
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -308,37 +360,37 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 (defattack-method join-active-user-set
-    :to-achieve [make-member-of ?attacker ?user ?active-user-set ?property ?target]
-    :prerequisites (;; assumption is that we know active-user
-		    [object-type-of ?active-user-set user-set]
-		    [value-of (?active-user-set os) ?os-instance]
-		    [object-type-of ?os-instance operating-system])
-    :plan (:goal [logon ?attacker ?user ?os-instance ?property ?target] :plan ?logon-plan)
+    :to-achieve [make-member-of ?attacker ?user ?active-user-set]
+    :bindings ([value-of (?active-user-set os) ?os-instance])
+    :typing ([object-type-of ?active-user-set user-set]
+             [object-type-of ?os-instance operating-system])
+    :plan (:goal [logon ?attacker ?user ?os-instance] :plan ?logon-plan)
     )
 
+;;; Fix: use of logon is inconsistent?  Not really, the :action thing isn't really a predication
 (defattack-method how-to-logon-1
-    :to-achieve [logon ?attacker ?user ?os-instance ?property ?target]
-    :prerequisites ([object-type-of ?os-instance operating-system]
-		    [value-of (?os-instance authorization-pool) ?pool]
-		    [object-type-of ?pool authorization-pool]
-		    [value-of (?pool users) ?user]
-		    [object-type-of ?user user])
+    :to-achieve [logon ?attacker ?user ?os-instance]
+    :bindings ([value-of (?os-instance authorization-pool) ?pool]
+               [value-of (?pool users) ?user])
+    :typing ([object-type-of ?os-instance operating-system]
+             [object-type-of ?pool authorization-pool]
+             [object-type-of ?user user])
     :plan (:sequential
-	   (:goal [achieve-knowledge-of ?attacker (password ?user) ?property ?target] :plan ?password-plan)
-	   (:goal [achieve-connection ?attacker ?os-instance telnet ?property ?target] :plan ?connection-plan)
-	   (:action [logon ?attacker ?user ?os-instance])))
+           (:goal [achieve-knowledge-of-password ?attacker ?user] :plan ?password-plan)
+           (:goal [achieve-connection ?attacker ?os-instance telnet] :plan ?connection-plan)
+           (:action [logon ?attacker ?user ?os-instance])))
 
 (defattack-method how-to-logon-2
-    :to-achieve [logon ?attacker ?user ?os-instance ?property ?target]
-    :prerequisites ([object-type-of ?os-instance operating-system]
-		    [value-of (?os-instance authorization-pool) ?pool]
-		    [object-type-of ?pool authorization-pool]
-		    [value-of (?pool users) ?user]
-		    [object-type-of ?user user])
+    :to-achieve [logon ?attacker ?user ?os-instance]
+    :bindings ([value-of (?os-instance authorization-pool) ?pool]
+               [value-of (?pool users) ?user])
+    :typing ([object-type-of ?os-instance operating-system]
+             [object-type-of ?pool authorization-pool]
+             [object-type-of ?user user])
     :plan (:sequential
-	   (:goal [achieve-knowledge-of ?attacker (password ?user) ?property ?target] :plan ?password-plan)
-	   (:goal [achieve-connection ?attacker ?os-instance ssh ?property ?target] :plan ?connection-plan)
-	   (:action [logon ?attacker ?user ?os-instance])))
+           (:goal [achieve-knowledge-of-password ?attacker ?user] :plan ?password-plan)
+           (:goal [achieve-connection ?attacker ?os-instance ssh] :plan ?connection-plan)
+           (:action [logon ?attacker ?user ?os-instance])))
 
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -348,42 +400,42 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 (defattack-method user-knows-own-password
-    :to-achieve [achieve-knowledge-of ?user (password ?user) ?property ?target]
-    :prerequisites ()
-    :plan (:action [use-own-password ?user])
+    :to-achieve [achieve-knowledge-of-password ?attacker ?user ?anything]
+    :prerequisites ((equal ?attacker ?user))
+    :plan (:action [use-own-password ?user ?anything])
     )
             
 (defattack-method how-to-get-password-by-guessing
-    :to-achieve [achieve-knowledge-of ?attacker (password ?user) ?property ?target]
+    :to-achieve [achieve-knowledge-of-password ?attacker ?user ?aything]
     :prerequisites ((not (equal ?attacker ?user)))
-    :plan (:goal [guess ?attacker (password ?user) ?property ?target] :plan ?guess-plan)
+    :plan (:goal [guess-password ?attacker ?user ?anything] :plan ?guess-plan)
     )
 
 (defattack-method guess-typical-user
-  :to-achieve [guess ?attacker (password ?user) ?property ?target]
-  :prerequisites ([object-type-of ?user typical-user]
-		  [object-type-of ?attacker attacker])
-  :plan (:action [dictionary-lookup-attack ?attacker (password ?user)])
-  )
+    :to-achieve [guess-password ?attacker ?user ?anything]
+    :typing ([object-type-of ?user typical-user]
+             [object-type-of ?attacker attacker])
+    :plan (:action [password-dictionary-lookup-attack ?attacker ?user ?anything])
+    )
 
 (defattack-method guess-superuser-passwords
-    :to-achieve [guess ?attacker (password ?user) ?property ?target]
-    :prerequisites ([object-type-of ?user user]
-		    [value-of (?user machines) ?machine]
-		    [object-type-of ?machine computer]
-		    [value-of (?machine os superuser) ?user])
-    :plan (:action [dictionary-lookup-attack ?attacker ?user])
+    :to-achieve [guess-password ?attacker ?user ?anything]
+    :typing ([value-of (?user machines) ?machine]
+             [value-of (?machine os superuser) ?user])
+    :bindings ([object-type-of ?user user]
+               [object-type-of ?machine computer])
+    :plan (:action [password-dictionary-lookup-attack ?attacker ?user])
     )
 
 (defattack-method how-to-get-password-by-virus
-    :to-achieve [achieve-knowledge-of ?attacker (password ?user) ?property ?target]
-    :prerequisites ([object-type-of ?user user]
-		    [uses-machine ?machine ?user]
-		    [object-type-of ?machine computer]
-		    [named-part-of ?machine os ?os-instance])
+    :to-achieve [achieve-knowledge-of-password ?attacker ?user ?anything]
+    :typing ([object-type-of ?user user]
+             [object-type-of ?machine computer])
+    :bindings ([uses-machine ?machine ?user]
+               [named-part-of ?machine os ?os-instance])
     :plan (:sequential
-	   (:goal [achieve-connection ?attacker ?os-instance email ?property ?target] :plan ?connection-plan)
-	   (:action [send-socially-engineered-virus ?attacker ?user]))
+           (:goal [achieve-connection ?attacker ?os-instance email (to-affect ?property ?target)] :plan ?connection-plan)
+           (:action [social-engineering-attack ?attacker ?user]))
     )
 
 ; This stuff was in the thing above, but I'm not sure what it was trying to say
@@ -395,15 +447,16 @@
 ; 			     )))))
 
 (defattack-method how-to-get-password-by-sniffing
-   :to-achieve [achieve-knowledge-of ?attacker (password ?user) ?property ?target]
-    :prerequisites ([object-type-of ?user user]
-		    [uses-machine ?machine ?user]
-		    [object-type-of ?machine computer]
-		    [value-of (?machine subnets) ?subnet]
-		    [object-type-of ?subnet subnet])
+    :to-achieve [achieve-knowledge-of-password ?attacker ?user ?anything]
+    :typing ([object-type-of ?user user]
+             [object-type-of ?machine computer]
+             [object-type-of ?subnet subnet])
+    :bindings ([uses-machine ?machine ?user]
+               [value-of (?machine subnets) ?subnet]
+               )
     :plan (:parallel 
-	   (:goal [observe ?attacker (network-traffic ?subnet) ?property ?target] :plan ?observation-plan)
-	   (:action [sniff-a-password ?attacker ?user ?subnet]))
+           (:goal [observe-network-traffic ?attacker ?subnet] :plan ?observation-plan)
+           (:action [sniff-a-password ?attacker ?user ?subnet]))
     )
 
  ; ((:goal (know (password ?user)) 
@@ -422,14 +475,13 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 (defattack-method achieve-connection-by-protocol
-  :to-achieve [achieve-connection ?attacker ?os-instance ?protocol-name ?property ?target]
-  ;; assumption is that we know the os-instance
-  :prerequisites ([object-type-of ?os-instance operating-system]
-		  [named-part-of ?machine os ?os-instance]
-		  [object-type-of ?machine computer]
-		  [accepts-connection ?machine ?protocol-name ?attacker ?])
-  :plan (:action [connect-via ?attacker ?machine ?protocol-name])
-  )
+    :to-achieve [achieve-connection ?attacker ?os-instance ?protocol-name]
+    :bindings ([named-part-of ?machine os ?os-instance])
+    :typing ([object-type-of ?os-instance operating-system]
+             [object-type-of ?machine computer])
+    :prerequisites ([accepts-connection ?machine ?protocol-name ?attacker ?])
+    :plan (:action [connect-via ?attacker ?machine ?protocol-name])
+    )
 
 ;;; to be filled in:
 ;;; if a remote request for a service arrives
@@ -456,26 +508,27 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 (defattack-method control-the-network-stack
-    :to-achieve [takes-direct-control-of ?attacker ?network-stack ?property ?target]
-    :prerequisites ([object-type-of ?network-stack network-stack]
-		    [named-part-of ?os-instance network-monitor ?network-stack]
-		    [object-type-of ?os-instance operating-system]
-		    [value-of (?os-instance superuser) ?superuser]
-		    [object-type-of ?superuser user])
+    :to-achieve [takes-direct-control-of ?attacker ?network-stack]
+    :bindings ([named-part-of ?os-instance network-monitor ?network-stack]
+               [value-of (?os-instance superuser) ?superuser])
+    :typing ([object-type-of ?network-stack network-stack]
+             [object-type-of ?os-instance operating-system]
+             [object-type-of ?superuser user])
     :plan (:sequential 
-	   (:goal [logon ?attacker ?superuser ?os-instance ?property ?target] :plan ?logon-plan)
-	   (:action [control ?attacker ?network-stack])))
+           (:goal [logon ?attacker ?superuser ?os-instance] :plan ?logon-plan)
+           (:action [control ?attacker ?network-stack])))
 
 (defattack-method read-network-traffic
-  :to-achieve [observe ?attacker (network-traffic ?subnet) ?property ?target]
-  :prerequisites ([object-type-of ?subnet switched-subnet]
-		  [value-of (?subnet switch) ?switch]
-		  [object-type-of ?switch switch]
-		  [named-part-of (?switch os) network-monitor ?network-stack]
-		  [object-type-of ?network-stack network-stack])
-  :plan (:sequential (:goal [takes-direct-control-of ?attacker ?network-stack ?property ?target] :plan ?control-plan)
-		     (:action [observe ?attacker network-traffic ?subnet]))
-  )
+    :to-achieve [observe-network-traffic ?attacker ?subnet]
+    :bindings ([value-of (?subnet switch) ?switch]
+               [value-of (?switch os) ?os]
+               [named-part-of ?os network-monitor ?network-stack])
+    :typing ([object-type-of ?subnet switched-subnet]
+             [object-type-of ?switch switch]
+             [object-type-of ?network-stack network-stack])
+    :plan (:sequential (:goal [takes-direct-control-of ?attacker ?network-stack (to-affect ?property ?target)] :plan ?control-plan)
+                       (:action [observe ?attacker network-traffic ?subnet]))
+    )
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;

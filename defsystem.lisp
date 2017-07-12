@@ -7,33 +7,33 @@
 
 (eval-when (:execute :load-toplevel)
   (let* ((loading-file *load-truename*)
-	 (host (pathname-host loading-file))
-	 (device (pathname-device loading-file))
-	 (home-dir (pathname-directory loading-file))
-	 (wild-dir (append home-dir (list :wild-inferiors))))
+         (host (pathname-host loading-file))
+         (device (pathname-device loading-file))
+         (home-dir (pathname-directory loading-file))
+         (wild-dir (append home-dir (list :wild-inferiors))))
     (setq *aplan-home-directory* (make-pathname :directory home-dir 
-						 :host host 
-						 :device device)
-	  *aplan-wild-directory* (make-pathname :directory wild-dir
-						 :host host 
-						 :device device
-						 :type :wild
-						 :name :wild
-						 :version :unspecific))
+                                                :host host 
+                                                :device device)
+          *aplan-wild-directory* (make-pathname :directory wild-dir
+                                                :host host 
+                                                :device device
+                                                :type :wild
+                                                :name :wild
+                                                :version :unspecific))
     (setf (logical-pathname-translations "aplan")
       `(("home;*.*"	,*aplan-home-directory*)
-	("**;*.*"	,*aplan-wild-directory*)
-	))
+        ("**;*.*"	,*aplan-wild-directory*)
+        ))
+    (with-open-file (F #P"aplan:home;my-logical-pathnames.lisp" :direction :output :if-exists :supersede :if-does-not-exist :create)
+      (format f "~%;;; aplan")
+      (format f "~2%~s" "aplan")
+      (loop for (a b) in (logical-pathname-translations "aplan")
+          do (format f "~%'(~s ~s)" (namestring a) (namestring b)))
+      (terpri f)
+      )
     (pushnew (namestring (truename #P"aplan:home;my-logical-pathnames.lisp"))
-	       (logical-pathname-translations-database-pathnames)
-	       :test #'string-equal)      
-      (with-open-file (F #P"aplan:home;my-logical-pathnames.lisp" :direction :output :if-exists :supersede)
-	(format f "~%;;; aplan")
-	(format f "~2%~s" "aplan")
-	(loop for (a b) in (logical-pathname-translations "aplan")
-	  do (format f "~%'(~s ~s)" (namestring a) (namestring b)))
-	(terpri f)
-	))
+             (logical-pathname-translations-database-pathnames)
+             :test #'string-equal))
   )
 
 
