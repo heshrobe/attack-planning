@@ -52,6 +52,7 @@
    ("system-dependencies" (:module-class separate-destination-joshua-module))
    ("ai-lab-description" (:module-class data-module))
    ("jbi-example" (:module-class data-module))   
+   ("cctv-network-description" (:module-class data-module))
    ("editor" (:module-class separate-destination-joshua-module))
    ("attack-graphics" (:module-class separate-destination-joshua-module))
    ))

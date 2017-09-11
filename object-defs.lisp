@@ -81,6 +81,25 @@
 (define-object-type png-file
     :included-object-types (graphic-image-file))
 
+(define-object-type graphic-video-file
+    :included-object-types (complex-encoded-data-file))
+
+(define-object-type typical-graphics-video-file
+    :included-object-types (graphic-video-file typical-object-mixin)
+    )
+
+(define-object-type wmv-file
+    :included-object-types (graphic-video-file))
+
+(define-object-type flv-file
+    :included-object-types (graphic-video-file))
+
+(define-object-type avi-file
+    :included-object-types (graphic-video-file))
+
+(define-object-type mp4-file
+    :included-object-types (graphic-video-file))
+
 (define-object-type database
     :included-object-types (data-resource)
     :slots ((schema) 
@@ -94,6 +113,9 @@
 ;;;  and the data store
 
 (define-object-type password-file
+  :included-object-types (file))
+
+(define-object-type configuration-file
   :included-object-types (file))
 
 (define-object-type scheduler-policy-file
@@ -126,6 +148,24 @@
 
 (define-object-type server-process
     :included-object-types (process))
+
+(define-object-type storage-server-process
+  :included-object-types (server-process))
+
+(define-object-type display-server-process
+  :included-object-types (server-process))
+
+(define-object-type video-processing-server-process
+  :included-object-types (server-process))
+
+(define-object-type video-surveillance-manager-process
+  :included-object-types (server-process))
+
+(define-object-type operator-console-server-process
+  :included-object-types (server-process))
+
+(define-object-type opc-server-process
+  :included-object-types (server-process))
 
 (define-object-type web-server-process
   :included-object-types (server-process))
@@ -168,6 +208,57 @@
 
 (define-object-type network-stack
   :included-object-types (system-process))
+
+;;; Hardware interfaces are defined as hardware (e.g., network card, interface port)
+;;; that is available for use (not necessarily in use) on a computer
+(define-object-type hardware-interfaces
+    :included-object-types (print-nicely-mixin)
+    )
+
+(define-object-type network-card
+    :included-object-types (hardware-interfaces)
+    )
+
+(define-object-type port
+    :included-object-types (hardware-interfaces)
+    )
+
+(define-object-type processing-unit
+    :included-object-types (hardware-interfaces)
+    )
+
+;;(define-object-type ethernet
+;;  :included-object-types (network-card))
+
+(define-object-type wifi
+  :included-object-types (network-card))
+
+(define-object-type bluetooth
+  :included-object-types (network-card))
+
+;;; Having a <port> device in-use and having an avaiable <port> port
+;;; are esentially the same thing since an adversary can just remove 
+;;; the <port> device to utilize the port
+(define-object-type usb-2
+  :included-object-types (port))
+
+(define-object-type usb-3
+  :included-object-types (port))
+
+(define-object-type thunderbolt-2
+  :included-object-types (port))
+
+(define-object-type thunderbolt-3
+  :included-object-types (port))
+
+(define-object-type gpu
+  :included-object-types (processing-unit))
+
+(define-object-type video-display-processor
+  :included-object-types (processing-unit))
+
+(define-object-type asic
+  :included-object-types (processing-unit))
 
 ;;; Note: actually the machines are os's
 ;;; authorization pools are groups of machines that log in 
@@ -347,6 +438,15 @@
 (define-object-type linux
   :included-object-types (unix))
 
+(define-object-type embedded-linux
+  :included-object-types (linux))
+
+(define-object-type open-wrt
+  :included-object-types (embedded-linux))
+
+(define-object-type android
+  :included-object-types (embedded-linux))
+
 (define-object-type solaris
   :included-object-types (unix))
 
@@ -377,6 +477,21 @@
 (define-object-type windows-8
   :included-object-types (windows))
 
+(define-object-type windows-embedded
+  :included-object-types (windows))
+
+(define-object-type windows-embedded-compact
+  :included-object-types (windows-embedded))
+
+(define-object-type windows-embedded-standard
+  :included-object-types (windows-embedded))
+
+(define-object-type windows-embedded-industry
+  :included-object-types (windows-embedded))
+
+(define-object-type real-time-operating-system
+  :included-object-types (operating-system))
+
 
 (define-object-type genera
   :included-object-types (operating-system))
@@ -390,6 +505,9 @@
 (define-object-type OS-X
   :included-object-types (mac unix)) 
 
+(define-object-type cisco-ios
+  :included-object-types (operating-system))
+
 (defgeneric operating-system-for-machine (machine-type))
 
 (define-object-type computer
@@ -398,6 +516,8 @@
           (subnets :set-valued t)
           (resources :set-valued t)
           (site :set-valued t)
+          (hardware-interfaces :set-valued t)
+          (communication-protocols :set-valued t)
           system-type
           health-status)
   :included-object-types (print-nicely-mixin))
@@ -481,6 +601,11 @@
 
 (defmethod operating-system-for-machine ((self linux-computer)) 'linux)
 
+(define-object-type embedded-linux-computer
+  :included-object-types (unix-computer))
+
+(defmethod operating-system-for-machine ((self embedded-linux-computer)) 'embedded-linux)
+
 (define-object-type solaris-computer
   :included-object-types (unix-computer))
 
@@ -490,8 +615,6 @@
   :included-object-types (computer))
 
 (defmethod operating-system-for-machine ((self lispm-computer)) 'genera)
-
-
 
 #+genera
 (define-object-type ip-address
@@ -580,7 +703,84 @@
   :included-object-types (computer)
   ) 
 
+;; we'll assume that iot cameras are stationary
+;; (i.e., have fixed IPs)
+(define-object-type iot-camera
+  :included-object-types (computer)
+  )
+
+(define-object-type wireless-access-point
+  :included-object-types (computer)
+  )
+
+(define-object-type typical-mobile-computer
+    :included-object-types (mobile-computer typical-object-mixin)
+    )
+
+(define-object-type smart-phone
+  :included-object-types (mobile-computer))
+
+(define-object-type tablet
+  :included-object-types (mobile-computer))
+
 (define-object-type site
   :included-object-types (print-nicely-mixin)
   :parts ((net-mask subnet-mask))
   :slots ((subnets :set-valued t))) 
+
+(define-object-type communication-protocols
+    :included-object-types (print-nicely-mixin)
+    )
+
+;; logon protocols (telnet, ssh)
+(define-object-type logon-protocol
+    :included-object-types (communication-protocols)
+    )
+
+(define-object-type telnet
+    :included-object-types (logon-protocol)
+    )
+
+(define-object-type ssh
+    :included-object-types (logon-protocol)
+    )
+
+;; web protocols (http, https)
+(define-object-type web-protocol 
+    :included-object-types (communication-protocols)
+    )
+
+(define-object-type http
+    :included-object-types (web-protocol)
+    )
+
+(define-object-type https
+    :included-object-types (web-protocol)
+    )
+
+;; transfer protocols (ftp, ftps)
+(define-object-type transfer-protocol
+    :included-object-types (communication-protocols)
+    )
+
+(define-object-type ftp 
+    :included-object-types (transfer-protocol)
+    )
+
+(define-object-type ftps
+    :included-object-types (transfer-protocol)
+    )
+
+;; multimedia protocols (skype)
+(define-object-type multimedia-protocol
+    :included-object-types (communication-protocols)
+    )
+
+(define-object-type voip
+    :included-object-types (transfer-protocol)
+    )
+
+;; proprietary protocols (logon port 8992)
+(define-object-type proprietary-protocol
+    :included-object-types (communication-protocols)
+    )

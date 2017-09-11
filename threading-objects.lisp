@@ -110,7 +110,7 @@
 	  [value-of (?os-instance processes) ?process]
 	  [object-type-of ?process process]
           ]
-  then [impacts fairness ?scheduler reliable-performance ?process ?os-instance]
+  then [impacts fairness ?scheduler reliable-performance ?process]
   )
 
 ;;; The size of a workload affects the workset size of a scheduler
@@ -121,7 +121,7 @@
 	  [value-of (?os-instance processes) ?process]
 	  [object-type-of ?process process]
           ]
-  then [impacts workset-size ?scheduler reliable-performance ?process ?os-instance]
+  then [impacts workset-size ?scheduler reliable-performance ?process]
   )
 
 (defrule size-of-workset-impacts-scheduler-workload-size (:forward)
@@ -131,7 +131,7 @@
 	  [input-of ?scheduler ?workload]
 	  [object-type-of ?workload os-workload]
 	  ]
-  then [impacts size ?workload workset-size ?scheduler ?os-instance]
+  then [impacts size ?workload workset-size ?scheduler]
   )
 
 (defrule size-of-part-of-workset-impacts-size-of-full-worset (:forward)
@@ -141,7 +141,7 @@
 	  [part-of ?full-workset ?partial-workset]
 	  [object-type-of ?partial-workset workload]
 	  ]
-  then [impacts size ?partial-workset size ?full-workset ?os-instance]
+  then [impacts size ?partial-workset size ?full-workset]
   )
 
 
@@ -156,7 +156,7 @@
 	  [process-controls-data-set ?sub-job-admitter ?workload]
 	  [object-type-of ?workload workload]
 	  ]
-  then [impacts size ?job-request-queue size ?workload ?os-instance]
+  then [impacts size ?job-request-queue size ?workload]
   )
  
 (defrule size-of-part-of-request-queue-impacts-size-of-full-request-queue (:forward)
@@ -166,7 +166,7 @@
 	  [part-of ?full-request-queue ?partial-request-queue]
 	  [object-type-of ?partial-request-queue job-launch-request-queue]
 	  ]
-  then [impacts size ?partial-request-queue size ?full-request-queue ?os-instance]
+  then [impacts size ?partial-request-queue size ?full-request-queue]
   )
 
 
@@ -186,7 +186,7 @@
 	  [value-of (?computer resources) ?file]
           [object-type-of ?file file]
           ]
-  then [impacts policy ?access-controller data-privacy ?file ?os-instance]
+  then [impacts policy ?access-controller data-privacy ?file]
   )
 
 ;;; access controller impacts integrity
@@ -199,7 +199,7 @@
 	  [value-of (?computer resources) ?file]
           [object-type-of ?file file]
           ]
-  then [impacts policy ?access-controller data-integrity ?file ?os-instance]
+  then [impacts policy ?access-controller data-integrity ?file]
   )
 
 
