@@ -110,7 +110,7 @@
 	  [value-of (?os-instance processes) ?process]
 	  [object-type-of ?process process]
           ]
-  then [impacts fairness ?scheduler reliable-performance ?process]
+  then [impacts fairness ?scheduler performance ?process]
   )
 
 ;;; The size of a workload affects the workset size of a scheduler
@@ -121,7 +121,7 @@
 	  [value-of (?os-instance processes) ?process]
 	  [object-type-of ?process process]
           ]
-  then [impacts workset-size ?scheduler reliable-performance ?process]
+  then [impacts workset-size ?scheduler performance ?process]
   )
 
 (defrule size-of-workset-impacts-scheduler-workload-size (:forward)
@@ -337,11 +337,15 @@
 ;;; and to reflect that application instances are controlled by their OS instances
 (defrule os-performance (:forward)
   If [object-type-of ?os-instance operating-system]
-  then [desirable-property-of ?os-instance reliable-performance])
+  then [desirable-property-of ?os-instance performance])
 
 (defrule os-privacy (:forward)
   If [object-type-of ?os-instance operating-system]
   then [desirable-property-of ?os-instance data-privacy])
+
+(defrule data-resource-privacy (:forward)
+  if [object-type-of ?resource data-resource]
+  then [desirable-property-of ?resource data-privacy])
 
 (defrule os-integrity (:forward)
   if [object-type-of ?os-instance operating-system]

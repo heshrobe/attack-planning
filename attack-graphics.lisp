@@ -122,7 +122,7 @@
 
 (define-aplan-command (com-find-plans :name t)
     ((computer 'computer)
-     (property 'desirable-property :default 'reliable-performance)
+     (property 'desirable-property :default 'performance)
      (resource `(computer-resource ,computer))
      &key (attacker 'attacker :default (follow-path '(typical-attacker))))
   (let ((answers (do-it :property property :machine computer :attacker attacker :resource resource)))
@@ -143,12 +143,13 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 (defun do-it (&key (attacker (follow-path '(typical-attacker)))
-                   (property 'reliable-performance) 
+                   (property 'performance) 
 		   (machine 'dopey) 
                    (resource (follow-path '(typical-dopey-process))))
   (let ((answers nil)
-	(os (follow-path `(,machine os))))
-    (ask `[affect ,attacker ,property ,resource ,os ?plan]
+	;; (os (follow-path `(,machine os)))
+	)
+    (ask `[affect ,attacker ,property ,resource ?plan]
          #'(lambda (just)
              (declare (ignore just))
 	     (let ((plan (copy-object-if-necessary ?plan)))

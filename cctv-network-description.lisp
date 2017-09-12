@@ -34,7 +34,7 @@
   :authorization-pools (communication-pool))
 
 ;; Define machines in communication pool
-(defrouter cctv-router ("192.0.0.0") :authorization-pool communication-pool :superuser router-administrator)
+(defrouter cctv-router ("192.0.0.0" "10.0.0.0") :authorization-pool communication-pool :superuser router-administrator)
 
 (defswitch cctv-switch switch "192.1.1.1" :authorization-pool communication-pool :superuser switch-administrator)
 
@@ -52,7 +52,7 @@
     :machines (cctv-switch))
 
 ;; Define subnet
-;;(defsubnet backbone switched-subnet "192.0.0.0" "255.0.0.0")
+(defsubnet backbone switched-subnet "192.0.0.0" "255.0.0.0")
 
 ;; Define router access policies
 (tell-policy cctv-router telnet :negative-location-mask "255.0.0.0" :negative-location-address "192.0.0.0")
@@ -183,6 +183,10 @@
   :authorization-pool device-pool
   :superuser device-administrator)
 
+;; define video-machine-policy
+(tell-policy typical-camera telnet :negative-location-mask "255.0.0.0" :negative-location-address "192.0.0.0") 
+(tell-policy typical-camera ssh :positive-location-mask "0.0.0.0" :positive-location-address "0.0.0.0")
+
 ;;; must follow the previous guy
 ;;; since it refers to it
 (defuser device-user
@@ -221,4 +225,16 @@
 (instantiate-a-process 'typical-user-process '(typical-camera) :role-name 'typical-camera-process)
 
 ;; Instantiate attacker
+;;; A lot of this is a complete hack.  What we'd like to say is that the attacker is 
+;;; somewhere that can contact the router of the victim.
 (create-attacker 'typical-attacker :negative-mask-address "192.1.0.0" :negative-mask-mask "255.255.0.0") 
+
+(defcomputer typical-attacker-machine computer "10.10.10.10"
+	     )
+
+(tell `[uses-machine ,(follow-path '(typical-attacker-machine)) ,(follow-path '(typical-attacker))])
+
+(defsubnet attacker-subnet switched-subnet "10.0.0.0" "255.0.0.0")
+
+(defswitch attacker-switch switch "10.1.1.1" )
+(tell-policy attacker-switch ssh :positive-location-mask "0.0.0.0" :positive-location-address "0.0.0.0")

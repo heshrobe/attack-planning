@@ -31,6 +31,9 @@
     :included-object-types (computer-resource)
     )
 
+(define-object-type data-set
+    :included-object-types (data-resource)
+    )
 
 (define-object-type file
   :included-object-types (data-resource)
@@ -343,7 +346,7 @@
 
 (define-object-type workload
   :slots (os processes)
-  :included-object-types (print-nicely-mixin))
+  :included-object-types (data-set print-nicely-mixin))
 
 (define-object-type os-workload
   :slots (os)

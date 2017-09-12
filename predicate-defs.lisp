@@ -139,7 +139,7 @@
 ;;; This implies guess some piece of knowedge like a passwork
 (define-goal guess (attacker thing property))
 
-(define-goal guess-password (attacker user thing))
+(define-goal guess-password (attacker user resource))
 
 ;;; discover the existence of a physical resource (e.g. a machine)
 (define-goal discover (attacker thing property))

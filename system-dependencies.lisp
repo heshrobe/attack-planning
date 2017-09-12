@@ -1,4 +1,4 @@
-;;; -*- Syntax: Joshua; Package: APLAN; Mode: JOSHUA; syntax: joshua; readtable: Joshua  -*-
+k;;; -*- Syntax: Joshua; Package: APLAN; Mode: JOSHUA; syntax: joshua; readtable: Joshua  -*-
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;
@@ -72,7 +72,7 @@
 (defattack-method read-file-property-directly
     :to-achieve [affect ?attacker data-privacy ?file]
     :prerequisites ([desirable-property-of ?file data-privacy])
-    :typing ([object-type-of ?file file])
+    :typing ([object-type-of ?file data-resource])
     :plan (:goal [achieve-knowledge-of-contents ?attacker ?file] :plan ?read-plan)
     )
 
@@ -376,7 +376,7 @@
              [object-type-of ?pool authorization-pool]
              [object-type-of ?user user])
     :plan (:sequential
-           (:goal [achieve-knowledge-of-password ?attacker ?user] :plan ?password-plan)
+           (:goal [achieve-knowledge-of-password ?attacker ?user ?os-instance] :plan ?password-plan)
            (:goal [achieve-connection ?attacker ?os-instance telnet] :plan ?connection-plan)
            (:action [logon ?attacker ?user ?os-instance])))
 
@@ -388,7 +388,7 @@
              [object-type-of ?pool authorization-pool]
              [object-type-of ?user user])
     :plan (:sequential
-           (:goal [achieve-knowledge-of-password ?attacker ?user] :plan ?password-plan)
+           (:goal [achieve-knowledge-of-password ?attacker ?user ?pool] :plan ?password-plan)
            (:goal [achieve-connection ?attacker ?os-instance ssh] :plan ?connection-plan)
            (:action [logon ?attacker ?user ?os-instance])))
 
@@ -400,41 +400,41 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 (defattack-method user-knows-own-password
-    :to-achieve [achieve-knowledge-of-password ?attacker ?user ?anything]
+    :to-achieve [achieve-knowledge-of-password ?attacker ?user ?resource]
     :prerequisites ((equal ?attacker ?user))
-    :plan (:action [use-own-password ?user ?anything])
+    :plan (:action [use-own-password ?user ?resource])
     )
             
 (defattack-method how-to-get-password-by-guessing
-    :to-achieve [achieve-knowledge-of-password ?attacker ?user ?aything]
+    :to-achieve [achieve-knowledge-of-password ?attacker ?user ?resource]
     :prerequisites ((not (equal ?attacker ?user)))
-    :plan (:goal [guess-password ?attacker ?user ?anything] :plan ?guess-plan)
+    :plan (:goal [guess-password ?attacker ?user ?resource] :plan ?guess-plan)
     )
 
 (defattack-method guess-typical-user
-    :to-achieve [guess-password ?attacker ?user ?anything]
+    :to-achieve [guess-password ?attacker ?user ?resource]
     :typing ([object-type-of ?user typical-user]
              [object-type-of ?attacker attacker])
-    :plan (:action [password-dictionary-lookup-attack ?attacker ?user ?anything])
+    :plan (:action [password-dictionary-lookup-attack ?attacker ?user ?resource])
     )
 
 (defattack-method guess-superuser-passwords
-    :to-achieve [guess-password ?attacker ?user ?anything]
+    :to-achieve [guess-password ?attacker ?user ?resource]
     :typing ([value-of (?user machines) ?machine]
              [value-of (?machine os superuser) ?user])
     :bindings ([object-type-of ?user user]
                [object-type-of ?machine computer])
-    :plan (:action [password-dictionary-lookup-attack ?attacker ?user])
+    :plan (:action [password-dictionary-lookup-attack ?attacker ?user ?resource])
     )
 
 (defattack-method how-to-get-password-by-virus
-    :to-achieve [achieve-knowledge-of-password ?attacker ?user ?anything]
+    :to-achieve [achieve-knowledge-of-password ?attacker ?user ?resource]
     :typing ([object-type-of ?user user]
              [object-type-of ?machine computer])
     :bindings ([uses-machine ?machine ?user]
                [named-part-of ?machine os ?os-instance])
     :plan (:sequential
-           (:goal [achieve-connection ?attacker ?os-instance email (to-affect ?property ?target)] :plan ?connection-plan)
+           (:goal [achieve-connection ?attacker ?os-instance emai] :plan ?connection-plan)
            (:action [social-engineering-attack ?attacker ?user]))
     )
 
@@ -447,7 +447,7 @@
 ; 			     )))))
 
 (defattack-method how-to-get-password-by-sniffing
-    :to-achieve [achieve-knowledge-of-password ?attacker ?user ?anything]
+    :to-achieve [achieve-knowledge-of-password ?attacker ?user ?resource]
     :typing ([object-type-of ?user user]
              [object-type-of ?machine computer]
              [object-type-of ?subnet subnet])
@@ -544,7 +544,7 @@
   if [and [object-type-of ?machine computer]
           [object-type-of ?user user]
           [reachable-from ?machine ?user ?path]
-          [value-of (?user location) ?location]
+	  [value-of (?user location) ?location]
           (path-is-acceptable-for-connection-type (copy-object-if-necessary ?path)
                                                   ?location ?connection-type)
           ])
@@ -553,9 +553,11 @@
   then [reachable-from ?target-computer ?user ?path]
   if [and [object-type-of ?user user]
           [object-type-of ?target-computer computer]
-          [value-of (?user machines) ?user-computer]
+          [uses-machine ?user-computer ?user]
           [object-type-of ?user-computer computer]
-          [connected ?user-computer ?target-computer ?path]])
+          [connected ?user-computer ?target-computer ?path]
+	  ]
+  )
 
 
 ;;; this handles the case for a user whose "location" in ip-space
