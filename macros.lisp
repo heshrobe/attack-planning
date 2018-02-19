@@ -28,6 +28,24 @@
        (fill-in-subnet-mask net-mask ,address-string ,address-mask)
        site)))
 
+
+(defmacro tell-positive-policy (bridge-or-computer connection-type (location-address location-mask)
+				&rest negative-locations-and-masks)
+  `(let ((location (make-positive-location-mask ,location-address ,location-mask)))
+     ,@(loop for (address mask) in negative-locations-and-masks
+	   collect `(push (make-location-mask 'subnet-mask ,address ,mask) (exception-masks location)))
+     (tell `[policy-for ,(follow-path '(,bridge-or-computer)) ,',connection-type ,location])))
+
+
+(defmacro defexternal-internet (name &rest excluded-subnets)
+  `(with-atomic-action
+       (let* ((site (make-object 'external-internet :name ',name))
+	      (location (make-positive-location-mask "0.0.0.0" "0.0.0.0")))
+	 (tell `[value-of (,site subnets) ,location])
+	 ,@(loop for (address mask) in excluded-subnets
+	       collect `(push (make-location-mask 'subnet-mask ,address ,mask) (exception-masks location)))
+	 site)))
+
 (defmacro defcomputer (name computer-type ip-address-string &key superuser authorization-pool)
   `(with-atomic-action
      (let ((computer (make-object ',computer-type :name ',name)))
@@ -48,11 +66,14 @@
           `(tell `[value-of (,switch os authorization-pool) ,(follow-path '(,authorization-pool))]))
        switch)))
 
-(defmacro defrouter (name ip-address-strings &key authorization-pool superuser)
+(defmacro defrouter (name ip-address-strings &key authorization-pool superuser external-networks)
   `(with-atomic-action 
      (let ((router (make-object 'router :name ',name)))
        (loop for ip-address-string in ',ip-address-strings
-             do (add-ip-address-to-computer ip-address-string router))
+	   do (add-ip-address-to-computer ip-address-string router))
+       ,@(when external-networks
+	  (loop for external-network-name in external-networks
+	      collect `(tell `[value-of (,router subnets) ,(follow-path '(, external-network-name))])))			    
        ,(when superuser
           `(tell `[value-of (,router os superuser) ,(follow-path '(,superuser))]))
        ,(when authorization-pool
@@ -114,15 +135,19 @@
        ,@(loop for (operation capability) in capability-requirements
                collect `(tell `[value-of (,resource capability-requirements) (,',operation ,(follow-path '(,capability)))])))))
 
-(defmacro tell-policy (bridge connection-type 
-                              &key positive-location-mask positive-location-address 
-                              negative-location-mask negative-location-address)
-  `(let ((location (if (and ,positive-location-mask ,positive-location-address)
-                    (make-positive-location-mask ,positive-location-address ,positive-location-mask)
-                    (make-negative-location-mask ,negative-location-address ,negative-location-mask))))
-     ,(if (eql bridge '*)
-        `(tell `[policy-for ?anything ,',connection-type ,location]) 
-        `(tell `[policy-for ,(follow-path '(,bridge)) ,',connection-type ,location]))))
+(defmacro tell-positive-policy (bridge-or-computer connection-type (location-address location-mask)
+				&rest negative-locations-and-masks)
+  `(let ((location (make-positive-location-mask ,location-address ,location-mask)))
+     ,@(loop for (address mask) in negative-locations-and-masks
+	   collect `(push (make-location-mask 'subnet-mask ,address ,mask) (exception-masks location)))
+     (tell `[policy-for ,(follow-path '(,bridge-or-computer)) ,',connection-type ,location])))
+
+(defmacro tell-negative-policy (bridge-or-computer connection-type (location-address location-mask)
+				&rest negative-locations-and-masks)
+  `(let ((location (make-negative-location-mask ,location-address ,location-mask)))
+     ,@(loop for (address mask) in negative-locations-and-masks
+	   collect `(push (make-location-mask 'subnet-mask ,address ,mask) (exception-masks location)))
+     (tell `[policy-for ,(follow-path '(,bridge-or-computer)) ,',connection-type ,location])))
 
 (defun instantiate-a-process (process-type machine &key role-name program)
   (let* ((process-name (or role-name (gentemp (concatenate 'string (string-upcase (string process-type)) "-"))))

@@ -102,6 +102,15 @@
 ;;; NOTE: if the OS object kept track of processes on it (which it doesn't)
 ;;; then we could do these rules more directly
 
+(defrule impact-trasitivity (:forward)
+  if [and [impacts ?intermediate-property ?intermediate-component  ?victim-property ?victim-component]
+	  [impacts ?distant-property ?distant-component ?intermediate-property ?intermediate-component]]
+  then [impacts ?distant-property ?distant-component ?victim-property ?victim-component]
+  )
+
+
+
+
 ;;; the fairness of the scheduler controls reliable performance
 (defrule scheduler-process-controls-data-set-performance (:forward)
   if [and [object-type-of ?os-instance operating-system]
@@ -113,10 +122,22 @@
   then [impacts fairness ?scheduler performance ?process]
   )
 
+(defrule scheduler-fairness-affects-performance (:forward)
+    IF [and [object-type-of ?victim-process process]
+	    [value-of (?victim-process host-os) ?victim-os]
+	    [object-type-of ?victim-os operating-system]
+	    [named-part-of ?victim-os scheduler ?victim-scheduler]
+	    [object-type-of ?victim-scheduler scheduler]]
+    Then [impacts fairness ?victim-scheduler performance ?victim-process]
+    )
+
 ;;; The size of a workload affects the workset size of a scheduler
 (defrule scheduler-process-controls-data-set-performance-2 (:forward)
   if [and [object-type-of ?os-instance operating-system]
           [named-part-of ?os-instance scheduler ?scheduler]
+	  ;; actually the workset is an input not a part
+	  ;; but also it's not referenced below
+	  ;; [named-part-of ?scheduler workset ?workset]
           [object-type-of ?scheduler scheduler]
 	  [value-of (?os-instance processes) ?process]
 	  [object-type-of ?process process]
@@ -339,6 +360,10 @@
   If [object-type-of ?os-instance operating-system]
   then [desirable-property-of ?os-instance performance])
 
+(defrule process-performance (:forward)
+  If [object-type-of ?process process]
+  then [desirable-property-of ?process performance])
+
 (defrule os-privacy (:forward)
   If [object-type-of ?os-instance operating-system]
   then [desirable-property-of ?os-instance data-privacy])
@@ -350,6 +375,10 @@
 (defrule os-integrity (:forward)
   if [object-type-of ?os-instance operating-system]
   then [desirable-property-of ?os-instance data-integrity])
+
+(defrule data-resource-integrity (:forward)
+  if [object-type-of ?resource data-resource]
+  then [desirable-property-of ?resource data-integrity])
 
 (defrule os-execution-integrity (:forward)
   if [object-type-of ?os-instance operating-system]

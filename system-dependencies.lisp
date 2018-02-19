@@ -1,4 +1,4 @@
-k;;; -*- Syntax: Joshua; Package: APLAN; Mode: JOSHUA; syntax: joshua; readtable: Joshua  -*-
+;;; -*- Syntax: Joshua; Package: APLAN; Mode: JOSHUA; syntax: joshua; readtable: Joshua  -*-
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;
@@ -50,7 +50,8 @@ k;;; -*- Syntax: Joshua; Package: APLAN; Mode: JOSHUA; syntax: joshua; readtable
                [named-part-of ?computer os ?os-instance]
                [part-of ?os-instance ?component])
     :typing ([object-type-of ?victim computer-resource]
-             [object-type-of ?os-instance operating-system])
+             [object-type-of ?os-instance operating-system]
+	     [object-type-of ?component process])
     :prerequisites ([impacts ?component-property ?component ?desirable-property ?victim])
     :plan (:sequential
            ;; this breaks down into two steps:
@@ -59,9 +60,53 @@ k;;; -*- Syntax: Joshua; Package: APLAN; Mode: JOSHUA; syntax: joshua; readtable
            ;; Notice that the first step is oblivous to its purpose
            ;; This certainly makes things simpler but might lead to getting control in a way
            ;; that doesn't actually work
-           (:goal [takes-control-of ?attacker ?component] :plan ?control-plan)
+           (:goal [takes-control-of ?attacker ?component-property ?component] :plan ?control-plan)
            (:goal [use-control-of-to-affect-resource ?attacker ?component ?desirable-property ?victim] :plan ?modification-plan))
     )
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;;
+;;; Performance
+;;;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+
+;;; Note: This could be done more indirectly by saying that 
+;;; performance is inversely proportional to workload size
+;;; and then having a rule that says that to decrease something that
+;;; is inversely proportional to something else increaese the something else
+
+(defattack-method increase-workload-to-decrease-performance
+    :to-achieve [affect ?attacker performance ?process]
+    :prerequisites ([desirable-property-of ?process performance])
+    :bindings ([value-of (?process host-os) ?os]
+	       [value-of (?os workload) ?workload])
+    :typing ([object-type-of ?process process]
+	     [object-type-of ?os operating-system]
+	     [object-type-of ?workload os-workload])
+    :plan (:goal [increase-size ?attacker ?workload])
+    )
+
+;;; now what we want to say is:
+;;; Either 
+;;; 1) find a process in the current workload that is capable of launching new jobs
+;;; get control of that process and cause it launch jobs.  For example, a server that takes 
+;;; requests through some protocol and launches jobs in response (e.g. web server ftp server)
+;;; repeatedly connect to it and cause it to launch a job
+;;; 2) Increase the size of the job launch queue
+
+(defattack-method increase-workload-by-increasing-job-launch-queue
+    :to-achieve [increase-size ?attacker ?workload]
+    :bindings ([value-of (?workload os) ?os]
+	       [value-of (?os job-launch-queue) ?queue]
+	       [named-part-of ?queue user-job-launch-request-queue ?user-job-launch-queue])
+    :typing ([object-type-of ?workload os-workload]
+	     [object-type-of ?os operating-system]
+	     [object-type-of ?queue os-job-launch-request-queue]
+	     [object-type-of ?user-job-launch-queue job-launch-request-queue])
+    :plan (:goal [increase-size ?attacker ?user-job-launch-queue]))
+
+
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;
@@ -73,7 +118,7 @@ k;;; -*- Syntax: Joshua; Package: APLAN; Mode: JOSHUA; syntax: joshua; readtable
     :to-achieve [affect ?attacker data-privacy ?file]
     :prerequisites ([desirable-property-of ?file data-privacy])
     :typing ([object-type-of ?file data-resource])
-    :plan (:goal [achieve-knowledge-of-contents ?attacker ?file] :plan ?read-plan)
+    :plan (:goal [achieve-knowledge-of-contents ?attacker ?file])
     )
 
 
@@ -87,7 +132,7 @@ k;;; -*- Syntax: Joshua; Package: APLAN; Mode: JOSHUA; syntax: joshua; readtable
     :to-achieve [affect ?attacker data-integrity ?file]
     :typing ([object-type-of ?file file])
     :prerequisites ([desirable-property-of ?file data-integrity])
-    :plan (:goal [modify ?attacker contents ?file] :plan ?write-plan)
+    :plan (:goal [modify ?attacker contents ?file])
     )
 
 ;;; To affect the data-integrity of some data-set
@@ -97,8 +142,8 @@ k;;; -*- Syntax: Joshua; Package: APLAN; Mode: JOSHUA; syntax: joshua; readtable
     :bindings ([output-of ?process ?data-set])    
     :typing ([object-type-of ?process process])
     :plan (:sequential
-           (:goal [takes-control-of ?attacker ?process] :plan ?control-plan)
-           (:goal [use-control-of-to-affect-resource ?attacker ?process data-integrity ?data-set] :plan ?modify-plan))
+           (:goal [takes-control-of ?attacker data-integrity ?process])
+           (:goal [use-control-of-to-affect-resource ?attacker ?process data-integrity ?data-set]))
     )
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -109,35 +154,35 @@ k;;; -*- Syntax: Joshua; Package: APLAN; Mode: JOSHUA; syntax: joshua; readtable
 
 (defattack-method take-control-of-directly
     ;; Takes control of a component to ultimately affect some property of the target
-    :to-achieve [takes-control-of ?attacker ?component]
-    :plan (:goal [takes-direct-control-of ?attacker ?component] :plan ?control-plan))
+    :to-achieve [takes-control-of ?attacker ?component-property ?component]
+    :plan (:goal [takes-direct-control-of ?attacker ?component-property ?component]))
 
 ;;; one way to take direct control of a process is to
 ;;; first find some way to modify the loadable file so as to affect the property of the target
 ;;; and then cause the load of the loadable file of the program that's supposed to run in the process
 
 (defattack-method control-process-through-loadable-files
-    :to-achieve [takes-direct-control-of ?attacker ?thing]
-    :bindings ([value-of (?thing program) ?program]
+    :to-achieve [takes-direct-control-of ?attacker ?victim-property ?victim]
+    :bindings ([value-of (?victim program) ?program]
                [value-of (?program load-files) ?file])
-    :typing ([object-type-of ?thing process]
+    :typing ([object-type-of ?victim process]
              [object-type-of ?program program]
              [object-type-of ?file dynamically-loadable-code-file])
     :plan (:sequential 
-           (:goal [modify ?attacker contents ?file] :plan ?code-modification-plan)
+           (:goal [modify ?attacker contents ?file])
            ;; Note: this is a hack right now.  Really it should be a goal which would involve
            ;; a series of actions to cause the file to get loaded (logging in?, robooting?)
            ;; Need to avoid a recursion where you're trying to load the file into the process
            ;; in order to control the process but to do the load you post a sub-goal of taking
            ;; contro of the process
-           (:action [load-file ?attacker ?file ?thing]))
+           (:action [load-file ?attacker ?file ?victim]))
     )
 
 ;;; Fixed:
 ;;; This mentions the host-os but it doesn't actually seem to carry through
 ;;; to the plan.  Just rationality check, I guess.
 (defattack-method buffer-overflow-can-control-server-processes
-    :to-achieve [takes-direct-control-of ?attacker ?process]
+    :to-achieve [takes-direct-control-of ?attacker ?process-property ?process]
     ;; :bindings ([value-of (?process host-os) ?os-instance])
     :typing ([object-type-of ?process process]
              ;; [object-type-of ?os-instance operating-system]
@@ -179,15 +224,27 @@ k;;; -*- Syntax: Joshua; Package: APLAN; Mode: JOSHUA; syntax: joshua; readtable
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 (defattack-method take-control-of-indirectly
-    :to-achieve [takes-control-of ?attacker ?victim]
-    :plan (:goal [takes-indirect-control-of ?attacker ?victim] :plan ?indirect-control-plan))
+    :to-achieve [takes-control-of ?attacker ?victim-property ?victim]
+    :plan (:goal [takes-indirect-control-of ?attacker ?victim-property ?victim]))
 
 ;;; Find an input of the victim and modify its contents
+;;; probably should say that the behavior is affected by the content
 (defattack-method control-component-through-input
-    :to-achieve [takes-indirect-control-of ?attacker ?victim]
+    :to-achieve [takes-indirect-control-of ?attacker ?victim-property ?victim]
     ;; assumption is that we know thing
     :bindings ([input-of ?thing ?input])
-    :plan (:goal [modify ?attacker contents ?input] :plan ?input-modification-plan)
+    :plan (:goal [modify ?attacker contents ?input])
+    )
+
+
+;;; want to say that if the property is affected by the size of the input
+;;; then change the size of the input
+
+(defattack-method control-component-through-input-size
+    :to-achieve [takes-indirect-control-of ?attacker ?victim-property ?victim]
+    ;; assumption is that we know thing
+    :bindings ([input-of ?victim ?input])
+    :plan (:goal [modify ?attacker size ?input])
     )
 
 
@@ -205,7 +262,7 @@ k;;; -*- Syntax: Joshua; Package: APLAN; Mode: JOSHUA; syntax: joshua; readtable
     :to-achieve [modify ?attacker ?victim-property ?victim]
     :bindings ([part-of ?victim ?component])
     :prerequisites ([impacts ?component-property ?component ?victim-property ?victim])
-    :plan (:goal [modify ?attacker ?component-property ?component] :plan ?modification-plan)
+    :plan (:goal [modify ?attacker ?component-property ?component])
     )
 
 ;;; modify a data-set by controlling a process that controls the data-set
@@ -215,8 +272,8 @@ k;;; -*- Syntax: Joshua; Package: APLAN; Mode: JOSHUA; syntax: joshua; readtable
              [object-type-of ?victim data-set])
     :prerequisites ([process-controls-data-set ?controller ?victim])
     :plan (:sequential 
-           (:goal [takes-control-of ?attacker ?controller] :plan ?control-plan)
-           (:goal [use-control-of-to-affect-resource ?attacker ?controller ?victim-property ?victim] :plan ?modification-plan)) 
+           (:goal [takes-control-of ?attacker (controlled-data-set ?victim) ?controller])
+           (:goal [use-control-of-to-affect-resource ?attacker ?controller ?victim-property ?victim])) 
     )
 
 ;;; NOTE: This should be expressed in a more general way about transforming formats
@@ -225,8 +282,8 @@ k;;; -*- Syntax: Joshua; Package: APLAN; Mode: JOSHUA; syntax: joshua; readtable
     :to-achieve [modify ?attacker ?file-property ?object-file]
     :prerequisites ([object-type-of ?object-file dynamically-loadable-code-file]
                     [value-of (?object-file source-file) ?source-file])
-    :plan (:sequential (:goal [modify ?attacker code ?source-file] :plan ?modification-plan)
-                       (:goal [force-compilation ?attacker ?source-file ?object-file] :Plan ?compile-plan))
+    :plan (:sequential (:goal [modify ?attacker code ?source-file])
+                       (:goal [force-compilation ?attacker ?source-file ?object-file]))
     )
 
 (defattack-method modify-through-available-access-rights
@@ -234,41 +291,47 @@ k;;; -*- Syntax: Joshua; Package: APLAN; Mode: JOSHUA; syntax: joshua; readtable
     :bindings ([value-of (?object machines) ?computer])
     :typing ([object-type-of ?computer computer])
     :prerequisites ([requires-access-right ?object write ?capability])
-    :plan (:sequential (:goal [achieve-access-right ?attacker write ?object ?user] :plan ?access-plan)
-                       (:goal [use-access-right-to-modify ?attacker write ?user ?object] :plan ?modification-plan))
+    :plan (:sequential (:goal [achieve-access-right ?attacker write ?object ?user])
+                       (:action [use-access-right-to-modify ?attacker write ?user ?object]))
     )
 
 ;;; To increase the size of the active user set of some OS
 ;;; Find a user in the authorization pool for the OS
 ;;; and make that user a member of the active user set
+(defattack-method modify-size-by-increase-size
+    :to-achieve [modify ?attacker size ?object]
+    :plan (:goal [increase-size ?attacker ?object])
+    )
+
 (defattack-method modify-active-user-set
     :to-achieve [increase-size ?attacker ?active-user-set]
     :bindings ([value-of (?active-user-set os) ?os-instance]
-               [value-of (?os-instance authorization-pool) ?authoorization-pool]
+               [value-of (?os-instance authorization-pool) ?authorization-pool]
                [value-of (?authorization-pool users) ?user])
     :typing ([object-type-of ?active-user-set user-set]
              [object-type-of ?os-instance operating-system]
              [object-type-of ?authorization-pool authorization-pool]
              [object-type-of ?user user])
-    :plan (:goal [make-member-of ?attacker ?user ?active-user-set] :plan ?plan)
+    :plan (:goal [make-member-of ?attacker ?user ?active-user-set])
     )
 
 ;;; NOTE: There are other ways of doing this, e.g. find some logged in user and take over his process
 ;;; in order to submit lots of jobs
 
+
+
 (defattack-method modify-job-request-queue
     :to-achieve [increase-size ?attacker ?user-job-launch-queue]
     :bindings ([named-part-of ?full-job-launch-queue user-job-launch-request-queue ?user-job-launch-queue]
                [value-of (?full-job-launch-queue os) ?os-instance]
-               )
+	       [value-of (?os-instance job-launch-queue) ?full-job-launch-queue])
     :typing ([object-type-of ?user-job-launch-queue job-launch-request-queue]
              [object-type-of ?full-job-launch-queue os-job-launch-request-queue]
              [object-type-of ?os-instance operating-system])
-    :prerequisites ([value-of (?os-instance job-launch-queue) ?full-job-launch-queue])
     :plan (:sequential
-           (:goal [logon ?attacker ?user ?os-instance] :plan ?login-plan)
+           (:goal [logon ?attacker ?user ?os-instance])
            (:repeated-action [submit-user-jobs ?user ?user-job-launch-queue])))
-		    
+
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;
 ;;; Performance related specifics
@@ -281,10 +344,10 @@ k;;; -*- Syntax: Joshua; Package: APLAN; Mode: JOSHUA; syntax: joshua; readtable
     :to-achieve [use-control-of-to-affect-resource ?attacker ?controller performance ?target]
     :bindings ([named-part-of ?os job-admitter ?controller]
                [value-of (?os-instance workload) ?input])
-    :typing ([object-type-of ?controller job-admitter]
+    :typing ([object-type-of ?controller os-job-admitter]
              [object-type-of ?os operating-system]
              [object-type-of ?input os-workload]
-             [object-type-of ?target process])
+	     [object-type-of ?target process])
     :plan (:action [add-user-jobs ?attacker ?input]))
 
 
@@ -308,7 +371,7 @@ k;;; -*- Syntax: Joshua; Package: APLAN; Mode: JOSHUA; syntax: joshua; readtable
     :to-achieve [achieve-knowledge-of-contents ?attacker ?file]
     :typing ([object-type-of ?file file])
     :plan (:sequential
-           (:goal [achieve-access-right ?attacker read ?file ?user] :plan ?plan)
+           (:goal [achieve-access-right ?attacker read ?file ?user])
            (:action [read-with-rights-of ?attacker ?user ?file]))
     )
 
@@ -334,7 +397,7 @@ k;;; -*- Syntax: Joshua; Package: APLAN; Mode: JOSHUA; syntax: joshua; readtable
              )
     ;; This is the key pre-req: The process has the desired right to the object
     :prerequisites ([has-permission ?the-process ?right ?object])
-    :plan (:goal [takes-direct-control-of ?attacker ?the-process] :plan ?control-plan)
+    :plan (:goal [takes-direct-control-of ?attacker (access-right ?right ?object) ?the-process])
     )
 
 
@@ -344,12 +407,12 @@ k;;; -*- Syntax: Joshua; Package: APLAN; Mode: JOSHUA; syntax: joshua; readtable
                [named-part-of ?machine os ?os-instance]
                [requires-access-right ?object ?right ?capability])
     ;; Note: has-capability is a function not an assertion
-    :prerequisites ((has-capability ?user ?capability))
+    :PREREQUISITES ((has-capability ?user ?capability))
     :typing ([object-type-of ?object computer-resource]
              [object-type-of ?machine computer]
              [object-type-of ?os-instance operating-system]
              [object-type-of ?user user])
-    :plan (:goal [logon ?attacker ?user ?os-instance] :plan ?password-plan)
+    :plan (:goal [logon ?attacker ?user ?os-instance])
     )
 
 
@@ -364,10 +427,9 @@ k;;; -*- Syntax: Joshua; Package: APLAN; Mode: JOSHUA; syntax: joshua; readtable
     :bindings ([value-of (?active-user-set os) ?os-instance])
     :typing ([object-type-of ?active-user-set user-set]
              [object-type-of ?os-instance operating-system])
-    :plan (:goal [logon ?attacker ?user ?os-instance] :plan ?logon-plan)
+    :plan (:goal [logon ?attacker ?user ?os-instance])
     )
 
-;;; Fix: use of logon is inconsistent?  Not really, the :action thing isn't really a predication
 (defattack-method how-to-logon-1
     :to-achieve [logon ?attacker ?user ?os-instance]
     :bindings ([value-of (?os-instance authorization-pool) ?pool]
@@ -376,8 +438,8 @@ k;;; -*- Syntax: Joshua; Package: APLAN; Mode: JOSHUA; syntax: joshua; readtable
              [object-type-of ?pool authorization-pool]
              [object-type-of ?user user])
     :plan (:sequential
-           (:goal [achieve-knowledge-of-password ?attacker ?user ?os-instance] :plan ?password-plan)
-           (:goal [achieve-connection ?attacker ?os-instance telnet] :plan ?connection-plan)
+           (:goal [achieve-knowledge-of-password ?attacker ?user ?pool])
+           (:goal [achieve-connection ?attacker ?os-instance telnet])
            (:action [logon ?attacker ?user ?os-instance])))
 
 (defattack-method how-to-logon-2
@@ -388,8 +450,8 @@ k;;; -*- Syntax: Joshua; Package: APLAN; Mode: JOSHUA; syntax: joshua; readtable
              [object-type-of ?pool authorization-pool]
              [object-type-of ?user user])
     :plan (:sequential
-           (:goal [achieve-knowledge-of-password ?attacker ?user ?pool] :plan ?password-plan)
-           (:goal [achieve-connection ?attacker ?os-instance ssh] :plan ?connection-plan)
+           (:goal [achieve-knowledge-of-password ?attacker ?user ?pool])
+           (:goal [achieve-connection ?attacker ?os-instance ssh])
            (:action [logon ?attacker ?user ?os-instance])))
 
 
@@ -408,7 +470,7 @@ k;;; -*- Syntax: Joshua; Package: APLAN; Mode: JOSHUA; syntax: joshua; readtable
 (defattack-method how-to-get-password-by-guessing
     :to-achieve [achieve-knowledge-of-password ?attacker ?user ?resource]
     :prerequisites ((not (equal ?attacker ?user)))
-    :plan (:goal [guess-password ?attacker ?user ?resource] :plan ?guess-plan)
+    :plan (:goal [guess-password ?attacker ?user ?resource])
     )
 
 (defattack-method guess-typical-user
@@ -434,7 +496,7 @@ k;;; -*- Syntax: Joshua; Package: APLAN; Mode: JOSHUA; syntax: joshua; readtable
     :bindings ([uses-machine ?machine ?user]
                [named-part-of ?machine os ?os-instance])
     :plan (:sequential
-           (:goal [achieve-connection ?attacker ?os-instance emai] :plan ?connection-plan)
+           (:goal [achieve-connection ?attacker ?os-instance email])
            (:action [social-engineering-attack ?attacker ?user]))
     )
 
@@ -455,7 +517,7 @@ k;;; -*- Syntax: Joshua; Package: APLAN; Mode: JOSHUA; syntax: joshua; readtable
                [value-of (?machine subnets) ?subnet]
                )
     :plan (:parallel 
-           (:goal [observe-network-traffic ?attacker ?subnet] :plan ?observation-plan)
+           (:goal [observe-network-traffic ?attacker ?subnet])
            (:action [sniff-a-password ?attacker ?user ?subnet]))
     )
 
@@ -508,14 +570,14 @@ k;;; -*- Syntax: Joshua; Package: APLAN; Mode: JOSHUA; syntax: joshua; readtable
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 (defattack-method control-the-network-stack
-    :to-achieve [takes-direct-control-of ?attacker ?network-stack]
+    :to-achieve [takes-direct-control-of ?attacker ?stack-property ?network-stack]
     :bindings ([named-part-of ?os-instance network-monitor ?network-stack]
                [value-of (?os-instance superuser) ?superuser])
     :typing ([object-type-of ?network-stack network-stack]
              [object-type-of ?os-instance operating-system]
              [object-type-of ?superuser user])
     :plan (:sequential 
-           (:goal [logon ?attacker ?superuser ?os-instance] :plan ?logon-plan)
+           (:goal [logon ?attacker ?superuser ?os-instance])
            (:action [control ?attacker ?network-stack])))
 
 (defattack-method read-network-traffic
@@ -526,7 +588,7 @@ k;;; -*- Syntax: Joshua; Package: APLAN; Mode: JOSHUA; syntax: joshua; readtable
     :typing ([object-type-of ?subnet switched-subnet]
              [object-type-of ?switch switch]
              [object-type-of ?network-stack network-stack])
-    :plan (:sequential (:goal [takes-direct-control-of ?attacker ?network-stack (to-affect ?property ?target)] :plan ?control-plan)
+    :plan (:sequential (:goal [takes-direct-control-of ?attacker network-traffic ?network-stack])
                        (:action [observe ?attacker network-traffic ?subnet]))
     )
 
@@ -555,7 +617,7 @@ k;;; -*- Syntax: Joshua; Package: APLAN; Mode: JOSHUA; syntax: joshua; readtable
           [object-type-of ?target-computer computer]
           [uses-machine ?user-computer ?user]
           [object-type-of ?user-computer computer]
-          [connected ?user-computer ?target-computer ?path]
+          [connected ?target-computer ?user-computer ?path]
 	  ]
   )
 

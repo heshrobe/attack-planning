@@ -335,7 +335,9 @@
   :included-object-types (print-nicely-mixin))
 
 (define-object-type attacker
-  :included-object-types (user))
+    :included-object-types (user)
+    :slots (world)
+    )
 
 (define-object-type typical-user
   :included-object-types (user typical-object-mixin))
@@ -513,6 +515,11 @@
 
 (defgeneric operating-system-for-machine (machine-type))
 
+(define-object-type has-policy-mixin
+    :other-instance-variables ((positive-policies :accessor positive-policies :initform nil)
+			       (negative-policies :accessor negative-policies :initform nil))
+    )
+
 (define-object-type computer
   :parts ((os (operating-system-for-machine self)))
   :slots ((ip-addresses :set-valued t)
@@ -523,7 +530,7 @@
           (communication-protocols :set-valued t)
           system-type
           health-status)
-  :included-object-types (print-nicely-mixin))
+  :included-object-types (has-policy-mixin print-nicely-mixin))
 
 (define-object-type typical-computer
     :included-object-types (computer typical-object-mixin)
@@ -643,24 +650,35 @@
 #-genera
 (defmethod ip-address-integer :around ((iadd ip-address))
   (if (slot-boundp iadd 'integer)
-    (call-next-method)
-    (setf (ip-address-integer iadd)
-          (+ (ash (octet1 iadd) 24.)
-             (ash (octet2 iadd) 16.)
-             (ash (octet3 iadd) 8.)
-             (octet4 iadd))))) 
+      (call-next-method)
+    (let ((answer 0))
+      (setq answer (dpb (octet4 iadd) (byte 8 0) answer))
+      (setq answer (dpb (octet3 iadd) (byte 8 8) answer))
+      (setq answer (dpb (octet2 iadd) (byte 8 16) answer))
+      (setq answer (dpb (octet1 iadd) (byte 8 24) answer))
+      (setf (ip-address-integer iadd) answer)
+      answer)))
+
+(define-object-type basic-subnet-mask
+  :parts ((ip-address ip-address)
+	  (mask ip-address)))
 
 (define-object-type subnet-mask
-  :parts ((ip-address ip-address)
-          (mask ip-address))
-  :included-object-types (print-nicely-mixin))
+  :other-instance-variables ((exception-masks :accessor exception-masks :initform nil)
+			     (intervals :accessor intervals :initform nil)
+			     (intervals-computed? :accessor intervals-computed? :initform nil))
+  :included-object-types (basic-subnet-mask print-nicely-mixin))
+
+(defmethod intervals :around ((mask subnet-mask))
+  (unless (intervals-computed? mask)
+    (compute-intervals mask))
+  (call-next-method))
 
 (define-object-type positive-location
   :included-object-types (subnet-mask))
 
 (define-object-type negative-location
   :included-object-types (subnet-mask))
-
 
 (define-object-type network-traffic
   :slots (subnet)
@@ -674,13 +692,15 @@
       (tell `[value-of (,traffic subnet) ,subnet])
       (tell `[value-of (,subnet network-traffic) ,traffic]))))
 
+(define-object-type subnet-mixin
+    :slots ((computers :set-valued t)
+	    (routers :set-valued t))
+    )
+
 (define-object-type subnet
-  :slots ((computers :set-valued t)
-          network-traffic 
-          site
-          (routers :set-valued t))
+  :slots (network-traffic site)
   :parts ((mask subnet-mask))
-  :included-object-types (print-nicely-mixin)
+  :included-object-types (subnet-mixin print-nicely-mixin)
   :initializations ((make-traffic-for-subnet #-genera self #+genera scl:self)))
 
 (define-object-type switched-subnet
@@ -704,7 +724,7 @@
 ;; computer provides that
 (define-object-type router
   :included-object-types (computer)
-  ) 
+  )
 
 ;; we'll assume that iot cameras are stationary
 ;; (i.e., have fixed IPs)
@@ -729,7 +749,12 @@
 (define-object-type site
   :included-object-types (print-nicely-mixin)
   :parts ((net-mask subnet-mask))
-  :slots ((subnets :set-valued t))) 
+  :slots ((subnets :set-valued t)))
+
+(define-object-type external-internet
+    :included-object-types (subnet-mixin print-nicely-mixin)
+    :slots ((subnets :set-valued t)
+	    ))
 
 (define-object-type communication-protocols
     :included-object-types (print-nicely-mixin)

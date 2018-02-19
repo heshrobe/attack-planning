@@ -159,14 +159,17 @@
 			:test #'equal))))
     answers))
 
-(defun create-attacker (name &key positive-mask-address positive-mask-mask
-                             negative-mask-address negative-mask-mask)
-  (let* ((attacker (make-object 'attacker :name name)))
-    (apply-positive-and-negative-masks attacker 
-				       positive-mask-address positive-mask-mask
-				       negative-mask-address negative-mask-mask)
+(defun create-attacker (name &key world-name)
+  (let* ((attacker (make-object 'attacker :name name))
+	 (the-world (follow-path (list world-name)))
+	 (his-machine (make-object 'typical-computer :name (intern (string-upcase (format nil "~a-machine" name))))))
+    (tell `[value-of (,attacker world) ,the-world])
+    (tell `[value-of (,attacker machines) ,his-machine])
+    (tell `[uses-machine ,his-machine ,attacker])
+    (tell `[value-of (,his-machine subnets) ,the-world])
+    (tell `[value-of (,the-world computers) ,his-machine])
+    (tell `[value-of (,attacker location) ,the-world])
     attacker))
-
 
 (define-aplan-command (com-show-plan :name t)
     ((which 'integer) 

@@ -7,6 +7,9 @@
 ;; We're assuming that entire network is internal (LAN)
 (defsite cctv-network "192.0.0.0" "255.0.0.0")
 
+;;; The rest of the world which is where the bad guy is assumed to live
+(defexternal-internet the-wild ("192.0.0.0" "255.0.0.0"))
+
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Communication pool 
 ;;
@@ -34,7 +37,11 @@
   :authorization-pools (communication-pool))
 
 ;; Define machines in communication pool
-(defrouter cctv-router ("192.0.0.0" "10.0.0.0") :authorization-pool communication-pool :superuser router-administrator)
+(defrouter cctv-router ("192.0.0.0" "10.0.0.0") 
+  :authorization-pool communication-pool
+  :superuser router-administrator
+  :external-networks (the-wild)
+  )
 
 (defswitch cctv-switch switch "192.1.1.1" :authorization-pool communication-pool :superuser switch-administrator)
 
@@ -54,13 +61,20 @@
 ;; Define subnet
 (defsubnet backbone switched-subnet "192.0.0.0" "255.0.0.0")
 
-;; Define router access policies
-(tell-policy cctv-router telnet :negative-location-mask "255.0.0.0" :negative-location-address "192.0.0.0")
-(tell-policy cctv-router ssh :positive-location-mask "0.0.0.0" :positive-location-address "0.0.0.0")
+;; Define router access policies 
+
+(tell-negative-policy cctv-router telnet ("192.0.0.0"  "255.0.0.0"))
+
+(tell-positive-policy cctv-router ssh ("0.0.0.0"  "0.0.0.0") ("192.0.0.0"  "255.0.0.0"))
+
+(tell-positive-policy cctv-router email ("0.0.0.0"  "0.0.0.0") ("192.0.0.0"  "255.0.0.0"))
 
 ;; Define switch access policies
-(tell-policy cctv-switch telnet :negative-location-mask "255.255.0.0" :negative-location-address "192.1.0.0")
-(tell-policy cctv-switch ssh :positive-location-mask "0.0.0.0" :positive-location-address "0.0.0.0")
+(tell-negative-policy cctv-switch telnet ("192.1.0.0" "255.255.0.0"))
+
+(tell-positive-policy cctv-switch ssh  ("0.0.0.0"  "0.0.0.0"))
+
+(tell-positive-policy cctv-switch email  ("0.0.0.0"  "0.0.0.0"))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Server pool 
@@ -184,8 +198,9 @@
   :superuser device-administrator)
 
 ;; define video-machine-policy
-(tell-policy typical-camera telnet :negative-location-mask "255.0.0.0" :negative-location-address "192.0.0.0") 
-(tell-policy typical-camera ssh :positive-location-mask "0.0.0.0" :positive-location-address "0.0.0.0")
+(tell-negative-policy typical-camera telnet ("192.0.0.0" "255.0.0.0"))
+
+(tell-positive-policy typical-camera ssh ("0.0.0.0" "0.0.0.0"))
 
 ;;; must follow the previous guy
 ;;; since it refers to it
@@ -227,14 +242,13 @@
 ;; Instantiate attacker
 ;;; A lot of this is a complete hack.  What we'd like to say is that the attacker is 
 ;;; somewhere that can contact the router of the victim.
-(create-attacker 'typical-attacker :negative-mask-address "192.1.0.0" :negative-mask-mask "255.255.0.0") 
+;;; So we're should specify his machine, what network he lives on (the-wild)
+;;; and then we need to update all the stuff about the connect, reachable etc
+;;; predicates.
 
-(defcomputer typical-attacker-machine computer "10.10.10.10"
-	     )
+(create-attacker 'typical-attacker :world-name 'the-wild)
 
-(tell `[uses-machine ,(follow-path '(typical-attacker-machine)) ,(follow-path '(typical-attacker))])
-
-(defsubnet attacker-subnet switched-subnet "10.0.0.0" "255.0.0.0")
-
-(defswitch attacker-switch switch "10.1.1.1" )
-(tell-policy attacker-switch ssh :positive-location-mask "0.0.0.0" :positive-location-address "0.0.0.0")
+;;;(defsubnet attacker-subnet switched-subnet "10.0.0.0" "255.0.0.0")
+;;;
+;;;(defswitch attacker-switch switch "10.1.1.1" )
+;;;(tell-policy attacker-switch ssh :positive-location-mask "0.0.0.0" :positive-location-address "0.0.0.0")

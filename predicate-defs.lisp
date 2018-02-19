@@ -95,16 +95,16 @@
 (define-goal affect (attacker property resource-or-component))
 
 ;;; Takes-control-of means to affect the behavior of something either directly or indirectly
-(define-goal takes-control-of (attacker component))
+(define-goal takes-control-of (attacker component-property component))
 
 ;;; Direct control means you actually control the execution of the component
 ;;; by either running your own code (e.g. code injection attacks)
 ;;; or by forcing control flow to go to a place that does what you want done (code reuse attacks, e.g.)
-(define-goal takes-direct-control-of (attack component))
+(define-goal takes-direct-control-of (attack component-property component))
 
 ;;; Indirect control means causing the behavior of the component to change (e.g. through its inputs) but not
 ;;; causing a change in control flow
-(define-goal takes-indirect-control-of (attack component))
+(define-goal takes-indirect-control-of (attack component-property component))
 
 ;;; Having gained control use it to affect the property of the target
 (define-goal use-control-of-to-affect-resource (attacker controlled-thing property resource))

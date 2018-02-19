@@ -44,7 +44,7 @@
                       finally (return (list sub-goals `(list ,key ,@plan-structure)))))
                  ((:goal :plan)
                   (let* ((goal (getf structure :goal))
-                         (plan (getf structure :plan))
+                         (plan (getf structure :plan (ji::make-logic-variable-maker (gentemp (string-upcase "?plan-") ))))
                          (rebuilt-statement (attach-logic-variable-to-predication-maker goal plan)))
                     (list (list rebuilt-statement)
                           (if (null connective)
