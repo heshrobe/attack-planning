@@ -479,6 +479,9 @@
 (define-object-type windows-7
     :included-object-types (windows))
 
+(define-object-type navnet 
+    :included-object-types (windows-7-computer))
+
 (define-object-type windows-8
   :included-object-types (windows))
 
