@@ -167,10 +167,20 @@
 	     :authorization-pool server-pool
 	     :superuser server-administrator)
 
+(tell-positive-policy windows-email-vm email ("0.0.0.0" "0.0.0.0"))
+(tell-positive-policy windows-email-vm ssh ("0.0.0.0" "0.0.0.0"))
+
 ;; Define resources in server pool
-(defresource emails data-resource
+(defresource emails file
     :capability-requirements ((write server-super-user) (read server-user-read))
     :machines (windows-email-vm))
+
+;;;;;;;;;;;;;;;;;
+;; EXTERNAL DEVICE POOL: todo
+;;
+;;;;;;;;;;;;;;;;;
+
+
 
 ;; TODO: need to define new data types for a VM (since we 
 ;; running a windows VM on the linux machine)
