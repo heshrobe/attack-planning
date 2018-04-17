@@ -425,7 +425,7 @@
     :included-object-types (print-nicely-mixin))
 
 (defmethod initialize-os-slots-of-parts ((os operating-system))
-  (ask `[part-of ,os ?part]
+  (ask `[part-of ,os ?part]cradlepoint-routercradlepoint-router
        #'(lambda (just)
 	   (declare (ignore just))
 	   (tell `[value-of (?part host-os) ,os])
@@ -706,18 +706,38 @@
   :included-object-types (subnet-mixin print-nicely-mixin)
   :initializations ((make-traffic-for-subnet #-genera self #+genera scl:self)))
 
+;;; This is a "star-like" wired subnet in which packets are delivered from
+;;; the connected devices to the switch which sends them to the connected
+;;; device which is the intended destination.  Is there a "promiscuous" mode in which 
+;;; a connected device gets sent every packet?
+
 (define-object-type switched-subnet
   :slots (switch)
   :included-object-types (subnet))
 
+;;; This is a network type like the old thick ethernet
+;;; in which any device physically connected to it can see every packet
 (define-object-type shared-media-subnet
-  :included-object-types (subnet))
+    :included-object-types (subnet))
+
+;;; In addition anybody nearby could see any packet
+(define-object-type wireless-subnet
+    :included-object-types (shared-media-subnet))
+
+;;; This is the standard automotive and other control system
+;;; bus
+(define-object-type canbus-subnet
+    :included-object-types (shared-media-subnet))
 
 ;; A switch is on one subnet.
 ;; it is reponsible in a switched network for sending
 ;; traffic between the computers connected to that subnet
+;;; Doesn't it also connect to a next level router?
 (define-object-type switch 
-  :included-object-types (computer))
+    :included-object-types (computer))
+
+(define-object-type wireless-router
+    :included-object-types (switch))
 
 ;; router is the thing connecting subnets
 ;; One might want to specialize this later into things with 

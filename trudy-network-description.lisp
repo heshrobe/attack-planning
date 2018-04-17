@@ -1,11 +1,36 @@
 ;;; -*- Mode: LISP; Syntax: Joshua; Package: aplan; readtable: joshua -*- 
 
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;;
 ;;; First attempt at trudy network description
+;;;
+;;;
+;;; First we define a site which should be a network range (192.0.0.0 255.255.255.0)
+;;;  Defsite should allow us to pick a range with holes in it (but doesn't yet)
+;;;
+;;; Then we define particular subnets within that site
+;;; (192.10.0.0 255.255.0.0 and 192.20.0.0 255.255)
+;;; 
+;;; Then we define the routers that connect the subnets (not yet updated).
+;;; 
+;;; For these we specify what protocols that pass and which protocols are blocked
+;;; and from what network ranges
+;;;
+;;; Then we define machines and state what subnets those machines are on
+;;;
+;;; This information allows us to compute which machines an outside user can 
+;;; connect to using which protocols
+;;; 
+;;;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 (in-package :aplan)
 
-(defsite it-network "0.0.0.0" "192.0.0.0")
-(defsite voyage-network "0.0.0.0" "192.0.0.0")
+
+(defsite trudy "192.0.0.0" "255.0.0.0")
+
+(defsubnet it-network switched-subnet "192.10.0.0" "255.255.0.0")
+(defsubnet voyage-network switched-subnet "192.20.0.0" "255.255.0.0")
 
 (defexternal-internet outside ("192.0.0.0" "255.0.0.0"))
 ;;; how to handle the engineering network?
@@ -135,6 +160,9 @@
 	     :authorization-pool server-pool
 	     :superuser server-administrator)
 
+(tell-positive-policy cradlepoint-router ssh ("0.0.0.0"  "0.0.0.0") ("192.0.0.0"  "255.0.0.0"))
+
+
 (defcomputer navnet windows-7-computer "192.1.1.4"
 	     :authorization-pool server-pool
 	     :superuser server-administrator)
@@ -166,7 +194,7 @@
 
 ;; Instantiate manager processes
 (instantiate-a-process 'server-process '(host-laptop))
-(instantiate-a-process 'server-process '(windows-email-vm))
+(instantiate-a-process 'server-process '(windows-email-vm) :role-name 'email-server)
 
 ;; Instantiate device processes
 ;;(instantiate-a-process 'typical-user-process '(typical-camera) :role-name 'typical-camera-process)
