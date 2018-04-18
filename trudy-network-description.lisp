@@ -41,7 +41,7 @@
 ;; (routers and switches in our network model)
 ;;;;;;;;
 
-(make-object 'authorization-pool :name 'communication-pool)
+(defauthorization-pool communication-pool)
 
 (defcapability communication-super-user communication-pool)
 
@@ -63,14 +63,21 @@
   :capabilities (communication-super-user)
   :authorization-pools (communication-pool))
 
-;;; dont know what second field should be here
-(defrouter cradlepoint-router ("192.0.0.0" "10.0.0.0")
+;;; The IP-Address-Strings field is a list of every IP address that this guy is reachable
+;;; at.  The code in threading-objects.lisp will then decide to put this guy on every subnet
+;;; that those addresses lie on.  So if the router has address 192.168.10.1 and there's a subnet
+;;; called foobar with range (192.168.10.0 255.255.255.0), then the router will automatically have foobar
+;;; as one of its subnets and foobqr will have the router as one of its computers.
+;;; The external networks keyword argument is a list of NAMES of external networks, e.g. The-wild
+(defrouter cradlepoint-router ("192.10.0.1" "192.20.0.1")
   :authorization-pool communication-pool
   :superuser router-administrator
   :external-networks (outside))
 
 ;; the specs don't list an ip for the furuno hub so i dont know what to put here
-(defswitch furuno-switch switch "192.1.1.1" :authorization-pool communication-pool :superuser switch-administrator)
+(defswitch furuno-switch switch "192.10.0.2" 
+	   :authorization-pool communication-pool 
+	   :superuser switch-administrator)
 
 ;; Define resources in communication pool
 (defresource router-password-file password-file
@@ -96,21 +103,33 @@
 
 ;; Define router access policies 
 
-
+;;; The router will reject TELNET packets from anywhere outside the 192.x.x.x range
 (tell-negative-policy cradlepoint-router telnet ("192.0.0.0"  "255.0.0.0"))
 
 ;; first argument is allowed range, the second argument is the blacklisted range
-;; can take more arugments?
+;; can take more arugments? 
+;;; It can take an arbitary number of blacklisted ranges
+
 (tell-positive-policy cradlepoint-router ssh ("0.0.0.0"  "0.0.0.0") ("192.0.0.0"  "255.0.0.0"))
 
 (tell-positive-policy cradlepoint-router email ("0.0.0.0"  "0.0.0.0") ("192.0.0.0"  "255.0.0.0"))
 
 ;; Define switch access policies
-(tell-negative-policy furuno-switch telnet ("192.1.0.0" "255.255.0.0"))
+;;; The switch will forward TELNET packets only from within its subnet
+(tell-negative-policy furuno-switch telnet ("192.10.0.0" "255.255.0.0"))
 
 ;; why do we have this? it doesn't seem to be defining any range...
+;;; Location masks have two paths:
+;;; 1) An 4 place IP address
+;;; 2) A mask where a 1 in that bit position means you have to match
+;;;    and a zero in the mask says "don't care"
+;;; So the mask below matches everything.
+;;; In fact anything with a mask of "0.0.0.0" will match anything
+
+;;; The switch will pass SSH packets originating anywhere
 (tell-positive-policy furuno-switch ssh  ("0.0.0.0"  "0.0.0.0"))
 
+;;; anybody anywhere can send email packets through this switch
 (tell-positive-policy furuno-switch email  ("0.0.0.0"  "0.0.0.0"))
 
 ;;;;;;;;;;;;;;;;;;;;;;;
@@ -126,7 +145,7 @@
 ;; and Video Processing Server
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
-(make-object 'authorization-pool :name 'server-pool)
+(defauthorization-pool server-pool)
 
 ;; Capabilities for server pool 
 (defcapability server-super-user server-pool)
@@ -156,7 +175,7 @@
 	     :authorization-pool server-pool
 	     :superuser server-administrator)
 
-(defcomputer windows-email-vm windows-7-computer "192.1.1.3"
+(defcomputer windows-email-vm windows-7-computer "192.10.0.3"
 	     :authorization-pool server-pool
 	     :superuser server-administrator)
 

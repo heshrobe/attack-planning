@@ -23,10 +23,17 @@
 
 (defmacro defsite (name address-string address-mask)
   `(with-atomic-action
+       (kill-redefined-object ',name)
      (let* ((site (make-object 'site :name ',name))
             (net-mask (follow-path `(,site net-mask))))
        (fill-in-subnet-mask net-mask ,address-string ,address-mask)
        site)))
+
+(defmacro defauthorization-pool (name)
+  `(with-atomic-action
+       (kill-redefined-object ',name)
+     (make-object 'authorization-pool :name ',name)
+     ))
 
 
 (defmacro tell-positive-policy (bridge-or-computer connection-type (location-address location-mask)
@@ -37,8 +44,14 @@
      (tell `[policy-for ,(follow-path '(,bridge-or-computer)) ,',connection-type ,location])))
 
 
+(defun kill-redefined-object (name)
+  (let ((object (follow-path (list name) t  nil)))
+    (when object 
+      (kill object))))
+
 (defmacro defexternal-internet (name &rest excluded-subnets)
   `(with-atomic-action
+       (kill-redefined-object ',name)
        (let* ((site (make-object 'external-internet :name ',name))
 	      (location (make-positive-location-mask "0.0.0.0" "0.0.0.0")))
 	 (tell `[value-of (,site subnets) ,location])
@@ -48,6 +61,7 @@
 
 (defmacro defcomputer (name computer-type ip-address-string &key superuser authorization-pool)
   `(with-atomic-action
+       (kill-redefined-object ',name)
      (let ((computer (make-object ',computer-type :name ',name)))
        (add-ip-address-to-computer ,ip-address-string computer)
        ,(when superuser
@@ -58,6 +72,7 @@
 
 (defmacro defswitch (name switch-type ip-address-string &key authorization-pool superuser)
   `(with-atomic-action
+       (kill-redefined-object ',name)
      (let ((switch (make-object ',switch-type :name ',name)))
        (add-ip-address-to-computer ,ip-address-string switch)
        ,(when superuser
@@ -66,8 +81,16 @@
           `(tell `[value-of (,switch os authorization-pool) ,(follow-path '(,authorization-pool))]))
        switch)))
 
+;;; The IP-Address-Strings field is a list of every IP address that this guy is reachable
+;;; at.  The code in threading-objects.lisp will then decide to put this guy on every subnet
+;;; that those addresses lie on.  So if the router has address 192.168.10.1 and there's a subnet
+;;; called foobar with range (192.168.10.0 255.255.255.0), then the router will automatically have foobar
+;;; as one of its subnets and foobqr will have the router as one of its computers.
+;;; The external networks keyword argument is a list of NAMES of external networks, e.g. The-wild
+
 (defmacro defrouter (name ip-address-strings &key authorization-pool superuser external-networks)
   `(with-atomic-action 
+       (kill-redefined-object ',name)
      (let ((router (make-object 'router :name ',name)))
        (loop for ip-address-string in ',ip-address-strings
 	   do (add-ip-address-to-computer ip-address-string router))
@@ -82,6 +105,7 @@
 
 (defmacro defsubnet (name segment-type ip-address-string subnet-mask-string)
   `(with-atomic-action
+       (kill-redefined-object ',name)
      (let* ((subnet (make-object ',segment-type :name ',name))
             (mask (follow-path '(,name mask))))
        (fill-in-subnet-mask mask ,ip-address-string ,subnet-mask-string)
@@ -92,6 +116,7 @@
 			     positive-address positive-mask
 			     negative-address negative-mask) 
   `(with-atomic-action
+       (kill-redefined-object ',name)
      (let ((user (make-object ',user-type :name ',name)))
        (tell `[value-of (,user name) ,',name])
        ,@(when email-address
@@ -119,6 +144,7 @@
 
 (defmacro defcapability (name authorization-pool &key greater lesser)
   `(with-atomic-action
+       (kill-redefined-object ',name)
      (let ((capability (make-object 'capability :name ',name)))
        (tell `[value-of (,capability authorization-pool) ,(follow-path '(,authorization-pool))])
        ,@(loop for g in greater
@@ -129,6 +155,7 @@
 
 (defmacro defresource (name resource-type &key capability-requirements machines)
   `(with-atomic-action
+       (kill-redefined-object ',name)
        (let ((resource (make-object ',resource-type :name ',name)))
        ,@(loop for machine in machines
 	     collect `(tell `[value-of (,resource machines) ,(follow-path '(,machine))]))
