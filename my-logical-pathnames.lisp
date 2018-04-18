@@ -2,5 +2,5 @@
 ;;; aplan
 
 "aplan"
-'("home;*.*" "/Users/hes/Research-Projects/attack-planning/")
-'("**;*.*" "/Users/hes/Research-Projects/attack-planning/**/*.*")
+'("home;*.*" "/media/psf/Home/Research-Projects/attack-planning/")
+'("**;*.*" "/media/psf/Home/Research-Projects/attack-planning/**/*.*")

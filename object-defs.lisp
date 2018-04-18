@@ -425,7 +425,7 @@
     :included-object-types (print-nicely-mixin))
 
 (defmethod initialize-os-slots-of-parts ((os operating-system))
-  (ask `[part-of ,os ?part]cradlepoint-routercradlepoint-router
+  (ask `[part-of ,os ?part]
        #'(lambda (just)
 	   (declare (ignore just))
 	   (tell `[value-of (?part host-os) ,os])
