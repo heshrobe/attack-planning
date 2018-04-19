@@ -120,6 +120,11 @@
 (clim:define-presentation-method clim:present (item (type attacker) stream  (view clim:textual-view) &key)
   (write-string (string (role-name item)) stream))
 
+(define-aplan-command (com-load-model :name t)
+    ((pathname 'clim:pathname))
+  (load pathname))
+
+
 (define-aplan-command (com-find-plans :name t)
     ((computer 'computer)
      (property 'desirable-property :default 'performance)

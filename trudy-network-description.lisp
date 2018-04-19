@@ -182,9 +182,13 @@
 (tell-positive-policy cradlepoint-router ssh ("0.0.0.0"  "0.0.0.0") ("192.0.0.0"  "255.0.0.0"))
 
 
-(defcomputer navnet windows-7-computer "192.1.1.4"
+(defcomputer navnet windows-7-computer "192.10.0.4"
 	     :authorization-pool server-pool
 	     :superuser server-administrator)
+
+(defresource typical-chart file
+	     :capability-requirements ((write server-super-user) (read server-user-read))
+	     :machines (navnet))
 
 (tell-positive-policy windows-email-vm email ("0.0.0.0" "0.0.0.0"))
 (tell-positive-policy windows-email-vm ssh ("0.0.0.0" "0.0.0.0"))
@@ -222,8 +226,19 @@
 ;;(instantiate-a-process 'display-server-process '(display))
 
 ;; Instantiate manager processes
-(instantiate-a-process 'server-process '(host-laptop))
-(instantiate-a-process 'server-process '(windows-email-vm) :role-name 'email-server)
+;; (instantiate-a-process 'server-process '(host-laptop))
+
+(defprocess email-server
+    :process-type email-server-process
+    :machine windows-email-vm
+    )
+
+(defprocess navigation-process
+    :process-type control-system-process
+    :machine navnet
+    )
+
+(tell `[input-of ,(follow-path '(navigation-process)) ,(follow-path '(typical-chart))])
 
 ;; Instantiate device processes
 ;;(instantiate-a-process 'typical-user-process '(typical-camera) :role-name 'typical-camera-process)

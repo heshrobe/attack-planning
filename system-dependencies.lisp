@@ -64,6 +64,13 @@
            (:goal [use-control-of-to-affect-resource ?attacker ?component ?desirable-property ?victim] :plan ?modification-plan))
     )
 
+(defattack-method affect-property-by-affecting-input
+    :to-achieve [affect ?attacker ?desirable-property ?victim]
+    :prerequisites ([impacts ?resource-property ?resource ?desirable-property ?victim])
+    :typing ([object-type-of ?resource computer-resource])
+    :plan (:goal [affect ?attacker ?resource-property ?resource])
+    )
+
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;
 ;;; Performance
@@ -86,6 +93,16 @@
 	     [object-type-of ?workload os-workload])
     :plan (:goal [increase-size ?attacker ?workload])
     )
+
+
+(defattack-method send-lots-of-emails
+    :to-achieve [affect ?attacker performance ?process]
+    :prerequisites ([desirable-property-of ?process performance])
+    :bindings ([value-of (?process host-os) ?os-instance])
+    :typing ([object-type-of ?process email-server-process])
+    :plan (:sequential
+	   (:goal [achieve-connection ?attacker ?os-instance email])
+	   (:repeated-action [submit ?attacker large-email ?process])))
 
 ;;; now what we want to say is:
 ;;; Either 
@@ -349,9 +366,7 @@
              [object-type-of ?input os-workload]
 	     [object-type-of ?target process])
     :plan (:action [add-user-jobs ?attacker ?input]))
-
-
-
+    
 ;;; If you control a process that produces an output
 ;;; you can use that control to mung the data-structure in core
 (defattack-method mung-in-core-data-structures
@@ -405,12 +420,16 @@
     :to-achieve [achieve-access-right ?attacker ?right ?object ?user]
     :bindings ([value-of (?object machines) ?machine]
                [named-part-of ?machine os ?os-instance]
-               [requires-access-right ?object ?right ?capability])
+               [requires-access-right ?object ?right ?capability]
+	       [value-of (?os-instance authorization-pool) ?pool]
+	       [value-of (?pool users) ?user]
+	       )
     ;; Note: has-capability is a function not an assertion
     :PREREQUISITES ((has-capability ?user ?capability))
     :typing ([object-type-of ?object computer-resource]
              [object-type-of ?machine computer]
              [object-type-of ?os-instance operating-system]
+	     [object-type-of ?pool authorization-pool]
              [object-type-of ?user user])
     :plan (:goal [logon ?attacker ?user ?os-instance])
     )

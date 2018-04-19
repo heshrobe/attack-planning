@@ -152,6 +152,9 @@
 (define-object-type server-process
     :included-object-types (process))
 
+(define-object-type email-server-process
+    :included-object-types (server-process))
+
 (define-object-type storage-server-process
   :included-object-types (server-process))
 
@@ -171,7 +174,12 @@
   :included-object-types (server-process))
 
 (define-object-type web-server-process
-  :included-object-types (server-process))
+    :included-object-types (server-process))
+
+(define-object-type control-system-process
+    :included-object-types (process))    
+    
+
 
 ;;; Note:
 ;;; It might be more correct to say that there is an apache server program

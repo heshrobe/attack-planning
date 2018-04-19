@@ -176,6 +176,11 @@
 	   collect `(push (make-location-mask 'subnet-mask ,address ,mask) (exception-masks location)))
      (tell `[policy-for ,(follow-path '(,bridge-or-computer)) ,',connection-type ,location])))
 
+(defmacro defprocess (role-name &key process-type machine program)
+  `(with-atomic-action
+       (kill-redefined-object ',role-name)
+     (instantiate-a-process ',process-type '(,machine) :role-name ',role-name :program ',program)))
+
 (defun instantiate-a-process (process-type machine &key role-name program)
   (let* ((process-name (or role-name (gentemp (concatenate 'string (string-upcase (string process-type)) "-"))))
          (machine (follow-path machine))
