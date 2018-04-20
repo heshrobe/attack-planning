@@ -1,11 +1,36 @@
 ;;; -*- Mode: LISP; Syntax: Joshua; Package: aplan; readtable: joshua -*- 
 
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;;
 ;;; First attempt at trudy network description
+;;;
+;;;
+;;; First we define a site which should be a network range (192.0.0.0 255.255.255.0)
+;;;  Defsite should allow us to pick a range with holes in it (but doesn't yet)
+;;;
+;;; Then we define particular subnets within that site
+;;; (192.10.0.0 255.255.0.0 and 192.20.0.0 255.255)
+;;; 
+;;; Then we define the routers that connect the subnets (not yet updated).
+;;; 
+;;; For these we specify what protocols that pass and which protocols are blocked
+;;; and from what network ranges
+;;;
+;;; Then we define machines and state what subnets those machines are on
+;;;
+;;; This information allows us to compute which machines an outside user can 
+;;; connect to using which protocols
+;;; 
+;;;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 (in-package :aplan)
 
-(defsite it-network "0.0.0.0" "192.0.0.0")
-(defsite voyage-network "0.0.0.0" "192.0.0.0")
+
+(defsite trudy "192.0.0.0" "255.0.0.0")
+
+(defsubnet it-network switched-subnet "192.10.0.0" "255.255.0.0")
+(defsubnet voyage-network switched-subnet "192.20.0.0" "255.255.0.0")
 
 (defexternal-internet outside ("192.0.0.0" "255.0.0.0"))
 ;;; how to handle the engineering network?
@@ -16,7 +41,7 @@
 ;; (routers and switches in our network model)
 ;;;;;;;;
 
-(make-object 'authorization-pool :name 'communication-pool)
+(defauthorization-pool communication-pool)
 
 (defcapability communication-super-user communication-pool)
 
@@ -38,14 +63,21 @@
   :capabilities (communication-super-user)
   :authorization-pools (communication-pool))
 
-;;; dont know what second field should be here
-(defrouter cradlepoint-router ("192.0.0.0" "10.0.0.0")
+;;; The IP-Address-Strings field is a list of every IP address that this guy is reachable
+;;; at.  The code in threading-objects.lisp will then decide to put this guy on every subnet
+;;; that those addresses lie on.  So if the router has address 192.168.10.1 and there's a subnet
+;;; called foobar with range (192.168.10.0 255.255.255.0), then the router will automatically have foobar
+;;; as one of its subnets and foobqr will have the router as one of its computers.
+;;; The external networks keyword argument is a list of NAMES of external networks, e.g. The-wild
+(defrouter cradlepoint-router ("192.10.0.1" "192.20.0.1")
   :authorization-pool communication-pool
   :superuser router-administrator
   :external-networks (outside))
 
 ;; the specs don't list an ip for the furuno hub so i dont know what to put here
-(defswitch furuno-switch switch "192.1.1.1" :authorization-pool communication-pool :superuser switch-administrator)
+(defswitch furuno-switch switch "192.10.0.2" 
+	   :authorization-pool communication-pool 
+	   :superuser switch-administrator)
 
 ;; Define resources in communication pool
 (defresource router-password-file password-file
@@ -71,21 +103,33 @@
 
 ;; Define router access policies 
 
-
+;;; The router will reject TELNET packets from anywhere outside the 192.x.x.x range
 (tell-negative-policy cradlepoint-router telnet ("192.0.0.0"  "255.0.0.0"))
 
 ;; first argument is allowed range, the second argument is the blacklisted range
-;; can take more arugments?
+;; can take more arugments? 
+;;; It can take an arbitary number of blacklisted ranges
+
 (tell-positive-policy cradlepoint-router ssh ("0.0.0.0"  "0.0.0.0") ("192.0.0.0"  "255.0.0.0"))
 
 (tell-positive-policy cradlepoint-router email ("0.0.0.0"  "0.0.0.0") ("192.0.0.0"  "255.0.0.0"))
 
 ;; Define switch access policies
-(tell-negative-policy furuno-switch telnet ("192.1.0.0" "255.255.0.0"))
+;;; The switch will forward TELNET packets only from within its subnet
+(tell-negative-policy furuno-switch telnet ("192.10.0.0" "255.255.0.0"))
 
 ;; why do we have this? it doesn't seem to be defining any range...
+;;; Location masks have two paths:
+;;; 1) An 4 place IP address
+;;; 2) A mask where a 1 in that bit position means you have to match
+;;;    and a zero in the mask says "don't care"
+;;; So the mask below matches everything.
+;;; In fact anything with a mask of "0.0.0.0" will match anything
+
+;;; The switch will pass SSH packets originating anywhere
 (tell-positive-policy furuno-switch ssh  ("0.0.0.0"  "0.0.0.0"))
 
+;;; anybody anywhere can send email packets through this switch
 (tell-positive-policy furuno-switch email  ("0.0.0.0"  "0.0.0.0"))
 
 ;;;;;;;;;;;;;;;;;;;;;;;
@@ -101,7 +145,7 @@
 ;; and Video Processing Server
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
-(make-object 'authorization-pool :name 'server-pool)
+(defauthorization-pool server-pool)
 
 ;; Capabilities for server pool 
 (defcapability server-super-user server-pool)
@@ -131,13 +175,20 @@
 	     :authorization-pool server-pool
 	     :superuser server-administrator)
 
-(defcomputer windows-email-vm windows-7-computer "192.1.1.3"
+(defcomputer windows-email-vm windows-7-computer "192.10.0.3"
 	     :authorization-pool server-pool
 	     :superuser server-administrator)
 
-(defcomputer navnet windows-7-computer "192.1.1.4"
+(tell-positive-policy cradlepoint-router ssh ("0.0.0.0"  "0.0.0.0") ("192.0.0.0"  "255.0.0.0"))
+
+
+(defcomputer navnet windows-7-computer "192.10.0.4"
 	     :authorization-pool server-pool
 	     :superuser server-administrator)
+
+(defresource typical-chart file
+	     :capability-requirements ((write server-super-user) (read server-user-read))
+	     :machines (navnet))
 
 (tell-positive-policy windows-email-vm email ("0.0.0.0" "0.0.0.0"))
 (tell-positive-policy windows-email-vm ssh ("0.0.0.0" "0.0.0.0"))
@@ -175,23 +226,22 @@
 ;;(instantiate-a-process 'display-server-process '(display))
 
 ;; Instantiate manager processes
-(instantiate-a-process 'server-process '(host-laptop))
-(instantiate-a-process 'server-process '(windows-email-vm))
+;; (instantiate-a-process 'server-process '(host-laptop))
 
-;; Instantiate device processes
-;;(instantiate-a-process 'typical-user-process '(typical-camera) :role-name 'typical-camera-process)
+(defprocess email-server
+    :process-type email-server-process
+    :machine windows-email-vm
+    )
+
+(defprocess navigation-process
+    :process-type control-system-process
+    :machine navnet
+    )
+
+(tell `[input-of ,(follow-path '(navigation-process)) ,(follow-path '(typical-chart))])
 
 ;; Instantiate attacker
-;;; A lot of this is a complete hack.  What we'd like to say is that the attacker is 
-;;; somewhere that can contact the router of the victim.
-;;; So we're should specify his machine, what network he lives on (the-wild)
-;;; and then we need to update all the stuff about the connect, reachable etc
-;;; predicates.
-
 (create-attacker 'typical-attacker :world-name 'outside)
 
-;;;(defsubnet attacker-subnet switched-subnet "10.0.0.0" "255.0.0.0")
-;;;
-;;;(defswitch attacker-switch switch "10.1.1.1" )
-;;;(tell-policy attacker-switch ssh :positive-location-mask "0.0.0.0" :positive-location-address "0.0.0.0")
-
+;;; Need to say that the super-user is an email client of the email-server process
+(def-email-clients email-server server-administrator)
