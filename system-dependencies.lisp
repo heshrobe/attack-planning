@@ -511,12 +511,15 @@
 (defattack-method how-to-get-password-by-virus
     :to-achieve [achieve-knowledge-of-password ?attacker ?user ?resource]
     :typing ([object-type-of ?user user]
+	     [object-type-of ?process email-server-process]
+	     [object-type-of ?os-instance operating-system]
              [object-type-of ?machine computer])
-    :bindings ([uses-machine ?machine ?user]
-               [named-part-of ?machine os ?os-instance])
+    :bindings ([email-client-of ?user ?process]
+	       [value-of (?process host-os) ?os-instance]
+	       [named-part-of ?machine os ?os-instance])
     :plan (:sequential
            (:goal [achieve-connection ?attacker ?os-instance email])
-           (:action [social-engineering-attack ?attacker ?user]))
+           (:action [phishing-attack ?attacker ?user ?process]))
     )
 
 ; This stuff was in the thing above, but I'm not sure what it was trying to say

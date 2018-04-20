@@ -487,9 +487,6 @@
 (define-object-type windows-7
     :included-object-types (windows))
 
-(define-object-type navnet 
-    :included-object-types (windows-7-computer))
-
 (define-object-type windows-8
   :included-object-types (windows))
 
@@ -600,6 +597,9 @@
   :included-object-types (windows-computer))
 
 (defmethod operating-system-for-machine ((self windows-7-computer)) 'windows-7)
+
+(define-object-type navnet 
+    :included-object-types (windows-7-computer))
 
 (define-object-type windows-8-computer
   :included-object-types (windows-computer))

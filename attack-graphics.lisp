@@ -124,7 +124,6 @@
     ((pathname 'clim:pathname))
   (load pathname))
 
-
 (define-aplan-command (com-find-plans :name t)
     ((computer 'computer)
      (property 'desirable-property :default 'performance)

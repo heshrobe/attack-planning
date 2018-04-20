@@ -160,7 +160,13 @@
        ,@(loop for machine in machines
 	     collect `(tell `[value-of (,resource machines) ,(follow-path '(,machine))]))
        ,@(loop for (operation capability) in capability-requirements
-               collect `(tell `[value-of (,resource capability-requirements) (,',operation ,(follow-path '(,capability)))])))))
+	     collect `(tell `[value-of (,resource capability-requirements) (,',operation ,(follow-path '(,capability)))])))))
+
+(defmacro def-email-clients (email-server &rest clients)
+  `(let ((the-server (Follow-path (list ',email-server))))
+     (loop for client-name in ',clients
+	 for client = (Follow-path (list client-name))
+	 do (tell `[email-client-of ,client ,the-server]))))
 
 (defmacro tell-positive-policy (bridge-or-computer connection-type (location-address location-mask)
 				&rest negative-locations-and-masks)

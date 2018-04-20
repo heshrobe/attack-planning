@@ -240,20 +240,8 @@
 
 (tell `[input-of ,(follow-path '(navigation-process)) ,(follow-path '(typical-chart))])
 
-;; Instantiate device processes
-;;(instantiate-a-process 'typical-user-process '(typical-camera) :role-name 'typical-camera-process)
-
 ;; Instantiate attacker
-;;; A lot of this is a complete hack.  What we'd like to say is that the attacker is 
-;;; somewhere that can contact the router of the victim.
-;;; So we're should specify his machine, what network he lives on (the-wild)
-;;; and then we need to update all the stuff about the connect, reachable etc
-;;; predicates.
-
 (create-attacker 'typical-attacker :world-name 'outside)
 
-;;;(defsubnet attacker-subnet switched-subnet "10.0.0.0" "255.0.0.0")
-;;;
-;;;(defswitch attacker-switch switch "10.1.1.1" )
-;;;(tell-policy attacker-switch ssh :positive-location-mask "0.0.0.0" :positive-location-address "0.0.0.0")
-
+;;; Need to say that the super-user is an email client of the email-server process
+(def-email-clients email-server server-administrator)
