@@ -122,6 +122,7 @@
 
 (define-aplan-command (com-load-model :name t)
     ((pathname 'clim:pathname))
+  (clear)
   (load pathname))
 
 (define-aplan-command (com-find-plans :name t)
