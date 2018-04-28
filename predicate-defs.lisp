@@ -42,6 +42,8 @@
 
 (define-predicate uses-machine (machine user))
 
+(define-predicate email-client-of (user email-server))
+
 ;;; Typically, the DNS translation of a domain name to an IP address
 (define-predicate translation-of (symbolic-rep concrete-rep))
 

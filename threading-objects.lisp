@@ -108,9 +108,6 @@
   then [impacts ?distant-property ?distant-component ?victim-property ?victim-component]
   )
 
-
-
-
 ;;; the fairness of the scheduler controls reliable performance
 (defrule scheduler-process-controls-data-set-performance (:forward)
   if [and [object-type-of ?os-instance operating-system]
@@ -189,6 +186,17 @@
 	  ]
   then [impacts size ?partial-request-queue size ?full-request-queue]
   )
+
+(defrule performance-affects-control-system-timeliness (:forward)
+  if [object-type-of ?process control-system-process]
+  then [impacts performance ?process timeliness ?process]
+  )
+
+(defrule inputs-affect-accuracy-of-control-system-process (:forward)
+  if [and [object-type-of ?process control-system-process]
+	  [input-of ?process ?file]
+	  [object-type-of ?file file]]
+  then [impacts data-integrity ?file accuracy ?process])
 
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -305,6 +313,12 @@
   if [and [object-type-of ?computer switch]
           [object-type-of ?subnet switched-subnet]
           [value-of (?computer subnets) ?subnet]]
+  then [value-of (?subnet switch) ?computer])
+
+(defrule router-on-switched-network-is-switch (:forward)
+  if [and [object-type-of ?computer router]
+          [object-type-of ?subnet switched-subnet]
+          [value-of (?computer subnets) ?subnet]]
    then [value-of (?subnet switch) ?computer])
 
 (defrule fill-in-computer-site (:forward)
@@ -394,6 +408,17 @@
   if [object-type-of ?os-instance operating-system]
   then [desirable-property-of ?os-instance presentation-integrity])
 
+;;; control system processes have two desirable properties
+;;; accuracy and timeliness
+
+(defrule control-system-accuracy (:forward)
+  if [object-type-of ?process control-system-process]
+  then [desirable-property-of ?process accuracy])
+
+(defrule control-system-timeliness (:forward)
+  if [object-type-of ?process control-system-process]
+  then [desirable-property-of ?process timeliness])
+
 (defrule servers-run-root-in-windows (:forward)
   if [and [object-type-of ?server-process server-process]
           [value-of (?server-process host-os) ?os-instance]
@@ -469,3 +494,17 @@
 	  [value-of (?process host-os) ?os]]
   then [value-of (?os processes) ?process]
   )
+
+(defrule thread-process-host-os (:forward)
+  if [and [object-type-of ?process process]
+	  [value-of (?process machines) ?machine]
+	  [named-part-of ?machine os ?os-instance]]
+  then [value-of (?process host-os) ?os-instance])
+
+(defrule thread-superuser (:forward)
+  if [and [object-type-of ?machine computer]
+	  [named-part-of ?machine os ?os-instance]
+	  [object-type-of ?os-instance operating-system]
+	  [value-of (?os-instance superuser) ?user]
+	  [object-type-of ?user user]]
+  then [value-of (?user machines) ?machine])
