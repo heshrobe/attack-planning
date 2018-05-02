@@ -70,22 +70,23 @@
 
 (defmethod aplan-top-level ((frame aplan) &REST OPTIONS)
   (let ((*package* (find-package (string-upcase "aplan"))))
-    (APPLY #'clim:default-frame-top-level
-	   frame
-	   :prompt ">"
-	   OPTIONS)))
+    (ji:with-joshua-readtable
+	(APPLY #'clim:default-frame-top-level
+		frame
+		:prompt ">"
+		OPTIONS))))
 
 (defun run-editor ()
   (process-run-function 
-   "Frame Top Level"
-   #'(lambda ()
-       (multiple-value-bind (width height) (screen-size)
-         (setq *editor* (clim:make-application-frame 'aplan
-                                                     :pretty-name "Attack Planner"
-                                                     #-allegro :parent #-allegro (clim:find-port)
-                                                     :width (floor (* .7 width))
-                                                     :height (floor (* .8 height)))))
-       (clim:run-frame-top-level *editor*))))
+      "Frame Top Level"
+    #'(lambda ()
+	(multiple-value-bind (width height) (screen-size)
+	  (setq *editor* (clim:make-application-frame 'aplan
+						      :pretty-name "Attack Planner"
+						      #-allegro :parent #-allegro (clim:find-port)
+						      :width (floor (* .7 width))
+						      :height (floor (* .8 height)))))
+	(clim:run-frame-top-level *editor*))))
 
 
 (clim-env::define-lisp-listener-command (com-start-aplan :name t)

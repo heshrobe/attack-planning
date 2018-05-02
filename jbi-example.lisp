@@ -83,13 +83,13 @@
 	       :machines (typical-maf-caf-computer)
 	       )
   
-  (tell `[value-of (typical-maf-class-file source-file) ,(follow-path '(typical-maf-java-file))])
+  (tell `[ltms:value-of (typical-maf-class-file source-file) ,(follow-path '(typical-maf-java-file))])
 
   (defresource maf-editor program
 	       :machines (typical-maf-caf-computer)
 	       )
   
-  (tell `[value-of (maf-editor load-files) ,(follow-path '(typical-maf-class-file))])
+  (tell `[ltms:value-of (maf-editor load-files) ,(follow-path '(typical-maf-class-file))])
 
   (defresource user-typical-file typical-file
 	       :capability-requirements ((write user-write) 
@@ -199,7 +199,7 @@
       :included-object-types (user-process))
 
   (defrule maf-runs-at-user-level (:forward)
-    if [object-type-of ?process maf-process]
+    if [ltms:object-type-of ?process maf-process]
     then `[runs-with-permissions-of ?process ,(follow-path '(typical-user))])
 
 
@@ -229,7 +229,7 @@
   ;; (instantiate-a-process 'iis-web-server-process '(maf1) :role-name 'web-server-process)
   (instantiate-a-process 'typical-user-process '(typical-maf-caf-computer) :role-name 'maf-client)
   (instantiate-a-process 'maf-process '(typical-maf-caf-computer) :role-name 'typical-maf-editor-process)
-  (tell `[value-of (typical-maf-editor-process program) ,(follow-path '(maf-editor))])
+  (tell `[ltms:value-of (typical-maf-editor-process program) ,(follow-path '(maf-editor))])
   (tell `[output-of ,(follow-path '(typical-maf-editor-process)) ,(follow-path '(typical-maf-plan))])
   (tell `[input-of ,(follow-path '(typical-maf-editor-process)) ,(follow-path '(typical-graphics-file))])
 

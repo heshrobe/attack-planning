@@ -46,12 +46,12 @@
 (defattack-method affect-property-by-controlling-impacting-component
     :to-achieve [affect ?attacker ?desirable-property ?victim]
     ;; find some component of the OS of a machine that the victim runs on
-    :bindings ([value-of (?victim machines) ?computer]
+    :bindings ([ltms:value-of (?victim machines) ?computer]
                [named-part-of ?computer os ?os-instance]
                [part-of ?os-instance ?component])
-    :typing ([object-type-of ?victim computer-resource]
-             [object-type-of ?os-instance operating-system]
-	     [object-type-of ?component process])
+    :typing ([ltms:object-type-of ?victim computer-resource]
+             [ltms:object-type-of ?os-instance operating-system]
+	     [ltms:object-type-of ?component process])
     :prerequisites ([impacts ?component-property ?component ?desirable-property ?victim])
     :plan (:sequential
            ;; this breaks down into two steps:
@@ -67,7 +67,7 @@
 (defattack-method affect-property-by-affecting-input
     :to-achieve [affect ?attacker ?desirable-property ?victim]
     :prerequisites ([impacts ?resource-property ?resource ?desirable-property ?victim])
-    :typing ([object-type-of ?resource computer-resource])
+    :typing ([ltms:object-type-of ?resource computer-resource])
     :plan (:goal [affect ?attacker ?resource-property ?resource])
     )
 
@@ -86,11 +86,11 @@
 (defattack-method increase-workload-to-decrease-performance
     :to-achieve [affect ?attacker performance ?process]
     :prerequisites ([desirable-property-of ?process performance])
-    :bindings ([value-of (?process host-os) ?os]
-	       [value-of (?os workload) ?workload])
-    :typing ([object-type-of ?process process]
-	     [object-type-of ?os operating-system]
-	     [object-type-of ?workload os-workload])
+    :bindings ([ltms:value-of (?process host-os) ?os]
+	       [ltms:value-of (?os workload) ?workload])
+    :typing ([ltms:object-type-of ?process process]
+	     [ltms:object-type-of ?os operating-system]
+	     [ltms:object-type-of ?workload os-workload])
     :plan (:goal [increase-size ?attacker ?workload])
     )
 
@@ -98,8 +98,8 @@
 (defattack-method send-lots-of-emails
     :to-achieve [affect ?attacker performance ?process]
     :prerequisites ([desirable-property-of ?process performance])
-    :bindings ([value-of (?process host-os) ?os-instance])
-    :typing ([object-type-of ?process email-server-process])
+    :bindings ([ltms:value-of (?process host-os) ?os-instance])
+    :typing ([ltms:object-type-of ?process email-server-process])
     :plan (:sequential
 	   (:goal [achieve-connection ?attacker ?os-instance email])
 	   (:repeated-action [submit ?attacker large-email ?process])))
@@ -114,13 +114,13 @@
 
 (defattack-method increase-workload-by-increasing-job-launch-queue
     :to-achieve [increase-size ?attacker ?workload]
-    :bindings ([value-of (?workload os) ?os]
-	       [value-of (?os job-launch-queue) ?queue]
+    :bindings ([ltms:value-of (?workload os) ?os]
+	       [ltms:value-of (?os job-launch-queue) ?queue]
 	       [named-part-of ?queue user-job-launch-request-queue ?user-job-launch-queue])
-    :typing ([object-type-of ?workload os-workload]
-	     [object-type-of ?os operating-system]
-	     [object-type-of ?queue os-job-launch-request-queue]
-	     [object-type-of ?user-job-launch-queue job-launch-request-queue])
+    :typing ([ltms:object-type-of ?workload os-workload]
+	     [ltms:object-type-of ?os operating-system]
+	     [ltms:object-type-of ?queue os-job-launch-request-queue]
+	     [ltms:object-type-of ?user-job-launch-queue job-launch-request-queue])
     :plan (:goal [increase-size ?attacker ?user-job-launch-queue]))
 
 
@@ -134,7 +134,7 @@
 (defattack-method read-file-property-directly
     :to-achieve [affect ?attacker data-privacy ?file]
     :prerequisites ([desirable-property-of ?file data-privacy])
-    :typing ([object-type-of ?file data-resource])
+    :typing ([ltms:object-type-of ?file data-resource])
     :plan (:goal [achieve-knowledge-of-contents ?attacker ?file])
     )
 
@@ -147,7 +147,7 @@
 
 (defattack-method write-file-property-directly
     :to-achieve [affect ?attacker data-integrity ?file]
-    :typing ([object-type-of ?file file])
+    :typing ([ltms:object-type-of ?file file])
     :prerequisites ([desirable-property-of ?file data-integrity])
     :plan (:goal [modify ?attacker contents ?file])
     )
@@ -157,7 +157,7 @@
 (defattack-method mung-process-output
     :to-achieve [affect ?attacker data-integrity ?data-set]
     :bindings ([output-of ?process ?data-set])    
-    :typing ([object-type-of ?process process])
+    :typing ([ltms:object-type-of ?process process])
     :plan (:sequential
            (:goal [takes-control-of ?attacker data-integrity ?process])
            (:goal [use-control-of-to-affect-resource ?attacker ?process data-integrity ?data-set]))
@@ -180,11 +180,11 @@
 
 (defattack-method control-process-through-loadable-files
     :to-achieve [takes-direct-control-of ?attacker ?victim-property ?victim]
-    :bindings ([value-of (?victim program) ?program]
-               [value-of (?program load-files) ?file])
-    :typing ([object-type-of ?victim process]
-             [object-type-of ?program program]
-             [object-type-of ?file dynamically-loadable-code-file])
+    :bindings ([ltms:value-of (?victim program) ?program]
+               [ltms:value-of (?program load-files) ?file])
+    :typing ([ltms:object-type-of ?victim process]
+             [ltms:object-type-of ?program program]
+             [ltms:object-type-of ?file dynamically-loadable-code-file])
     :plan (:sequential 
            (:goal [modify ?attacker contents ?file])
            ;; Note: this is a hack right now.  Really it should be a goal which would involve
@@ -200,9 +200,9 @@
 ;;; to the plan.  Just rationality check, I guess.
 (defattack-method buffer-overflow-can-control-server-processes
     :to-achieve [takes-direct-control-of ?attacker ?process-property ?process]
-    ;; :bindings ([value-of (?process host-os) ?os-instance])
-    :typing ([object-type-of ?process process]
-             ;; [object-type-of ?os-instance operating-system]
+    ;; :bindings ([ltms:value-of (?process host-os) ?os-instance])
+    :typing ([ltms:object-type-of ?process process]
+             ;; [ltms:object-type-of ?os-instance operating-system]
              )
     :prerequisites ((is-vulnerable-to ?process 'buffer-overflow-attack))
     :plan (:action [take-control-with-buffer-overflow ?attacker ?process])
@@ -285,8 +285,8 @@
 ;;; modify a data-set by controlling a process that controls the data-set
 (defattack-method modify-through-controller
     :to-achieve [modify ?attacker ?victim-property ?victim]
-    :typing ([object-type-of ?controller process]
-             [object-type-of ?victim data-set])
+    :typing ([ltms:object-type-of ?controller process]
+             [ltms:object-type-of ?victim data-set])
     :prerequisites ([process-controls-data-set ?controller ?victim])
     :plan (:sequential 
            (:goal [takes-control-of ?attacker (controlled-data-set ?victim) ?controller])
@@ -297,16 +297,16 @@
 ;;; but it will do for now.
 (defattack-method modify-loadable-code
     :to-achieve [modify ?attacker ?file-property ?object-file]
-    :prerequisites ([object-type-of ?object-file dynamically-loadable-code-file]
-                    [value-of (?object-file source-file) ?source-file])
+    :prerequisites ([ltms:object-type-of ?object-file dynamically-loadable-code-file]
+                    [ltms:value-of (?object-file source-file) ?source-file])
     :plan (:sequential (:goal [modify ?attacker code ?source-file])
                        (:goal [force-compilation ?attacker ?source-file ?object-file]))
     )
 
 (defattack-method modify-through-available-access-rights
     :to-achieve [modify ?attacker ?object-property ?object]
-    :bindings ([value-of (?object machines) ?computer])
-    :typing ([object-type-of ?computer computer])
+    :bindings ([ltms:value-of (?object machines) ?computer])
+    :typing ([ltms:object-type-of ?computer computer])
     :prerequisites ([requires-access-right ?object write ?capability])
     :plan (:sequential (:goal [achieve-access-right ?attacker write ?object ?user])
                        (:action [use-access-right-to-modify ?attacker write ?user ?object]))
@@ -322,13 +322,13 @@
 
 (defattack-method modify-active-user-set
     :to-achieve [increase-size ?attacker ?active-user-set]
-    :bindings ([value-of (?active-user-set os) ?os-instance]
-               [value-of (?os-instance authorization-pool) ?authorization-pool]
-               [value-of (?authorization-pool users) ?user])
-    :typing ([object-type-of ?active-user-set user-set]
-             [object-type-of ?os-instance operating-system]
-             [object-type-of ?authorization-pool authorization-pool]
-             [object-type-of ?user user])
+    :bindings ([ltms:value-of (?active-user-set os) ?os-instance]
+               [ltms:value-of (?os-instance authorization-pool) ?authorization-pool]
+               [ltms:value-of (?authorization-pool users) ?user])
+    :typing ([ltms:object-type-of ?active-user-set user-set]
+             [ltms:object-type-of ?os-instance operating-system]
+             [ltms:object-type-of ?authorization-pool authorization-pool]
+             [ltms:object-type-of ?user user])
     :plan (:goal [make-member-of ?attacker ?user ?active-user-set])
     )
 
@@ -340,11 +340,11 @@
 (defattack-method modify-job-request-queue
     :to-achieve [increase-size ?attacker ?user-job-launch-queue]
     :bindings ([named-part-of ?full-job-launch-queue user-job-launch-request-queue ?user-job-launch-queue]
-               [value-of (?full-job-launch-queue os) ?os-instance]
-	       [value-of (?os-instance job-launch-queue) ?full-job-launch-queue])
-    :typing ([object-type-of ?user-job-launch-queue job-launch-request-queue]
-             [object-type-of ?full-job-launch-queue os-job-launch-request-queue]
-             [object-type-of ?os-instance operating-system])
+               [ltms:value-of (?full-job-launch-queue os) ?os-instance]
+	       [ltms:value-of (?os-instance job-launch-queue) ?full-job-launch-queue])
+    :typing ([ltms:object-type-of ?user-job-launch-queue job-launch-request-queue]
+             [ltms:object-type-of ?full-job-launch-queue os-job-launch-request-queue]
+             [ltms:object-type-of ?os-instance operating-system])
     :plan (:sequential
            (:goal [logon ?attacker ?user ?os-instance])
            (:repeated-action [submit-user-jobs ?user ?user-job-launch-queue])))
@@ -360,11 +360,11 @@
 (defattack-method add-jobs-after-job-launcher-is-hacked
     :to-achieve [use-control-of-to-affect-resource ?attacker ?controller performance ?target]
     :bindings ([named-part-of ?os job-admitter ?controller]
-               [value-of (?os-instance workload) ?input])
-    :typing ([object-type-of ?controller os-job-admitter]
-             [object-type-of ?os operating-system]
-             [object-type-of ?input os-workload]
-	     [object-type-of ?target process])
+               [ltms:value-of (?os-instance workload) ?input])
+    :typing ([ltms:object-type-of ?controller os-job-admitter]
+             [ltms:object-type-of ?os operating-system]
+             [ltms:object-type-of ?input os-workload]
+	     [ltms:object-type-of ?target process])
     :plan (:action [add-user-jobs ?attacker ?input]))
     
 ;;; If you control a process that produces an output
@@ -372,7 +372,7 @@
 (defattack-method mung-in-core-data-structures
     :to-achieve [use-control-of-to-affect-resource ?attacker ?process data-integrity ?data-set]
     :bindings ([output-of ?process ?data-set])
-    :typing ([object-type-of ?process process])
+    :typing ([ltms:object-type-of ?process process])
     :plan (:action [modify-in-core-data-structures ?process ?data-set]))
 
 
@@ -384,7 +384,7 @@
 
 (defattack-method how-to-read-a-file
     :to-achieve [achieve-knowledge-of-contents ?attacker ?file]
-    :typing ([object-type-of ?file file])
+    :typing ([ltms:object-type-of ?file file])
     :plan (:sequential
            (:goal [achieve-access-right ?attacker read ?file ?user])
            (:action [read-with-rights-of ?attacker ?user ?file]))
@@ -397,18 +397,18 @@
     :to-achieve [achieve-access-right ?attacker ?right ?object ?user]
     ;; all this is asking is there a process in the workload
     ;; and if so with which user's permissions is it running
-    :bindings ([value-of (?object machines) ?machine]
+    :bindings ([ltms:value-of (?object machines) ?machine]
                [named-part-of ?machine os ?os-instance]
-               [value-of (?os-instance workload) ?os-workload]
-               [or [value-of (?os-workload server-workload processes) ?the-process]
-                   [value-of (?os-workload user-workload processes) ?the-process]]
+               [ltms:value-of (?os-instance workload) ?os-workload]
+               [or [ltms:value-of (?os-workload server-workload processes) ?the-process]
+                   [ltms:value-of (?os-workload user-workload processes) ?the-process]]
                [runs-with-permissions-of ?the-process ?user]
                )
-    :typing ([object-type-of ?object computer-resource]
-             [object-type-of ?machine computer]
-             [object-type-of ?os-instance operating-system]
-             [object-type-of ?os-workload os-workload]
-             [object-type-of ?the-process process]           
+    :typing ([ltms:object-type-of ?object computer-resource]
+             [ltms:object-type-of ?machine computer]
+             [ltms:object-type-of ?os-instance operating-system]
+             [ltms:object-type-of ?os-workload os-workload]
+             [ltms:object-type-of ?the-process process]           
              )
     ;; This is the key pre-req: The process has the desired right to the object
     :prerequisites ([has-permission ?the-process ?right ?object])
@@ -418,19 +418,19 @@
 
 (defattack-method how-to-achieve-access-right-by-password-stealing
     :to-achieve [achieve-access-right ?attacker ?right ?object ?user]
-    :bindings ([value-of (?object machines) ?machine]
+    :bindings ([ltms:value-of (?object machines) ?machine]
                [named-part-of ?machine os ?os-instance]
                [requires-access-right ?object ?right ?capability]
-	       [value-of (?os-instance authorization-pool) ?pool]
-	       [value-of (?pool users) ?user]
+	       [ltms:value-of (?os-instance authorization-pool) ?pool]
+	       [ltms:value-of (?pool users) ?user]
 	       )
     ;; Note: has-capability is a function not an assertion
     :PREREQUISITES ((has-capability ?user ?capability))
-    :typing ([object-type-of ?object computer-resource]
-             [object-type-of ?machine computer]
-             [object-type-of ?os-instance operating-system]
-	     [object-type-of ?pool authorization-pool]
-             [object-type-of ?user user])
+    :typing ([ltms:object-type-of ?object computer-resource]
+             [ltms:object-type-of ?machine computer]
+             [ltms:object-type-of ?os-instance operating-system]
+	     [ltms:object-type-of ?pool authorization-pool]
+             [ltms:object-type-of ?user user])
     :plan (:goal [logon ?attacker ?user ?os-instance])
     )
 
@@ -443,19 +443,19 @@
 
 (defattack-method join-active-user-set
     :to-achieve [make-member-of ?attacker ?user ?active-user-set]
-    :bindings ([value-of (?active-user-set os) ?os-instance])
-    :typing ([object-type-of ?active-user-set user-set]
-             [object-type-of ?os-instance operating-system])
+    :bindings ([ltms:value-of (?active-user-set os) ?os-instance])
+    :typing ([ltms:object-type-of ?active-user-set user-set]
+             [ltms:object-type-of ?os-instance operating-system])
     :plan (:goal [logon ?attacker ?user ?os-instance])
     )
 
 (defattack-method how-to-logon-1
     :to-achieve [logon ?attacker ?user ?os-instance]
-    :bindings ([value-of (?os-instance authorization-pool) ?pool]
-               [value-of (?pool users) ?user])
-    :typing ([object-type-of ?os-instance operating-system]
-             [object-type-of ?pool authorization-pool]
-             [object-type-of ?user user])
+    :bindings ([ltms:value-of (?os-instance authorization-pool) ?pool]
+               [ltms:value-of (?pool users) ?user])
+    :typing ([ltms:object-type-of ?os-instance operating-system]
+             [ltms:object-type-of ?pool authorization-pool]
+             [ltms:object-type-of ?user user])
     :plan (:sequential
            (:goal [achieve-knowledge-of-password ?attacker ?user ?pool])
            (:goal [achieve-connection ?attacker ?os-instance telnet])
@@ -463,11 +463,11 @@
 
 (defattack-method how-to-logon-2
     :to-achieve [logon ?attacker ?user ?os-instance]
-    :bindings ([value-of (?os-instance authorization-pool) ?pool]
-               [value-of (?pool users) ?user])
-    :typing ([object-type-of ?os-instance operating-system]
-             [object-type-of ?pool authorization-pool]
-             [object-type-of ?user user])
+    :bindings ([ltms:value-of (?os-instance authorization-pool) ?pool]
+               [ltms:value-of (?pool users) ?user])
+    :typing ([ltms:object-type-of ?os-instance operating-system]
+             [ltms:object-type-of ?pool authorization-pool]
+             [ltms:object-type-of ?user user])
     :plan (:sequential
            (:goal [achieve-knowledge-of-password ?attacker ?user ?pool])
            (:goal [achieve-connection ?attacker ?os-instance ssh])
@@ -494,28 +494,28 @@
 
 (defattack-method guess-typical-user
     :to-achieve [guess-password ?attacker ?user ?resource]
-    :typing ([object-type-of ?user typical-user]
-             [object-type-of ?attacker attacker])
+    :typing ([ltms:object-type-of ?user typical-user]
+             [ltms:object-type-of ?attacker attacker])
     :plan (:action [password-dictionary-lookup-attack ?attacker ?user ?resource])
     )
 
 (defattack-method guess-superuser-passwords
     :to-achieve [guess-password ?attacker ?user ?resource]
-    :typing ([value-of (?user machines) ?machine]
-             [value-of (?machine os superuser) ?user])
-    :bindings ([object-type-of ?user user]
-               [object-type-of ?machine computer])
+    :typing ([ltms:value-of (?user machines) ?machine]
+             [ltms:value-of (?machine os superuser) ?user])
+    :bindings ([ltms:object-type-of ?user user]
+               [ltms:object-type-of ?machine computer])
     :plan (:action [password-dictionary-lookup-attack ?attacker ?user ?resource])
     )
 
 (defattack-method how-to-get-password-by-virus
     :to-achieve [achieve-knowledge-of-password ?attacker ?user ?resource]
-    :typing ([object-type-of ?user user]
-	     [object-type-of ?process email-server-process]
-	     [object-type-of ?os-instance operating-system]
-             [object-type-of ?machine computer])
+    :typing ([ltms:object-type-of ?user user]
+	     [ltms:object-type-of ?process email-server-process]
+	     [ltms:object-type-of ?os-instance operating-system]
+             [ltms:object-type-of ?machine computer])
     :bindings ([email-client-of ?user ?process]
-	       [value-of (?process host-os) ?os-instance]
+	       [ltms:value-of (?process host-os) ?os-instance]
 	       [named-part-of ?machine os ?os-instance])
     :plan (:sequential
            (:goal [achieve-connection ?attacker ?os-instance email])
@@ -532,11 +532,11 @@
 
 (defattack-method how-to-get-password-by-sniffing
     :to-achieve [achieve-knowledge-of-password ?attacker ?user ?resource]
-    :typing ([object-type-of ?user user]
-             [object-type-of ?machine computer]
-             [object-type-of ?subnet subnet])
+    :typing ([ltms:object-type-of ?user user]
+             [ltms:object-type-of ?machine computer]
+             [ltms:object-type-of ?subnet subnet])
     :bindings ([uses-machine ?machine ?user]
-               [value-of (?machine subnets) ?subnet]
+               [ltms:value-of (?machine subnets) ?subnet]
                )
     :plan (:parallel 
            (:goal [observe-network-traffic ?attacker ?subnet])
@@ -561,8 +561,8 @@
 (defattack-method achieve-connection-by-protocol
     :to-achieve [achieve-connection ?attacker ?os-instance ?protocol-name]
     :bindings ([named-part-of ?machine os ?os-instance])
-    :typing ([object-type-of ?os-instance operating-system]
-             [object-type-of ?machine computer])
+    :typing ([ltms:object-type-of ?os-instance operating-system]
+             [ltms:object-type-of ?machine computer])
     :prerequisites ([accepts-connection ?machine ?protocol-name ?attacker ?])
     :plan (:action [connect-via ?attacker ?machine ?protocol-name])
     )
@@ -594,22 +594,22 @@
 (defattack-method control-the-network-stack
     :to-achieve [takes-direct-control-of ?attacker ?stack-property ?network-stack]
     :bindings ([named-part-of ?os-instance network-monitor ?network-stack]
-               [value-of (?os-instance superuser) ?superuser])
-    :typing ([object-type-of ?network-stack network-stack]
-             [object-type-of ?os-instance operating-system]
-             [object-type-of ?superuser user])
+               [ltms:value-of (?os-instance superuser) ?superuser])
+    :typing ([ltms:object-type-of ?network-stack network-stack]
+             [ltms:object-type-of ?os-instance operating-system]
+             [ltms:object-type-of ?superuser user])
     :plan (:sequential 
            (:goal [logon ?attacker ?superuser ?os-instance])
            (:action [control ?attacker ?network-stack])))
 
 (defattack-method read-network-traffic
     :to-achieve [observe-network-traffic ?attacker ?subnet]
-    :bindings ([value-of (?subnet switch) ?switch]
-               [value-of (?switch os) ?os]
+    :bindings ([ltms:value-of (?subnet switch) ?switch]
+               [ltms:value-of (?switch os) ?os]
                [named-part-of ?os network-monitor ?network-stack])
-    :typing ([object-type-of ?subnet switched-subnet]
-             [object-type-of ?switch switch]
-             [object-type-of ?network-stack network-stack])
+    :typing ([ltms:object-type-of ?subnet switched-subnet]
+             [ltms:object-type-of ?switch switch]
+             [ltms:object-type-of ?network-stack network-stack])
     :plan (:sequential (:goal [takes-direct-control-of ?attacker network-traffic ?network-stack])
                        (:action [observe ?attacker network-traffic ?subnet]))
     )
@@ -625,20 +625,20 @@
 
 (defrule path-allows-connection (:backward)
   then [accepts-connection ?machine ?connection-type ?user ?path] 
-  if [and [object-type-of ?machine computer]
-          [object-type-of ?user user]
+  if [and [ltms:object-type-of ?machine computer]
+          [ltms:object-type-of ?user user]
           [reachable-from ?machine ?user ?path]
-	  [value-of (?user location) ?location]
+	  [ltms:value-of (?user location) ?location]
           (path-is-acceptable-for-connection-type (copy-object-if-necessary ?path)
                                                   ?location ?connection-type)
           ])
 
 (defrule bridges-on-pathway (:backward)
   then [reachable-from ?target-computer ?user ?path]
-  if [and [object-type-of ?user user]
-          [object-type-of ?target-computer computer]
+  if [and [ltms:object-type-of ?user user]
+          [ltms:object-type-of ?target-computer computer]
           [uses-machine ?user-computer ?user]
-          [object-type-of ?user-computer computer]
+          [ltms:object-type-of ?user-computer computer]
           [connected ?target-computer ?user-computer ?path]
 	  ]
   )
@@ -648,14 +648,14 @@
 ;;; is known (by a mask) but for which we don't know a specific machine.
 (defrule bridges-on-pathway-2 (:backward)
   then [reachable-from ?computer ?user (?router . ?path)]
-  if [and [object-type-of ?user user]
-          [value-of (?user location) ?location]
-          [object-type-of ?computer computer]
-          [value-of (?computer site) ?site]
-          [object-type-of ?site site]
+  if [and [ltms:object-type-of ?user user]
+          [ltms:value-of (?user location) ?location]
+          [ltms:object-type-of ?computer computer]
+          [ltms:value-of (?computer site) ?site]
+          [ltms:object-type-of ?site site]
           (not (location-is-in-net-segment ?site ?location))
-          [object-type-of ?router router]
-          [value-of (?router site) ?site]
+          [ltms:object-type-of ?router router]
+          [ltms:value-of (?router site) ?site]
           ;; should really check for being the router to the outside
           [connected ?computer ?router ?path]])
 
@@ -683,11 +683,11 @@ This is redundant
   then [achieve-knowledge-of ?attacker ?object ((:goal (know-contents-of ?object) 
                                                  :plan ?composite-plan))]
   ;; assumption is that we know the object
-  if [and [object-type-of ?object computer-resource]
-	  [value-of (?object machines) ?computer]
-          [object-type-of ?computer computer]
+  if [and [ltms:object-type-of ?object computer-resource]
+	  [ltms:value-of (?object machines) ?computer]
+          [ltms:object-type-of ?computer computer]
           [part-of (?computer os) ?os-instance]
-          [object-type-of ?os-instance operating-system]
+          [ltms:object-type-of ?os-instance operating-system]
           [requires-access-right ?object read ?capability]
 	  [achieve-access-right ?attacker read ?object ?vehicle ?access-plan]
 	  (unify ?composite-plan 

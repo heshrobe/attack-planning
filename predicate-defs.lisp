@@ -8,50 +8,50 @@
 ;;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
-(define-predicate desirable-property-of (system property))
+(define-predicate desirable-property-of (system property) (ltms:ltms-predicate-model))
 
 ;;; This is used in the sense that a process controls a data-set
-(define-predicate process-controls-data-set (thing1 thing2))
+(define-predicate process-controls-data-set (thing1 thing2) (ltms:ltms-predicate-model))
 
 ;;; Some property of one component affects a property of another component of the OS
-(define-predicate impacts (feature component property thing))
+(define-predicate impacts (feature component property thing) (ltms:ltms-predicate-model))
 
-(define-predicate input-of (component resource))
+(define-predicate input-of (component resource) (ltms:ltms-predicate-model))
 
-(define-predicate output-of (component resource))
+(define-predicate output-of (component resource) (ltms:ltms-predicate-model))
 
-(define-predicate residence (thing place))
+(define-predicate residence (thing place) (ltms:ltms-predicate-model))
 
-(define-predicate migrates-from (thing place1 place2 process))
+(define-predicate migrates-from (thing place1 place2 process) (ltms:ltms-predicate-model))
 
-(define-predicate is-a-format-of (thing format-type other-thing))
+(define-predicate is-a-format-of (thing format-type other-thing) (ltms:ltms-predicate-model))
 
-(define-predicate transforms (process format1 format2))
+(define-predicate transforms (process format1 format2) (ltms:ltms-predicate-model))
 
-(define-predicate has-permission (user object operation))
+(define-predicate has-permission (user object operation) (ltms:ltms-predicate-model))
 
-(define-predicate runs-with-permissions-of (process user))
+(define-predicate runs-with-permissions-of (process user) (ltms:ltms-predicate-model))
 
-(define-predicate requires-access-right (object operation capability))
+(define-predicate requires-access-right (object operation capability) (ltms:ltms-predicate-model))
 
-(define-predicate vulnerable-to (thing attack))
+(define-predicate vulnerable-to (thing attack) (ltms:ltms-predicate-model))
 
-(define-predicate protected-from (thing attack))
+(define-predicate protected-from (thing attack) (ltms:ltms-predicate-model))
 
-(define-predicate accepts-connection (machine type user path))
+(define-predicate accepts-connection (machine type user path) (ltms:ltms-predicate-model))
 
-(define-predicate uses-machine (machine user))
+(define-predicate uses-machine (machine user) (ltms:ltms-predicate-model))
 
-(define-predicate email-client-of (user email-server))
+(define-predicate email-client-of (user email-server) (ltms:ltms-predicate-model))
 
 ;;; Typically, the DNS translation of a domain name to an IP address
-(define-predicate translation-of (symbolic-rep concrete-rep))
+(define-predicate translation-of (symbolic-rep concrete-rep) (ltms:ltms-predicate-model))
 
-(define-predicate connected (subnet1 subnet2 path))
+(define-predicate connected (subnet1 subnet2 path) (ltms:ltms-predicate-model))
  
-(define-predicate reachable-from (computer1 computer2 router))
+(define-predicate reachable-from (computer1 computer2 router) (ltms:ltms-predicate-model))
 
-(define-predicate policy-for (bridge connection-type location-mask))
+(define-predicate policy-for (bridge connection-type location-mask) (ltms:ltms-predicate-model))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;
@@ -60,9 +60,9 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 
-(defmacro define-goal (name variables) `(define-predicate ,name ,(append variables '(plan))))
+(defmacro define-goal (name variables) `(define-predicate ,name ,(append variables '(plan)) (ltms:ltms-predicate-model)))
 
-;;; (defmacro define-subgoal-with-purpose (name variables) `(define-predicate ,name ,(append variables '(purpose plan))))
+;;; (defmacro define-subgoal-with-purpose (name variables) `(define-predicate ,name ,(append variables '(purpose plan)) (ltms:ltms-predicate-model)))
 
 (defparameter *action-table* (make-hash-table))
 

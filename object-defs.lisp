@@ -19,95 +19,118 @@
 
 (define-object-type computer-resource
   :included-object-types (print-nicely-mixin)
-  :slots ((machines :set-valued t)
-          (capability-requirements :set-valued t)))
+  :slots ((machines :set-valued t :tms t)
+          (capability-requirements :set-valued t :tms t)))
 
 (define-object-type code-in-memory
+    :tms t
     :included-object-types (computer-resource)
-    :slots (load-image)
+    :slots ((load-image :tms t))
     )
 
 (define-object-type data-resource
+    :tms t
     :included-object-types (computer-resource)
     )
 
 (define-object-type data-set
+    :tms t
     :included-object-types (data-resource)
     )
 
 (define-object-type file
+    :tms t
   :included-object-types (data-resource)
-  :slots ((directories :set-valued t)))
+  :slots ((directories :set-valued t :tms t)))
 
 (define-object-type typical-file
+    :tms t
     :included-object-types (file typical-object-mixin)
     )
 
 (define-object-type dynamically-loadable-code-file
+    :tms t
     :included-object-types (file))
 
 (define-object-type class-file
+    :tms t
     :included-object-types (dynamically-loadable-code-file)
-    :slots (source-file 
-	    (programs :set-valued t))
+    :slots ((source-file :tms t)
+	    (programs :set-valued t :tms t))
     )
 
 (define-object-type typical-class-file
+    :tms t
     :included-object-types (class-file typical-object-mixin))
 
 (define-object-type source-file
+    :tms t
     :included-object-types (file)
-    :slots (object-file)
+    :slots ((object-file :tms t))
     )
 
 (define-object-type java-file
+    :tms t
     :included-object-types (source-file)
     )
 
 (define-object-type typical-java-file
+    :tms t
     :included-object-types (java-file typical-object-mixin)
     )
 
 (define-object-type complex-encoded-data-file
+    :tms t
     :included-object-types (file))
 
 (define-object-type graphic-image-file
+    :tms t
     :included-object-types (complex-encoded-data-file))
 
 (define-object-type typical-graphics-image-file
+    :tms t
     :included-object-types (graphic-image-file typical-object-mixin)
     )
 
 (define-object-type jpeg-file
+    :tms t
     :included-object-types (graphic-image-file))
 
 (define-object-type png-file
+    :tms t
     :included-object-types (graphic-image-file))
 
 (define-object-type graphic-video-file
+    :tms t
     :included-object-types (complex-encoded-data-file))
 
 (define-object-type typical-graphics-video-file
+    :tms t
     :included-object-types (graphic-video-file typical-object-mixin)
     )
 
 (define-object-type wmv-file
+    :tms t
     :included-object-types (graphic-video-file))
 
 (define-object-type flv-file
+    :tms t
     :included-object-types (graphic-video-file))
 
 (define-object-type avi-file
+    :tms t
     :included-object-types (graphic-video-file))
 
 (define-object-type mp4-file
+    :tms t
     :included-object-types (graphic-video-file))
 
 (define-object-type database
+    :tms t
     :included-object-types (data-resource)
-    :slots ((schema) 
+    :slots ((schema :tms t) 
 	    ;; Note, shouldn't there also be (servers :set-valued t)
-	    (tables :set-valued t)))
+	    (tables :set-valued t :tms t)))
 
 ;;; Note: need a notion of a web-site
 ;;;  this has several parts
@@ -116,67 +139,87 @@
 ;;;  and the data store
 
 (define-object-type password-file
+    :tms t
   :included-object-types (file))
 
 (define-object-type configuration-file
+    :tms t
   :included-object-types (file))
 
 (define-object-type scheduler-policy-file
+    :tms t
   :included-object-types (file))
 
 (define-object-type directory
+    :tms t
   :included-object-types (computer-resource)
-  :slots ((files :set-valued t)))
+  :slots ((files :set-valued t :tms t)))
 
 (define-object-type process
-    :slots (host-os program code-image)
+    :tms t
+    :slots ((host-os  :tms t)
+	    (program :tms t)
+	    (code-image :tms t))
     :included-object-types (computer-resource))
 
 ;;; presumably there could be both system programs
 ;;; and application programs
 ;;; should there be a privilege level specified?
 (define-object-type program
-    :slots (host-os 
-	    (processes :set-valued t)
-	    (load-files :set-valued t))
+    :tms t
+    :slots ((host-os :tms t)
+	    (processes :set-valued t :tms t)
+	    (load-files :set-valued t :tms t))
     :included-object-types (computer-resource))
 
 ;;; This is the application level program
 (define-object-type application-program
+    :tms t
     :included-object-types (program)
     )
 
 (define-object-type system-process
+    :tms t
     :included-object-types (process))
 
 (define-object-type server-process
+    :tms t
     :included-object-types (process))
 
 (define-object-type email-server-process
+    :tms t
     :included-object-types (server-process))
 
 (define-object-type storage-server-process
+    :tms t
   :included-object-types (server-process))
 
 (define-object-type display-server-process
+    :tms t
   :included-object-types (server-process))
 
 (define-object-type video-processing-server-process
+    :tms t
   :included-object-types (server-process))
 
 (define-object-type video-surveillance-manager-process
+    :tms t
   :included-object-types (server-process))
 
 (define-object-type operator-console-server-process
+    :tms t
   :included-object-types (server-process))
 
 (define-object-type opc-server-process
+    :tms t
   :included-object-types (server-process))
 
 (define-object-type web-server-process
+    :tms t
     :included-object-types (server-process))
 
 (define-object-type control-system-process
+    :tms t
     :included-object-types (process))    
     
 
@@ -187,88 +230,113 @@
 ;;; these might run at different privilege levels.
 
 (define-object-type apache-web-server-process
+    :tms t
   :included-object-types (web-server-process))
 
 (define-object-type lisp-server-process
+    :tms t
   :included-object-types (web-server-process))
 
 (define-object-type cl-http-server-process
+    :tms t
     :included-object-types (lisp-server-process))
 
 (define-object-type allegro-http-server-process
+    :tms t
     :included-object-types (lisp-server-process))
 
 (define-object-type iis-web-server-process
+    :tms t
   :included-object-types (web-server-process))
 
 (define-object-type user-process
+    :tms t
     :included-object-types (process)
     )
 
 (define-object-type typical-user-process
+    :tms t
   :included-object-types (user-process typical-object-mixin))
 
 (define-object-type scheduler
+    :tms t
   :included-object-types (system-process))
 
 (define-object-type logon-controller
+    :tms t
   :included-object-types (system-process))
 
 (define-object-type access-controller
+    :tms t
   :included-object-types (system-process))
 
 (define-object-type network-stack
+    :tms t
   :included-object-types (system-process))
 
 ;;; Hardware interfaces are defined as hardware (e.g., network card, interface port)
 ;;; that is available for use (not necessarily in use) on a computer
 (define-object-type hardware-interfaces
+    :tms t
     :included-object-types (print-nicely-mixin)
     )
 
 (define-object-type network-card
+    :tms t
     :included-object-types (hardware-interfaces)
     )
 
 (define-object-type port
+    :tms t
     :included-object-types (hardware-interfaces)
     )
 
 (define-object-type processing-unit
+    :tms t
     :included-object-types (hardware-interfaces)
     )
 
 ;;(define-object-type ethernet
+:tms t
 ;;  :included-object-types (network-card))
 
 (define-object-type wifi
+    :tms t
   :included-object-types (network-card))
 
 (define-object-type bluetooth
+    :tms t
   :included-object-types (network-card))
 
 ;;; Having a <port> device in-use and having an avaiable <port> port
 ;;; are esentially the same thing since an adversary can just remove 
 ;;; the <port> device to utilize the port
 (define-object-type usb-2
+    :tms t
   :included-object-types (port))
 
 (define-object-type usb-3
+    :tms t
   :included-object-types (port))
 
 (define-object-type thunderbolt-2
+    :tms t
   :included-object-types (port))
 
 (define-object-type thunderbolt-3
+    :tms t
   :included-object-types (port))
 
 (define-object-type gpu
+    :tms t
   :included-object-types (processing-unit))
 
 (define-object-type video-display-processor
+    :tms t
   :included-object-types (processing-unit))
 
 (define-object-type asic
+    :tms t
   :included-object-types (processing-unit))
 
 ;;; Note: actually the machines are os's
@@ -288,96 +356,117 @@
 ;;; requested (e.g. fingerprint spoofing).
 
 (define-object-type credential
+    :tms t
     :included-object-types (print-nicely-mixin)
     )
 
 (define-object-type password
+    :tms t
     :included-object-types (credential)
     )
 
 (define-object-type certificate
+    :tms t
     :included-object-types (credential)
     )
 
 (define-object-type physical-token
+    :tms t
     :included-object-types (credential)
     )
 
 (define-object-type biometric-characteristic
+    :tms t
     :included-object-types (credential)
     )
 
 (define-object-type behavioral-biometric
+    :tms t
     :included-object-types (biometric-characteristic)
     )
 
 (define-object-type physical-biometric
+    :tms t
     :included-object-types (biometric-characteristic)
     )
 
 
 (define-object-type authorization-pool
-  :slots ((machines :set-valued t)
-          (capabilities :set-valued t)
-          (users :set-valued t))
+    :tms t
+  :slots ((machines :set-valued t :tms t)
+          (capabilities :set-valued t :tms t)
+          (users :set-valued t :tms t))
   :included-object-types (print-nicely-mixin))
 
 ;;; "capability" is a level of authorization good enough to access
 ;;; this thing.
 
 (define-object-type capability
-  :slots ((more-general :set-valued t)
-          authorization-pool 
-          (more-specific :set-valued t))
+    :tms t
+  :slots ((more-general :set-valued t :tms t)
+          (authorization-pool :tms t)
+          (more-specific :set-valued t :tms t))
   :included-object-types (print-nicely-mixin))
 
 ;;; Note: For mobile users don't we need to bind authorization
 ;;; pools with site?
 
 (define-object-type user
-  :slots (location name
-                   email-address 
-                   (capabilities :set-valued t)
-                   (authorization-pool :set-valued t)
-                   (machines :set-valued t))
+    :tms t
+    :slots ((location :tms t)
+	    (name :tms t)
+	    (email-address :tms t)
+	    (capabilities :set-valued t :tms t)
+	    (authorization-pool :set-valued t :tms t)
+	    (machines :set-valued t :tms t))
   :included-object-types (print-nicely-mixin))
 
 (define-object-type attacker
+    :tms t
     :included-object-types (user)
-    :slots (world)
+    :slots ((world :tms t))
     )
 
 (define-object-type typical-user
+    :tms t
   :included-object-types (user typical-object-mixin))
 
 (define-object-type user-set
-  :slots (os)
+    :tms t
+  :slots ((os :tms t))
   :included-object-types (print-nicely-mixin))
 
 (define-object-type workload
-  :slots (os processes)
+    :tms t
+    :slots ((os :tms t)
+	    (processes :tms t))
   :included-object-types (data-set print-nicely-mixin))
 
 (define-object-type os-workload
-  :slots (os)
+    :tms t
+  :slots ((os :tms t))
   :parts  ((user-workload workload)
            (server-workload workload))
   :included-object-types (print-nicely-mixin))
 
 (define-object-type job-launcher
+    :tms t
   :included-object-types (system-process))
 
 (define-object-type os-job-admitter
+    :tms t
   :parts ((user-job-admitter job-launcher)
           (server-job-admitter job-launcher))
   :included-object-types (system-process))
 
 (define-object-type job-launch-request-queue
-    :slots (os)
+    :tms t
+    :slots ((os :tms t))
     :included-object-types (print-nicely-mixin))
 
 (define-object-type os-job-launch-request-queue
-    :slots (os)
+    :tms t
+    :slots ((os :tms t))
     :parts ((user-job-launch-request-queue job-launch-request-queue)
 	    (server-job-launch-request-queue job-launch-request-queue))
     :included-object-types (print-nicely-mixin))
@@ -387,26 +476,26 @@
       (let* ((os-name (role-name os-instance))
              (new-name (gentemp (concatenate 'string (string-upcase "workload") "-" (string os-name) "-")))
              (workload (make-object 'os-workload :name new-name)))
-        (tell `[value-of (,workload os) ,os-instance])
-        (tell `[value-of (,workload user-workload os) ,os-instance])
-        (tell `[value-of (,workload server-workload os) ,os-instance])
-        (tell `[value-of (,os-instance workload) ,workload]))))
+        (tell `[ltms:value-of (,workload os) ,os-instance])
+        (tell `[ltms:value-of (,workload user-workload os) ,os-instance])
+        (tell `[ltms:value-of (,workload server-workload os) ,os-instance])
+        (tell `[ltms:value-of (,os-instance workload) ,workload]))))
 
 (defun make-user-set-for-os (os-instance)
   (with-atomic-action
       (let* ((os-name (role-name os-instance))
              (new-name (gentemp (concatenate 'string (string-upcase "user-set") "-" (string os-name) "-")))
              (user-set (make-object 'user-set :name new-name)))
-        (tell `[value-of (,user-set os) ,os-instance])
-        (tell `[value-of (,os-instance user-set) ,user-set]))))
+        (tell `[ltms:value-of (,user-set os) ,os-instance])
+        (tell `[ltms:value-of (,os-instance user-set) ,user-set]))))
 
 (defun make-job-launch-queue-for-os (os-instance)
   (with-atomic-action
       (let* ((os-name (role-name os-instance))
 	     (new-name (gentemp (concatenate 'string (string-upcase "job-launch-queue") "-" (string os-name) "-")))
 	     (job-launch-queue (make-object 'os-job-launch-request-queue :name new-name)))
-	(tell `[value-of (,job-launch-queue os) ,os-instance])
-	(tell `[value-of (,os-instance job-launch-queue) ,job-launch-queue]))))
+	(tell `[ltms:value-of (,job-launch-queue os) ,os-instance])
+	(tell `[ltms:value-of (,os-instance job-launch-queue) ,job-launch-queue]))))
 
 ;;; Note:  This organization is probably wrong
 ;;; We probably want to characterize machines by their make and model number
@@ -418,8 +507,13 @@
 ;;;  with slots reflecting version
 
 (define-object-type operating-system
-    :slots (workload user-set superuser authorization-pool job-launch-queue 
-                     (processes :set-valued t))
+    :tms t
+    :slots ((workload :tms t)
+	    (user-set :tms t)
+	    (superuser :tms t)
+	    (authorization-pool :tms t)
+	    (job-launch-queue :tms t) 
+	    (processes :set-valued t :tms t))
     :initializations ((make-workload-for-os self)
                       (make-user-set-for-os  self)
                       (make-job-launch-queue-for-os self)
@@ -436,116 +530,145 @@
   (ask `[part-of ,os ?part]
        #'(lambda (just)
 	   (declare (ignore just))
-	   (tell `[value-of (?part host-os) ,os])
+	   (tell `[ltms:value-of (?part host-os) ,os])
 	   (ask [part-of ?part ?his-part]
 		#'(lambda (just)
 		    (declare (ignore just))
-		    (ask [object-type-of ?his-part system-process]
+		    (ask [ltms:object-type-of ?his-part system-process]
 			 #'(lambda (just)
 			     (declare (ignore just))
-			     (tell `[value-of (?his-part host-os) ,os]))))))))
+			     (tell `[ltms:value-of (?his-part host-os) ,os]))))))))
 
 (define-object-type unix
+    :tms t
   :included-object-types (operating-system))
 
 (define-object-type linux
+    :tms t
   :included-object-types (unix))
 
 (define-object-type embedded-linux
+    :tms t
   :included-object-types (linux))
 
 (define-object-type open-wrt
+    :tms t
   :included-object-types (embedded-linux))
 
 (define-object-type android
+    :tms t
   :included-object-types (embedded-linux))
 
 (define-object-type solaris
+    :tms t
   :included-object-types (unix))
 
 (define-object-type hp-ux 
+    :tms t
   :included-object-types (unix))
 
 (define-object-type windows
+    :tms t
   :included-object-types (operating-system))
 
 (define-object-type windows-95
+    :tms t
   :included-object-types (windows))
 
 (define-object-type windows-98
+    :tms t
   :included-object-types (windows))
 
 (define-object-type windows-nt
+    :tms t
   :included-object-types (windows))
 
 (define-object-type windows-2000
+    :tms t
     :included-object-types (windows))
 
 (define-object-type windows-xp
+    :tms t
   :included-object-types (windows))
 
 (define-object-type windows-7
+    :tms t
     :included-object-types (windows))
 
 (define-object-type windows-8
+    :tms t
   :included-object-types (windows))
 
 (define-object-type windows-embedded
+    :tms t
   :included-object-types (windows))
 
 (define-object-type windows-embedded-compact
+    :tms t
   :included-object-types (windows-embedded))
 
 (define-object-type windows-embedded-standard
+    :tms t
   :included-object-types (windows-embedded))
 
 (define-object-type windows-embedded-industry
+    :tms t
   :included-object-types (windows-embedded))
 
 (define-object-type real-time-operating-system
+    :tms t
   :included-object-types (operating-system))
 
 
 (define-object-type genera
+    :tms t
   :included-object-types (operating-system))
 
 (define-object-type mac
+    :tms t
   :included-object-types (operating-system))
 
 (define-object-type Mac-OS
+    :tms t
   :included-object-types (mac))
 
 (define-object-type OS-X
+    :tms t
   :included-object-types (mac unix)) 
 
 (define-object-type cisco-ios
+    :tms t
   :included-object-types (operating-system))
 
 (defgeneric operating-system-for-machine (machine-type))
 
 (define-object-type has-policy-mixin
+    :tms t
     :other-instance-variables ((positive-policies :accessor positive-policies :initform nil)
 			       (negative-policies :accessor negative-policies :initform nil))
     )
 
 (define-object-type computer
+    :tms t
   :parts ((os (operating-system-for-machine self)))
-  :slots ((ip-addresses :set-valued t)
-          (subnets :set-valued t)
-          (resources :set-valued t)
-          (site :set-valued t)
-          (hardware-interfaces :set-valued t)
-          (communication-protocols :set-valued t)
-          system-type
-          health-status)
+  :slots ((ip-addresses :set-valued t :tms t)
+          (subnets :set-valued t :tms t)
+          (resources :set-valued t :tms t)
+          (site :set-valued t :tms t)
+          (hardware-interfaces :set-valued t :tms t)
+          (communication-protocols :set-valued t :tms t)
+          (system-type :tms t)
+          (health-status :tms t))
   :included-object-types (has-policy-mixin print-nicely-mixin))
 
 (define-object-type typical-computer
+    :tms t
     :included-object-types (computer typical-object-mixin)
     )
 
 ;;; Note: These are machines that are always on all of its subnets
 (define-object-type fixed-computer
+    :tms t
     :included-object-types (computer))
 
 ;;; Note: These are machines that are sometimes on some of its subnets
@@ -555,90 +678,109 @@
 ;;; Also probably need a notion of TYPICAL-ROVING-NETWORK
 ;;; i.e. some repreentative of all the nets it might roam onto
 (define-object-type mobile-computer
+    :tms t
     :included-object-types (computer))
 
 (defmethod operating-system-for-machine ((self computer)) 'operating-system)
 
 (define-object-type mac-computer
+    :tms t
   :included-object-types (computer))
 
 (define-object-type unix-computer
+    :tms t
   :included-object-types (computer))
 
 (define-object-type windows-computer
+    :tms t
   :included-object-types (computer))
 
 (define-object-type windows-95-computer
+    :tms t
   :included-object-types (windows-computer))
 
 (defmethod operating-system-for-machine ((self windows-95-computer)) 'windows-95)
 
 (define-object-type windows-98-computer
+    :tms t
   :included-object-types (windows-computer))
 
 (defmethod operating-system-for-machine ((self windows-98-computer)) 'windows-98)
 
 (define-object-type windows-nt-computer
+    :tms t
   :included-object-types (windows-computer))
 
 (defmethod operating-system-for-machine ((self windows-nt-computer)) 'windows-nt)
 
 (define-object-type windows-2000-computer
+    :tms t
   :included-object-types (windows-computer))
 
 (defmethod operating-system-for-machine ((self windows-2000-computer)) 'windows-2000)
 
 (define-object-type windows-xp-computer
+    :tms t
   :included-object-types (windows-computer))
 
 (defmethod operating-system-for-machine ((self windows-xp-computer)) 'windows-xp)
 
 (define-object-type windows-7-computer
+    :tms t
   :included-object-types (windows-computer))
 
 (defmethod operating-system-for-machine ((self windows-7-computer)) 'windows-7)
 
 (define-object-type navnet 
+    :tms t
     :included-object-types (windows-7-computer))
 
 (define-object-type windows-8-computer
+    :tms t
   :included-object-types (windows-computer))
 
 (defmethod operating-system-for-machine ((self windows-8-computer)) 'windows-8)
 
 (define-object-type mac-os-computer
+    :tms t
   :included-object-types (mac-computer))
 
 ;;; Might also want to elaborate all the variants of OSX and Linux
 (defmethod operating-system-for-machine ((self mac-os-computer)) 'mac-os)
 
 (define-object-type os-x-computer
+    :tms t
   :included-object-types (mac-computer))
 
 (defmethod operating-system-for-machine ((self os-x-computer)) 'mac-os-x)
 
 (define-object-type linux-computer
+    :tms t
   :included-object-types (unix-computer))
 
 (defmethod operating-system-for-machine ((self linux-computer)) 'linux)
 
 (define-object-type embedded-linux-computer
+    :tms t
   :included-object-types (unix-computer))
 
 (defmethod operating-system-for-machine ((self embedded-linux-computer)) 'embedded-linux)
 
 (define-object-type solaris-computer
+    :tms t
   :included-object-types (unix-computer))
 
 (defmethod operating-system-for-machine ((self solaris-computer)) 'solaris)
   
 (define-object-type lispm-computer
+    :tms t
   :included-object-types (computer))
 
 (defmethod operating-system-for-machine ((self lispm-computer)) 'genera)
 
 #+genera
 (define-object-type ip-address
+    :tms t
   :slots (octet1 octet2 octet3 octet4)
   :other-instance-variables (integer)
   :included-object-types (print-nicely-mixin))
@@ -654,7 +796,11 @@
              (octet4 scl:self)))))
 #-genera
 (define-object-type ip-address
-  :slots (octet1 octet2 octet3 octet4)
+    :tms t
+    :slots ((octet1 :tms t)
+	    (octet2 :tms t)
+	    (octet3 :tms t)
+	    (octet4 :tms t))
   :included-object-types (print-nicely-mixin)
   :other-instance-variables ((integer :accessor ip-address-integer)))
 
@@ -671,10 +817,12 @@
       answer)))
 
 (define-object-type basic-subnet-mask
+    :tms t
   :parts ((ip-address ip-address)
 	  (mask ip-address)))
 
 (define-object-type subnet-mask
+    :tms t
   :other-instance-variables ((exception-masks :accessor exception-masks :initform nil)
 			     (intervals :accessor intervals :initform nil)
 			     (intervals-computed? :accessor intervals-computed? :initform nil))
@@ -686,13 +834,16 @@
   (call-next-method))
 
 (define-object-type positive-location
+    :tms t
   :included-object-types (subnet-mask))
 
 (define-object-type negative-location
+    :tms t
   :included-object-types (subnet-mask))
 
 (define-object-type network-traffic
-  :slots (subnet)
+    :tms t
+  :slots ((subnet :tms t))
   :included-object-types (print-nicely-mixin))
 
 (defun make-traffic-for-subnet (subnet)
@@ -700,16 +851,19 @@
     (let* ((subnet-name (role-name subnet))
            (new-name (gentemp (concatenate 'string (string-upcase "traffic") "-" (string subnet-name) "-")))
            (traffic (make-object 'network-traffic :name new-name)))
-      (tell `[value-of (,traffic subnet) ,subnet])
-      (tell `[value-of (,subnet network-traffic) ,traffic]))))
+      (tell `[ltms:value-of (,traffic subnet) ,subnet])
+      (tell `[ltms:value-of (,subnet network-traffic) ,traffic]))))
 
 (define-object-type subnet-mixin
-    :slots ((computers :set-valued t)
-	    (routers :set-valued t))
+    :tms t
+    :slots ((computers :set-valued t :tms t)
+	    (routers :set-valued t :tms t))
     )
 
 (define-object-type subnet
-  :slots (network-traffic site)
+    :tms t
+    :slots ((network-traffic :tms t)
+	    (site :tms t))
   :parts ((mask subnet-mask))
   :included-object-types (subnet-mixin print-nicely-mixin)
   :initializations ((make-traffic-for-subnet #-genera self #+genera scl:self)))
@@ -720,21 +874,25 @@
 ;;; a connected device gets sent every packet?
 
 (define-object-type switched-subnet
-  :slots (switch)
+    :tms t
+  :slots ((switch :tms t))
   :included-object-types (subnet))
 
 ;;; This is a network type like the old thick ethernet
 ;;; in which any device physically connected to it can see every packet
 (define-object-type shared-media-subnet
+    :tms t
     :included-object-types (subnet))
 
 ;;; In addition anybody nearby could see any packet
 (define-object-type wireless-subnet
+    :tms t
     :included-object-types (shared-media-subnet))
 
 ;;; This is the standard automotive and other control system
 ;;; bus
 (define-object-type canbus-subnet
+    :tms t
     :included-object-types (shared-media-subnet))
 
 ;; A switch is on one subnet.
@@ -742,9 +900,11 @@
 ;; traffic between the computers connected to that subnet
 ;;; Doesn't it also connect to a next level router?
 (define-object-type switch 
+    :tms t
     :included-object-types (computer))
 
 (define-object-type wireless-router
+    :tms t
     :included-object-types (switch))
 
 ;; router is the thing connecting subnets
@@ -754,92 +914,113 @@
 ;; this doesn't need subnets slot because
 ;; computer provides that
 (define-object-type router
+    :tms t
   :included-object-types (computer)
   )
 
 ;; we'll assume that iot cameras are stationary
 ;; (i.e., have fixed IPs)
 (define-object-type iot-camera
+    :tms t
   :included-object-types (computer)
   )
 
 (define-object-type wireless-access-point
+    :tms t
   :included-object-types (computer)
   )
 
 (define-object-type typical-mobile-computer
+    :tms t
     :included-object-types (mobile-computer typical-object-mixin)
     )
 
 (define-object-type smart-phone
+    :tms t
   :included-object-types (mobile-computer))
 
 (define-object-type tablet
+    :tms t
   :included-object-types (mobile-computer))
 
 (define-object-type site
+    :tms t
   :included-object-types (print-nicely-mixin)
   :parts ((net-mask subnet-mask))
-  :slots ((subnets :set-valued t)))
+  :slots ((subnets :set-valued t :tms t)))
 
 (define-object-type external-internet
+    :tms t
     :included-object-types (subnet-mixin print-nicely-mixin)
-    :slots ((subnets :set-valued t)
+    :slots ((subnets :set-valued t :tms t)
 	    ))
 
 (define-object-type communication-protocols
+    :tms t
     :included-object-types (print-nicely-mixin)
     )
 
 ;; logon protocols (telnet, ssh)
 (define-object-type logon-protocol
+    :tms t
     :included-object-types (communication-protocols)
     )
 
 (define-object-type telnet
+    :tms t
     :included-object-types (logon-protocol)
     )
 
 (define-object-type ssh
+    :tms t
     :included-object-types (logon-protocol)
     )
 
 ;; web protocols (http, https)
 (define-object-type web-protocol 
+    :tms t
     :included-object-types (communication-protocols)
     )
 
 (define-object-type http
+    :tms t
     :included-object-types (web-protocol)
     )
 
 (define-object-type https
+    :tms t
     :included-object-types (web-protocol)
     )
 
 ;; transfer protocols (ftp, ftps)
 (define-object-type transfer-protocol
+    :tms t
     :included-object-types (communication-protocols)
     )
 
 (define-object-type ftp 
+    :tms t
     :included-object-types (transfer-protocol)
     )
 
 (define-object-type ftps
+    :tms t
     :included-object-types (transfer-protocol)
     )
 
 ;; multimedia protocols (skype)
 (define-object-type multimedia-protocol
+    :tms t
     :included-object-types (communication-protocols)
     )
 
 (define-object-type voip
+    :tms t
     :included-object-types (transfer-protocol)
     )
 
 ;; proprietary protocols (logon port 8992)
 (define-object-type proprietary-protocol
+    :tms t
     :included-object-types (communication-protocols)
     )

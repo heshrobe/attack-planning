@@ -11,15 +11,15 @@
         (rule-2-name (intern (string-upcase (concatenate 'string (string rule-name) "-2")))))
     `(progn
        (defrule ,rule-1-name (:forward)
-         if [and [object-type-of ,from-type-variable ,from-type]
-                 [value-of (,from-type-variable ,from-slot) ,to-type-variable]
-                 [object-type-of ,to-type-variable ,to-type]]
-         then [value-of (,to-type-variable ,to-slot) ,from-type-variable])
+         if [and [ltms:object-type-of ,from-type-variable ,from-type]
+                 [ltms:value-of (,from-type-variable ,from-slot) ,to-type-variable]
+                 [ltms:object-type-of ,to-type-variable ,to-type]]
+         then [ltms:value-of (,to-type-variable ,to-slot) ,from-type-variable])
        (defrule ,rule-2-name (:forward)
-         if [and [object-type-of ,to-type-variable ,to-type]
-                 [value-of (,to-type-variable ,to-slot) ,from-type-variable]
-                 [object-type-of ,from-type-variable ,from-type]]
-         then [value-of (,from-type-variable ,from-slot) ,to-type-variable]))))
+         if [and [ltms:object-type-of ,to-type-variable ,to-type]
+                 [ltms:value-of (,to-type-variable ,to-slot) ,from-type-variable]
+                 [ltms:object-type-of ,from-type-variable ,from-type]]
+         then [ltms:value-of (,from-type-variable ,from-slot) ,to-type-variable]))))
 
 (defmacro defsite (name address-string address-mask)
   `(with-atomic-action
@@ -54,7 +54,7 @@
        (kill-redefined-object ',name)
        (let* ((site (make-object 'external-internet :name ',name))
 	      (location (make-positive-location-mask "0.0.0.0" "0.0.0.0")))
-	 (tell `[value-of (,site subnets) ,location])
+	 (tell `[ltms:value-of (,site subnets) ,location])
 	 ,@(loop for (address mask) in excluded-subnets
 	       collect `(push (make-location-mask 'subnet-mask ,address ,mask) (exception-masks location)))
 	 site)))
@@ -65,9 +65,9 @@
      (let ((computer (make-object ',computer-type :name ',name)))
        (add-ip-address-to-computer ,ip-address-string computer)
        ,(when superuser
-          `(tell `[value-of (,computer os superuser) ,(follow-path '(,superuser))]))
+          `(tell `[ltms:value-of (,computer os superuser) ,(follow-path '(,superuser))]))
        ,(when authorization-pool
-          `(tell `[value-of (,computer os authorization-pool) ,(follow-path '(,authorization-pool))]))
+          `(tell `[ltms:value-of (,computer os authorization-pool) ,(follow-path '(,authorization-pool))]))
        computer)))
 
 (defmacro defswitch (name switch-type ip-address-string &key authorization-pool superuser)
@@ -76,9 +76,9 @@
      (let ((switch (make-object ',switch-type :name ',name)))
        (add-ip-address-to-computer ,ip-address-string switch)
        ,(when superuser
-          `(tell `[value-of (,switch os superuser) ,(follow-path '(,superuser))]))
+          `(tell `[ltms:value-of (,switch os superuser) ,(follow-path '(,superuser))]))
        ,(when authorization-pool
-          `(tell `[value-of (,switch os authorization-pool) ,(follow-path '(,authorization-pool))]))
+          `(tell `[ltms:value-of (,switch os authorization-pool) ,(follow-path '(,authorization-pool))]))
        switch)))
 
 ;;; The IP-Address-Strings field is a list of every IP address that this guy is reachable
@@ -96,11 +96,11 @@
 	   do (add-ip-address-to-computer ip-address-string router))
        ,@(when external-networks
 	  (loop for external-network-name in external-networks
-	      collect `(tell `[value-of (,router subnets) ,(follow-path '(, external-network-name))])))			    
+	      collect `(tell `[ltms:value-of (,router subnets) ,(follow-path '(, external-network-name))])))			    
        ,(when superuser
-          `(tell `[value-of (,router os superuser) ,(follow-path '(,superuser))]))
+          `(tell `[ltms:value-of (,router os superuser) ,(follow-path '(,superuser))]))
        ,(when authorization-pool
-          `(tell `[value-of (,router os authorization-pool) ,(follow-path '(,authorization-pool))]))
+          `(tell `[ltms:value-of (,router os authorization-pool) ,(follow-path '(,authorization-pool))]))
        router)))
 
 (defmacro defsubnet (name segment-type ip-address-string subnet-mask-string)
@@ -118,15 +118,15 @@
   `(with-atomic-action
        (kill-redefined-object ',name)
      (let ((user (make-object ',user-type :name ',name)))
-       (tell `[value-of (,user name) ,',name])
+       (tell `[ltms:value-of (,user name) ,',name])
        ,@(when email-address
-          `((tell `[value-of (,user email-address) ,',email-address])))
+          `((tell `[ltms:value-of (,user email-address) ,',email-address])))
        ,@(loop for machine in machines
                collect `(tell `[uses-machine ,(follow-path '(,machine)) ,user]))
        ,@(loop for pool in authorization-pools
-               collect `(tell `[value-of (,user authorization-pool) ,(follow-path '(,pool))]))
+               collect `(tell `[ltms:value-of (,user authorization-pool) ,(follow-path '(,pool))]))
        ,@(loop for cap in capabilities
-	     collect `(tell `[value-of (,user capabilities) ,(follow-path '(,cap))]))
+	     collect `(tell `[ltms:value-of (,user capabilities) ,(follow-path '(,cap))]))
        (apply-positive-and-negative-masks user ,positive-address ,positive-mask ,negative-address ,negative-mask)
        user))) 
 
@@ -136,21 +136,21 @@
     (when (and positive-mask-address positive-mask-mask)
       (with-atomic-action
         (let ((positive-mask (make-positive-location-mask positive-mask-address positive-mask-mask)))
-          (tell `[value-of (,user location) ,positive-mask]))))
+          (tell `[ltms:value-of (,user location) ,positive-mask]))))
     (when (and negative-mask-address negative-mask-mask)
       (with-atomic-action
         (let ((negative-mask (make-negative-location-mask negative-mask-address negative-mask-mask)))
-          (tell `[value-of (,user location) ,negative-mask])))))
+          (tell `[ltms:value-of (,user location) ,negative-mask])))))
 
 (defmacro defcapability (name authorization-pool &key greater lesser)
   `(with-atomic-action
        (kill-redefined-object ',name)
      (let ((capability (make-object 'capability :name ',name)))
-       (tell `[value-of (,capability authorization-pool) ,(follow-path '(,authorization-pool))])
+       (tell `[ltms:value-of (,capability authorization-pool) ,(follow-path '(,authorization-pool))])
        ,@(loop for g in greater
-               collect `(tell `[value-of (,capability more-general) ,(follow-path '(,g))]))
+               collect `(tell `[ltms:value-of (,capability more-general) ,(follow-path '(,g))]))
        ,@(loop for l in lesser
-               collect `(tell `[value-of (,capability more-specific) ,(follow-path '(,l))])) 
+               collect `(tell `[ltms:value-of (,capability more-specific) ,(follow-path '(,l))])) 
        )))
 
 (defmacro defresource (name resource-type &key capability-requirements machines)
@@ -158,9 +158,9 @@
        (kill-redefined-object ',name)
        (let ((resource (make-object ',resource-type :name ',name)))
        ,@(loop for machine in machines
-	     collect `(tell `[value-of (,resource machines) ,(follow-path '(,machine))]))
+	     collect `(tell `[ltms:value-of (,resource machines) ,(follow-path '(,machine))]))
        ,@(loop for (operation capability) in capability-requirements
-	     collect `(tell `[value-of (,resource capability-requirements) (,',operation ,(follow-path '(,capability)))])))))
+	     collect `(tell `[ltms:value-of (,resource capability-requirements) (,',operation ,(follow-path '(,capability)))])))))
 
 (defmacro def-email-clients (email-server &rest clients)
   `(let ((the-server (Follow-path (list ',email-server))))
@@ -195,10 +195,10 @@
          (workload (follow-path (list os 'workload))))
     (when program
       (let ((program (follow-path program)))
-	(tell `[value-of (,process program) ,program])))
-    (tell `[value-of (,process host-os) ,os])
-    (tell `[value-of (,process machines) ,machine])
+	(tell `[ltms:value-of (,process program) ,program])))
+    (tell `[ltms:value-of (,process host-os) ,os])
+    (tell `[ltms:value-of (,process machines) ,machine])
     (typecase process
-      ((or server-process system-process) (tell `[value-of (,workload server-workload processes) ,process]))
-      (otherwise (tell `[value-of (,workload user-workload processes) ,process])))
+      ((or server-process system-process) (tell `[ltms:value-of (,workload server-workload processes) ,process]))
+      (otherwise (tell `[ltms:value-of (,workload user-workload processes) ,process])))
     process))

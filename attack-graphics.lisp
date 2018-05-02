@@ -53,7 +53,7 @@
 
 (clim:define-presentation-method clim:accept ((type computer) stream (view clim:textual-view) &key)
   (let ((answers nil))
-    (ask [object-type-of ?m computer]
+    (ask [ltms:object-type-of ?m computer]
          #'(lambda (just)
              (declare (ignore just))
              (pushnew ?m answers)))
@@ -87,7 +87,7 @@
 
 (defun resources-on-machine (machine)
   (let ((answers nil))
-    (ask `[value-of (,machine resources) ?resource]
+    (ask `[ltms:value-of (,machine resources) ?resource]
          #'(lambda (just)
              (declare (ignore just))
              (pushnew ?resource answers)))
@@ -108,7 +108,7 @@
 
 (clim:define-presentation-method clim:accept ((type attacker) stream (view clim:textual-view) &key)
   (let ((answers nil))
-    (ask [object-type-of ?m attacker]
+    (ask [ltms:object-type-of ?m attacker]
          #'(lambda (just)
              (declare (ignore just))
              (pushnew ?m answers)))
@@ -122,7 +122,9 @@
 
 (define-aplan-command (com-load-model :name t)
     ((pathname 'clim:pathname))
-  (load pathname))
+  (clear)
+  (ji:with-joshua-readtable 
+      (load pathname)))
 
 (define-aplan-command (com-find-plans :name t)
     ((computer 'computer)
@@ -167,12 +169,12 @@
   (let* ((attacker (make-object 'attacker :name name))
 	 (the-world (follow-path (list world-name)))
 	 (his-machine (make-object 'typical-computer :name (intern (string-upcase (format nil "~a-machine" name))))))
-    (tell `[value-of (,attacker world) ,the-world])
-    (tell `[value-of (,attacker machines) ,his-machine])
+    (tell `[ltms:value-of (,attacker world) ,the-world])
+    (tell `[ltms:value-of (,attacker machines) ,his-machine])
     (tell `[uses-machine ,his-machine ,attacker])
-    (tell `[value-of (,his-machine subnets) ,the-world])
-    (tell `[value-of (,the-world computers) ,his-machine])
-    (tell `[value-of (,attacker location) ,the-world])
+    (tell `[ltms:value-of (,his-machine subnets) ,the-world])
+    (tell `[ltms:value-of (,the-world computers) ,his-machine])
+    (tell `[ltms:value-of (,attacker location) ,the-world])
     attacker))
 
 (define-aplan-command (com-show-plan :name t)

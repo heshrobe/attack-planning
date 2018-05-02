@@ -112,12 +112,12 @@
          (ip-address (or (follow-path (list name) t nil) (make-object 'ip-address :name name))))
     (loop for octet in '(octet1 octet2 octet3 octet4)
           for value in octets
-          do (tell `[value-of (,ip-address ,octet) ,value]))
+          do (tell `[ltms:value-of (,ip-address ,octet) ,value]))
     ip-address))
 
 (defun add-ip-address-to-computer (ip-address-string computer)
   (let* ((ip-address (create-ip-address ip-address-string)))
-    (tell `[value-of (,computer ip-addresses) ,ip-address])))
+    (tell `[ltms:value-of (,computer ip-addresses) ,ip-address])))
 
 (defun fill-in-subnet-mask (subnet-mask ip-address-string subnet-mask-string)
   (let ((address-octets (parse-ip-address ip-address-string))
@@ -125,8 +125,8 @@
     (loop for octet-name in '(octet1 octet2 octet3 octet4)
           for address-octet in address-octets
           for mask-octet in mask-octets
-          do (tell `[value-of (,subnet-mask ip-address ,octet-name) ,address-octet])
-             (tell `[value-of (,subnet-mask mask ,octet-name) ,mask-octet]))))
+          do (tell `[ltms:value-of (,subnet-mask ip-address ,octet-name) ,address-octet])
+             (tell `[ltms:value-of (,subnet-mask mask ,octet-name) ,mask-octet]))))
 
 (defun ip-address-is-on-subnet (ip-address subnet)
   (let* ((subnet-mask (ip-address-integer (follow-path `(,subnet mask mask))))
