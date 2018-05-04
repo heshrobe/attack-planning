@@ -123,8 +123,12 @@
 (define-aplan-command (com-load-model :name t)
     ((pathname 'clim:pathname))
   (clear)
+<<<<<<< HEAD
   (ji:with-joshua-readtable 
       (load pathname)))
+=======
+  (load pathname))
+>>>>>>> a7bc1f4cd16ac3d505608774d6b453c73d49d9ef
 
 (define-aplan-command (com-find-plans :name t)
     ((computer 'computer)
