@@ -192,13 +192,6 @@
   then [impacts performance ?process timeliness ?process]
   )
 
-(defrule inputs-affect-accuracy-of-control-system-process (:forward)
-  if [and [ltms:object-type-of ?process control-system-process]
-	  [input-of ?process ?file]
-	  [ltms:object-type-of ?file file]]
-  then [impacts data-integrity ?file accuracy ?process])
-
-
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;
 ;;; Impact relationships relating to access controller
@@ -415,6 +408,12 @@
   if [ltms:object-type-of ?process control-system-process]
   then [desirable-property-of ?process accuracy])
 
+(defrule inputs-affect-accuracy-of-control-system-process (:forward)
+  if [and [ltms:object-type-of ?process control-system-process]
+	  [input-of ?process ?file]
+	  [ltms:object-type-of ?file file]]
+  then [impacts data-integrity ?file accuracy ?process])
+
 (defrule control-system-timeliness (:forward)
   if [ltms:object-type-of ?process control-system-process]
   then [desirable-property-of ?process timeliness])
@@ -508,3 +507,56 @@
 	  [ltms:value-of (?os-instance superuser) ?user]
 	  [ltms:object-type-of ?user user]]
   then [ltms:value-of (?user machines) ?machine])
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;;
+;;; Bus related stuff
+;;;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+(defrule add-to-connected-systems (:forward)
+  if [and [object-type-of ?device hardware]
+	  [connected-to-bus ?device ? ?bus ?]
+	  [object-type-of ?bus bus]]
+  then [ltms:value-of (?bus connected-systems) ?device]
+  )
+
+(defrule anybody-is-master-on-canbus (:forward)
+  if [and [object-type-of ?device hardware]
+	  [ltms:value-of (?device hardware-interfaces) ?interface]
+	  [object-type-of ?bus canbus]
+	  [connected-to-bus ?computer ?interface ?bus ?slot]]
+  then [can-master ?device ?bus]
+  )
+
+(defrule master-on-bus-can-slave-others (:forward)
+  if [and [object-type-of ?master hardware]
+	  [object-type-of ?bus bus]
+	  [can-master ?master ?bus]
+	  [object-type-of ?victim hardware]
+	  [connected-to-bus ?victim ?interface ?bus ?slot]
+	  (not (eql ?master ?victim))
+	  ]
+  then [can-be-mastered-by ?master ?victim ?bus]
+  )
+
+(defrule anbody-can-issue-command-on-canbus (:forward)
+  if [and [object-type-of ?bus canbus]
+	  [object-type-of ?master hardware]
+	  [can-be-mastered-by ?master ?victim ?bus]
+	  [object-type-of ?victime peripheral]
+	  [command-to ?victim ?command]]
+  then [can-issue-command-to ?master ?command ?victim ?bus]
+  )
+
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;;
+;;; Web Server Vulnerabilities
+;;;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+(defrule apache-can-be-hacked-1 (:forward)
+  if [object-type-of ?process apache-web-server-process]
+  then [vulnerable-to-overflow-attack ?process]
+  )

@@ -180,7 +180,7 @@
 (define-aplan-command (com-show-plan :name t)
     ((which 'integer) 
      &key (orientation '(clim:member-alist (("horizontal" . :horizontal) ("vertical" . :vertical))) :default :vertical)
-     (postscript? 'clim:boolean :default nil :prompt "Generate to a postscript file")
+     (pdf? 'clim:boolean :default nil :prompt "Generate to a pdf file")
      (file-name 'clim:pathname)
      (text-size '(clim:member :very-small :small :normal :large :very-large)))
   (let ((plan (nth which (attack-plans clim:*application-frame*))))
@@ -190,16 +190,25 @@
                (clim:with-text-face (stream :bold)
                  (clim:with-text-size (stream text-size)
                    (format stream "~%Attack Plan ~d~%" which)
-                   (graph-an-attack-plan plan stream orientation text-size)))))
-        (if postscript?
-	    (with-open-file (file file-name :direction :output :if-exists :supersede)
+                   (graph-an-attack-plan plan stream orientation text-size))))
+	     (make-file-name-of-type (file-name type)
+	       (merge-pathnames (make-pathname :type type) file-name)))
+        (cond
+	 (pdf?
+	  (let* ((ps-pathname (make-file-name-of-type file-name "ps"))
+		 (pdf-pathname (make-file-name-of-type file-name "pdf"))
+		 (command (format nil "pstopdf ~a -o ~a" ps-pathname pdf-pathname)))
+	    (with-open-file (file ps-pathname :direction :output :if-exists :supersede)
 	      (clim:with-output-to-postscript-stream (stream file)
 		(body stream)))
+	    (excl:run-shell-command command :wait t)
+	    (delete-file ps-pathname)))
+	 (t
           (let ((stream (clim:get-frame-pane clim:*application-frame* 'attack-structure)))
             (multiple-value-bind (x y) (clim:stream-cursor-position stream)
               (clim:stream-set-cursor-position stream x (+ y 10))
               (clim:window-set-viewport-position stream x (+ y 10)))
-            (body stream)))        
+            (body stream))))
         (terpri)))))
 
 (defclass attack-goal ()
@@ -231,6 +240,9 @@
    (subgoals :initform nil :accessor subgoals :initarg :subgoals)
    (actions :initform nil :accessor actions :initarg :actions)
    ))
+
+(defclass plan-or-node ()
+  ((supporting-plans :initform nil :initarg :supporting-plans :accessor supporting-plans)))
 
 ;;; What this does:
 ;;; 1) Unique-izes goals
@@ -287,6 +299,12 @@
 	  for goal = (intern-goal (getf raw-plan :goal))
 	  for plan = (getf raw-plan :plan)
 	  do (traverse plan goal)))
+    ;; Insert OR-nodes for goals with multiple supporting plans
+    (loop for goal being the hash-values of goal-hash-table
+	for supporting-plans = (supporting-plans goal)
+	when (not (null (rest supporting-plans)))
+	do (setf (supporting-plans goal)
+	     (list (make-instance 'plan-or-node :supporting-plans supporting-plans))))
     (values (loop for goal being the hash-values of goal-hash-table
 		when  (loop for supported-plan in (supported-plans goal) always (null (supergoal supported-plan)))
 		collect goal)
@@ -338,16 +356,25 @@
 				(:singleton :reduces-to))))
         ))))
 
+(defmethod print-merged-plan-object ((or-node plan-or-node) stream)
+  (clim:with-drawing-options (stream :line-thickness 2)
+    (clim:surrounding-output-with-border (stream :shape :oval :ink clim:+green+)
+      (clim:with-text-face (stream :bold)
+      (format stream "~&OR")))))
+
+
 (defmethod merged-plan-inferior ((goal attack-goal)) (supporting-plans goal))
 
 (defmethod merged-plan-inferior ((plan attack-plan)) (steps plan))
 
 (defmethod merged-plan-inferior ((action attack-action)) nil)
 
+(defmethod merged-plan-inferior ((or-node plan-or-node)) (supporting-plans or-node))
+
 (define-aplan-command (com-show-merged-plans :name t)
     (&key (direction '(member :horizontal :vertical) :default :vertical)
 	  (text-size '(member :small :very-small :normal :large) :default :very-small)
-	  (postscript? 'clim:boolean :default nil :prompt "Generate to a postscript file")
+	  (pdf? 'clim:boolean :default nil :prompt "Generate to a pdf file")
 	  (file-name 'clim:pathname))
   (flet ((body (stream)
 	   (terpri)
@@ -356,16 +383,27 @@
 	       (format stream "~%Merged Plans ~%"))
 	     (clim:with-text-size (stream :small)
 	       (graph-merged-plans goals stream direction text-size))
-	     (terpri))))
-    (if postscript?
-          (with-open-file (file file-name :direction :output :if-exists :supersede)
-            (clim:with-output-to-postscript-stream (stream file)
-              (body stream)))
-          (let ((stream (clim:get-frame-pane clim:*application-frame* 'attack-structure)))
-            (multiple-value-bind (x y) (clim:stream-cursor-position stream)
-              (clim:stream-set-cursor-position stream x (+ y 10))
-              (clim:window-set-viewport-position stream x (+ y 10)))
-            (body stream)))))
+	     (terpri)))
+	 (make-pathname-with-type (pathname type)
+	   (merge-pathnames (make-pathname :type type) pathname)))
+    (cond
+     (pdf?
+      (let* ((ps-pathname (make-pathname-with-type file-name "ps"))
+	     (pdf-pathname (make-pathname-with-type file-name "pdf"))
+	     (command (format nil "pstopdf ~a -o ~a" ps-pathname pdf-pathname)))
+      (with-open-file (file ps-pathname :direction :output :if-exists :supersede)
+	(clim:with-output-to-postscript-stream (stream file)
+	  (body stream)
+	  ))
+      #+Allegro
+       (excl:run-shell-command command :wait t)
+       (delete-file ps-pathname)))
+     (t
+      (let ((stream (clim:get-frame-pane clim:*application-frame* 'attack-structure)))
+	(multiple-value-bind (x y) (clim:stream-cursor-position stream)
+	  (clim:stream-set-cursor-position stream x (+ y 10))
+	  (clim:window-set-viewport-position stream x (+ y 10)))
+	(body stream))))))
 
 
 

@@ -181,10 +181,11 @@
 
 (tell-positive-policy cradlepoint-router ssh ("0.0.0.0"  "0.0.0.0") ("192.0.0.0"  "255.0.0.0"))
 
-
 (defcomputer navnet windows-7-computer "192.10.0.4"
 	     :authorization-pool server-pool
-	     :superuser server-administrator)
+	     :superuser server-administrator
+	     :interfaces (serial)
+	     )
 
 (defresource typical-chart file
 	     :capability-requirements ((write server-super-user) (read server-user-read))
@@ -198,11 +199,45 @@
     :capability-requirements ((write server-super-user) (read server-user-read))
     :machines (windows-email-vm))
 
-;;;;;;;;;;;;;;;;;
-;; EXTERNAL DEVICE POOL: todo
-;;
-;;;;;;;;;;;;;;;;;
 
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;;
+;;; Navigation Network -- Canbus
+;;;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+(defbus navigation-bus 
+    :bus-type canbus
+    :slots (0 1 2 3 4 5 6)
+    )
+
+(define-peripheral auto-pilot
+    :peripheral-type auto-pilot
+    :interfaces (serial)
+    :commands (update-setpoint)
+    )
+
+(defprocess auto-pilot-process
+    :process-type control-system-process
+    :machine auto-pilot
+    )
+
+(define-connection auto-pilot serial navigation-bus 3)
+(define-connection navnet serial navigation-bus 0)
+
+
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;;
+;;; The Navaigation System
+;;;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+
+(define-system navigation-system
+    :components (navigation-bus auto-pilot )
+    :roles ((controller auto-pilot))
+    )
 
 
 ;; TODO: need to define new data types for a VM (since we 
@@ -238,7 +273,12 @@
     :machine navnet
     )
 
-(tell `[input-of ,(follow-path '(navigation-process)) ,(follow-path '(typical-chart))])
+(defprocess web-server-process
+    :Process-type apache-web-server-process
+    :machine navnet
+    )
+
+(define-input navigation-process typical-chart)
 
 ;; Instantiate attacker
 (create-attacker 'typical-attacker :world-name 'outside)

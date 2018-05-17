@@ -148,7 +148,18 @@
 
 (define-goal achieve-connection (attacker os-instance connection-type))
 
-(define-goal logon (attacker user os-instance))
+;;; Note: Maybe this should specify the entity that's doing the execution
+;;; an entity might be a process or a user.  Would need a mixin system-entity
+;;; that's mixed into both user and process.
+(define-goal remote-execution (attacker entity os-instance))
+
+(define-goal code-injection (attacker process os-instance))
+
+(define-goal code-reuse (attacker process os-instance))
+
+(define-predicate vulnerable-to-overflow-attack (process) (ltms:ltms-predicate-model))
+
+(define-goal remote-shell (attacker user os-instance))
 
 ;;; This is related to attacks in which for example the user is misdirected
 ;;; to a fake site or to a fake DNS resolver
@@ -178,7 +189,8 @@
 (define-action read-with-rights-of (actor user file))
                                                      
 ;;; The actor logs onto the particular OS as user
-(define-action logon (actor user os-instance))
+
+(define-action login (actor user os-instance))
 
 (define-action use-own-password (user))
 
@@ -196,3 +208,33 @@
 
 (define-action observe (actor network-traffic subnet))
 
+(define-action open-ftp-connection (actor target))
+
+(define-action open-http-connection (actor target))
+
+(define-action trasmit-data (actor data target))
+
+(define-action launch-code-injection-attack (attacker process))
+
+(define-action launch-code-reuse-attack (attacker process))
+
+(define-action issue-false-sensor-data-report (attacker controller source bus))
+
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;;
+;;; Predicates related to busses and connections to them
+;;;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+(define-predicate connected-to-bus (computer interface bus slot) (ltms:ltms-predicate-model))
+
+(define-predicate can-master (computer bus) (ltms:ltms-predicate-model))
+
+(define-predicate can-be-mastered-by (slave master bus) (ltms:ltms-predicate-model))
+
+(define-predicate command-to (peripheral command-name) (ltms:ltms-predicate-model))
+
+(define-predicate can-issue-command-to (master victim command bus) (ltms:ltms-predicate-model))
+
+(define-predicate system-role (system role-name component) (ltms:ltms-predicate-model))

@@ -47,7 +47,7 @@
     :to-achieve [affect ?attacker ?desirable-property ?victim]
     ;; find some component of the OS of a machine that the victim runs on
     :bindings ([ltms:value-of (?victim machines) ?computer]
-               [named-part-of ?computer os ?os-instance]
+               [ltms:named-part-of ?computer os ?os-instance]
                [part-of ?os-instance ?component])
     :typing ([ltms:object-type-of ?victim computer-resource]
              [ltms:object-type-of ?os-instance operating-system]
@@ -116,7 +116,7 @@
     :to-achieve [increase-size ?attacker ?workload]
     :bindings ([ltms:value-of (?workload os) ?os]
 	       [ltms:value-of (?os job-launch-queue) ?queue]
-	       [named-part-of ?queue user-job-launch-request-queue ?user-job-launch-queue])
+	       [ltms:named-part-of ?queue user-job-launch-request-queue ?user-job-launch-queue])
     :typing ([ltms:object-type-of ?workload os-workload]
 	     [ltms:object-type-of ?os operating-system]
 	     [ltms:object-type-of ?queue os-job-launch-request-queue]
@@ -335,19 +335,58 @@
 ;;; NOTE: There are other ways of doing this, e.g. find some logged in user and take over his process
 ;;; in order to submit lots of jobs
 
+;;; Here entity can be passed in unbound and will be unified
+(defattack-method remote-execution-to-remote-shell
+    :to-achieve [remote-execution ?attacker ?user ?os-instance]
+    :bindings ([ltms:value-of (?os-instance authorization-pool) ?authorization-pool] 
+	       [ltms:value-of (?authorization-pool users) ?user])
+    :typing ([ltms:object-type-of ?os-instance operating-system]
+             [ltms:object-type-of ?authorization-pool authorization-pool]
+             [ltms:object-type-of ?user user])
+    :plan (:goal [remote-shell ?attacker ?user ?os-instance]))
 
+(defattack-method remote-execution-to-code-injection
+    :to-achieve [remote-execution ?attacker ?process ?os-instance]
+    :bindings ([ltms:value-of (?os-instance processes) ?process])
+    :typing ([ltms:object-type-of ?os-instance operating-system]
+	     [ltms:object-type-of ?process process])
+    :plan (:goal [code-injection ?attacker ?process ?os-instance]))
+
+(defattack-method code-injection-against-web-server
+    :to-achieve [code-injection ?attacker ?process ?os-instance]
+    :typing ([ltms:object-type-of ?process web-server-process])
+    :prerequisites ([vulnerable-to-overflow-attack ?process])
+    :plan (:action [launch-code-injection-attack ?attacker ?process]))
+
+(defattack-method remote-execution-to-code-reuse
+    :to-achieve [remote-execution ?attacker ?process ?os-instance]
+    :bindings ([ltms:value-of (?os-instance processes) ?process])
+    :typing ([ltms:object-type-of ?os-instance operating-system]
+	     [ltms:object-type-of ?process process])
+    :plan (:goal [code-reuse ?attacker ?process ?os-instance]))
+
+(defattack-method code-reuse-against-web-server
+    :to-achieve [code-reuse ?attacker ?process ?os-instance]
+    :typing ([ltms:object-type-of ?process web-server-process])
+    :prerequisites ([vulnerable-to-overflow-attack ?process])
+    :plan (:action [launch-code-reuse-attack ?attacker ?process]))
+
+;;; Note: It's more general if we just say to achieve remote-execution
+;;; and let the system determine whether that meant remote-shell, code-injection, code-reuse, etc.
+;;; In deterimining how to do that it also determines what entity to do it as.
 
 (defattack-method modify-job-request-queue
     :to-achieve [increase-size ?attacker ?user-job-launch-queue]
-    :bindings ([named-part-of ?full-job-launch-queue user-job-launch-request-queue ?user-job-launch-queue]
+    :bindings ([ltms:named-part-of ?full-job-launch-queue user-job-launch-request-queue ?user-job-launch-queue]
                [ltms:value-of (?full-job-launch-queue os) ?os-instance]
-	       [ltms:value-of (?os-instance job-launch-queue) ?full-job-launch-queue])
+	       [ltms:value-of (?os-instance job-launch-queue) ?full-job-launch-queue]
+	       )
     :typing ([ltms:object-type-of ?user-job-launch-queue job-launch-request-queue]
              [ltms:object-type-of ?full-job-launch-queue os-job-launch-request-queue]
              [ltms:object-type-of ?os-instance operating-system])
     :plan (:sequential
-           (:goal [logon ?attacker ?user ?os-instance])
-           (:repeated-action [submit-user-jobs ?user ?user-job-launch-queue])))
+           (:goal [remote-execution ?attacker ?entity ?os-instance])
+           (:repeated-action [submit-user-jobs ?entity ?user-job-launch-queue])))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;
@@ -359,7 +398,7 @@
 ;;; They can affect performance by adding jobs
 (defattack-method add-jobs-after-job-launcher-is-hacked
     :to-achieve [use-control-of-to-affect-resource ?attacker ?controller performance ?target]
-    :bindings ([named-part-of ?os job-admitter ?controller]
+    :bindings ([ltms:named-part-of ?os job-admitter ?controller]
                [ltms:value-of (?os-instance workload) ?input])
     :typing ([ltms:object-type-of ?controller os-job-admitter]
              [ltms:object-type-of ?os operating-system]
@@ -384,10 +423,14 @@
 
 (defattack-method how-to-read-a-file
     :to-achieve [achieve-knowledge-of-contents ?attacker ?file]
+    :bindings ([ltms:value-of (?attacker machines) ?attacker-machine])
     :typing ([ltms:object-type-of ?file file])
     :plan (:sequential
            (:goal [achieve-access-right ?attacker read ?file ?user])
-           (:action [read-with-rights-of ?attacker ?user ?file]))
+           (:action [read-with-rights-of ?attacker ?user ?file])
+	   (:action [open-ftp-connection ?attacker ?attacker-machine])
+	   (:action [trasmit-data ?attacker ?file ?attacker-machine])
+	   )
     )
 
 ;;; The ?user part of this is actually to feed back to the higher
@@ -398,7 +441,7 @@
     ;; all this is asking is there a process in the workload
     ;; and if so with which user's permissions is it running
     :bindings ([ltms:value-of (?object machines) ?machine]
-               [named-part-of ?machine os ?os-instance]
+               [ltms:named-part-of ?machine os ?os-instance]
                [ltms:value-of (?os-instance workload) ?os-workload]
                [or [ltms:value-of (?os-workload server-workload processes) ?the-process]
                    [ltms:value-of (?os-workload user-workload processes) ?the-process]]
@@ -419,7 +462,7 @@
 (defattack-method how-to-achieve-access-right-by-password-stealing
     :to-achieve [achieve-access-right ?attacker ?right ?object ?user]
     :bindings ([ltms:value-of (?object machines) ?machine]
-               [named-part-of ?machine os ?os-instance]
+               [ltms:named-part-of ?machine os ?os-instance]
                [requires-access-right ?object ?right ?capability]
 	       [ltms:value-of (?os-instance authorization-pool) ?pool]
 	       [ltms:value-of (?pool users) ?user]
@@ -431,7 +474,7 @@
              [ltms:object-type-of ?os-instance operating-system]
 	     [ltms:object-type-of ?pool authorization-pool]
              [ltms:object-type-of ?user user])
-    :plan (:goal [logon ?attacker ?user ?os-instance])
+    :plan (:goal [remote-shell ?attacker ?user ?os-instance])
     )
 
 
@@ -446,11 +489,11 @@
     :bindings ([ltms:value-of (?active-user-set os) ?os-instance])
     :typing ([ltms:object-type-of ?active-user-set user-set]
              [ltms:object-type-of ?os-instance operating-system])
-    :plan (:goal [logon ?attacker ?user ?os-instance])
+    :plan (:goal [remote-shell ?attacker ?user ?os-instance])
     )
 
 (defattack-method how-to-logon-1
-    :to-achieve [logon ?attacker ?user ?os-instance]
+    :to-achieve [remote-shell ?attacker ?user ?os-instance]
     :bindings ([ltms:value-of (?os-instance authorization-pool) ?pool]
                [ltms:value-of (?pool users) ?user])
     :typing ([ltms:object-type-of ?os-instance operating-system]
@@ -459,10 +502,10 @@
     :plan (:sequential
            (:goal [achieve-knowledge-of-password ?attacker ?user ?pool])
            (:goal [achieve-connection ?attacker ?os-instance telnet])
-           (:action [logon ?attacker ?user ?os-instance])))
+           (:action [login ?attacker ?user ?os-instance])))
 
 (defattack-method how-to-logon-2
-    :to-achieve [logon ?attacker ?user ?os-instance]
+    :to-achieve [remote-shell ?attacker ?user ?os-instance]
     :bindings ([ltms:value-of (?os-instance authorization-pool) ?pool]
                [ltms:value-of (?pool users) ?user])
     :typing ([ltms:object-type-of ?os-instance operating-system]
@@ -471,7 +514,7 @@
     :plan (:sequential
            (:goal [achieve-knowledge-of-password ?attacker ?user ?pool])
            (:goal [achieve-connection ?attacker ?os-instance ssh])
-           (:action [logon ?attacker ?user ?os-instance])))
+           (:action [login ?attacker ?user ?os-instance])))
 
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -516,7 +559,7 @@
              [ltms:object-type-of ?machine computer])
     :bindings ([email-client-of ?user ?process]
 	       [ltms:value-of (?process host-os) ?os-instance]
-	       [named-part-of ?machine os ?os-instance])
+	       [ltms:named-part-of ?machine os ?os-instance])
     :plan (:sequential
            (:goal [achieve-connection ?attacker ?os-instance email])
            (:action [phishing-attack ?attacker ?user ?process]))
@@ -560,7 +603,7 @@
 
 (defattack-method achieve-connection-by-protocol
     :to-achieve [achieve-connection ?attacker ?os-instance ?protocol-name]
-    :bindings ([named-part-of ?machine os ?os-instance])
+    :bindings ([ltms:named-part-of ?machine os ?os-instance])
     :typing ([ltms:object-type-of ?os-instance operating-system]
              [ltms:object-type-of ?machine computer])
     :prerequisites ([accepts-connection ?machine ?protocol-name ?attacker ?])
@@ -593,20 +636,20 @@
 
 (defattack-method control-the-network-stack
     :to-achieve [takes-direct-control-of ?attacker ?stack-property ?network-stack]
-    :bindings ([named-part-of ?os-instance network-monitor ?network-stack]
+    :bindings ([ltms:named-part-of ?os-instance network-monitor ?network-stack]
                [ltms:value-of (?os-instance superuser) ?superuser])
     :typing ([ltms:object-type-of ?network-stack network-stack]
              [ltms:object-type-of ?os-instance operating-system]
              [ltms:object-type-of ?superuser user])
     :plan (:sequential 
-           (:goal [logon ?attacker ?superuser ?os-instance])
+           (:goal [remote-shell ?attacker ?superuser ?os-instance])
            (:action [control ?attacker ?network-stack])))
 
 (defattack-method read-network-traffic
     :to-achieve [observe-network-traffic ?attacker ?subnet]
     :bindings ([ltms:value-of (?subnet switch) ?switch]
                [ltms:value-of (?switch os) ?os]
-               [named-part-of ?os network-monitor ?network-stack])
+               [ltms:named-part-of ?os network-monitor ?network-stack])
     :typing ([ltms:object-type-of ?subnet switched-subnet]
              [ltms:object-type-of ?switch switch]
              [ltms:object-type-of ?network-stack network-stack])
@@ -714,4 +757,46 @@ Transformations: compilation jarification loading
 ;;;    Privilege escalation as way to that
 ;;;    Buffer overread as read to do that
 ;;; Having copy of system as way to have knowledge of memory contents
-					
+
+
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;;
+;;; Things relevant to control systems
+;;;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+(defattack-method fake-sensor-data
+    :to-achieve [affect ?attacker accuracy ?controller-process]
+    :bindings ([ltms:value-of (?controller-process machines) ?machine]
+	       [connected-to-bus ?machine ?interface ?bus ?slot]
+	       [connected-to-bus ?other-machine ?other-interface ?bus ?other-slot]
+	       [ltms:named-part-of ?other-machine os ?os])
+    :prerequisites ((not (eql ?machine ?other-machine))
+		    [can-be-mastered-by ?machine ?other-machine ?bus])
+    :typing ([ltms:object-type-of ?machine computer]
+	     [ltms:object-type-of ?other-machine computer]
+	     [ltms:object-type-of ?os operating-system]
+	     [ltms:object-type-of ?bus bus])
+    :plan (:sequential
+	   (:goal [remote-execution ?attacker ?entity ?os])
+	   (:action [issue-false-sensor-data-report ?attacker ?machine ?other-machine ?bus]))
+    )
+
+(defattack-method fake-command-data
+    :to-achieve [affect ?attacker accuracy ?controller-process]
+    :bindings ([ltms:value-of (?controller-process machines) ?machine]
+	       [connected-to-bus ?machine ?interface ?bus ?slot]
+	       [connected-to-bus ?other-machine ?other-interface ?bus ?other-slot]
+	       [ltms:named-part-of ?other-machine os ?os])
+    :prerequisites ((not (eql ?machine ?other-machine))
+		    [can-be-mastered-by ?machine ?other-machine ?bus])
+    :typing ([ltms:object-type-of ?machine computer]
+	     [ltms:object-type-of ?other-machine computer]
+	     [ltms:object-type-of ?os operating-system]
+	     [ltms:object-type-of ?bus bus])
+    :plan (:sequential
+	   (:goal [remote-execution ?attacker ?entity ?os])
+	   (:action [issue-incorrect-setpoint ?attacker ?machine ?other-machine ?bus]))
+    )
+

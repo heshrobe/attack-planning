@@ -59,7 +59,7 @@
 	       collect `(push (make-location-mask 'subnet-mask ,address ,mask) (exception-masks location)))
 	 site)))
 
-(defmacro defcomputer (name computer-type ip-address-string &key superuser authorization-pool)
+(defmacro defcomputer (name computer-type ip-address-string &key superuser authorization-pool interfaces)
   `(with-atomic-action
        (kill-redefined-object ',name)
      (let ((computer (make-object ',computer-type :name ',name)))
@@ -68,7 +68,36 @@
           `(tell `[ltms:value-of (,computer os superuser) ,(follow-path '(,superuser))]))
        ,(when authorization-pool
           `(tell `[ltms:value-of (,computer os authorization-pool) ,(follow-path '(,authorization-pool))]))
+       ,@(when interfaces
+	   (loop for interface in interfaces
+	       collect `(tell `[ltms:value-of (,computer hardware-interfaces) ,',interface])))
        computer)))
+
+(defmacro define-peripheral (name &key peripheral-type interfaces commands)
+  `(with-atomic-action
+       (kill-redefined-object ',name)
+     (let ((device (make-object ',peripheral-type :name ',name)))
+       ,@(when interfaces
+	   (loop for interface in interfaces
+	       collect `(tell `[ltms:value-of (,device hardware-interfaces) ,',interface])))
+       ,@(when commands
+	   (loop for command in commands
+		 collect `(tell `[command-to ,device ,',command])))
+       device)))
+
+(defmacro defbus (name &key bus-type slots)
+  `(with-atomic-action
+    (kill-redefined-object ',name)
+    (let ((bus (make-object ',bus-type :name ',name)))
+      ,@(when slots
+	  (loop for slot in slots
+		collect `(tell `[ltms:value-of (,bus slots) ,',slot])))
+      bus)))
+
+(defmacro define-connection (device interface bus slot)
+  `(let ((device (follow-path '(,device)))
+	 (bus (follow-path '(,bus))))
+     (tell `[connected-to-bus ,device ,',interface ,bus ,',slot])))
 
 (defmacro defswitch (name switch-type ip-address-string &key authorization-pool superuser)
   `(with-atomic-action
@@ -202,3 +231,17 @@
       ((or server-process system-process) (tell `[ltms:value-of (,workload server-workload processes) ,process]))
       (otherwise (tell `[ltms:value-of (,workload user-workload processes) ,process])))
     process))
+
+(defmacro define-system (name &key (system-type 'system) components roles)
+  `(with-atomic-action
+       (kill-redefined-object ',name)
+     (let ((the-system (make-object ',system-type :name ',name)))
+       ,@(loop for component in components
+	     collect `(tell `[ltms:value-of (,the-system components) ,(follow-path '(,component))]))
+       ,@(loop for (role-name component-name) in roles
+	     collect `(tell `[system-role ,the-system ,',role-name ,(follow-path '(,component-name))]))
+       )))
+
+(defmacro define-input (process-name data-name)
+  `(tell `[input-of ,(follow-path '(,process-name)) ,(follow-path '(,data-name))]))
+

@@ -17,10 +17,16 @@
 
 (define-object-type typical-object-mixin)
 
+(define-object-type system-entity
+    :tms t
+    :included-object-types (print-nicely-mixin)
+    )
+
 (define-object-type computer-resource
-  :included-object-types (print-nicely-mixin)
-  :slots ((machines :set-valued t :tms t)
-          (capability-requirements :set-valued t :tms t)))
+    :tms t
+    :included-object-types (print-nicely-mixin)
+    :slots ((machines :set-valued t :tms t)
+	    (capability-requirements :set-valued t :tms t)))
 
 (define-object-type code-in-memory
     :tms t
@@ -157,10 +163,10 @@
 
 (define-object-type process
     :tms t
-    :slots ((host-os  :tms t)
+    :slots ((host-os :tms t)
 	    (program :tms t)
 	    (code-image :tms t))
-    :included-object-types (computer-resource))
+    :included-object-types (computer-resource system-entity))
 
 ;;; presumably there could be both system programs
 ;;; and application programs
@@ -233,21 +239,23 @@
     :tms t
   :included-object-types (web-server-process))
 
-(define-object-type lisp-server-process
-    :tms t
-  :included-object-types (web-server-process))
+;;; I rather think these are obsolete
+;;;
+; (define-object-type lisp-server-process
+;     :tms t
+;   :included-object-types (web-server-process))
 
-(define-object-type cl-http-server-process
-    :tms t
-    :included-object-types (lisp-server-process))
+; (define-object-type cl-http-server-process
+;     :tms t
+;     :included-object-types (lisp-server-process))
 
-(define-object-type allegro-http-server-process
-    :tms t
-    :included-object-types (lisp-server-process))
+; (define-object-type allegro-http-server-process
+;     :tms t
+;     :included-object-types (lisp-server-process))
 
-(define-object-type iis-web-server-process
-    :tms t
-  :included-object-types (web-server-process))
+; (define-object-type iis-web-server-process
+;     :tms t
+;   :included-object-types (web-server-process))
 
 (define-object-type user-process
     :tms t
@@ -419,7 +427,7 @@
 	    (capabilities :set-valued t :tms t)
 	    (authorization-pool :set-valued t :tms t)
 	    (machines :set-valued t :tms t))
-  :included-object-types (print-nicely-mixin))
+  :included-object-types (system-entity print-nicely-mixin))
 
 (define-object-type attacker
     :tms t
@@ -648,18 +656,28 @@
 			       (negative-policies :accessor negative-policies :initform nil))
     )
 
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;;
+;;; Hardware
+;;;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+(define-object-type hardware
+    :tms t
+    :slots ((hardware-interfaces :set-valued t :tms t))
+    )
+
 (define-object-type computer
     :tms t
-  :parts ((os (operating-system-for-machine self)))
-  :slots ((ip-addresses :set-valued t :tms t)
-          (subnets :set-valued t :tms t)
-          (resources :set-valued t :tms t)
-          (site :set-valued t :tms t)
-          (hardware-interfaces :set-valued t :tms t)
-          (communication-protocols :set-valued t :tms t)
-          (system-type :tms t)
-          (health-status :tms t))
-  :included-object-types (has-policy-mixin print-nicely-mixin))
+    :parts ((os (operating-system-for-machine self)))
+    :slots ((ip-addresses :set-valued t :tms t)
+	    (subnets :set-valued t :tms t)
+	    (resources :set-valued t :tms t)
+	    (site :set-valued t :tms t)
+	    (communication-protocols :set-valued t :tms t)
+	    (system-type :tms t)
+	    (health-status :tms t))
+    :included-object-types (has-policy-mixin hardware print-nicely-mixin))
 
 (define-object-type typical-computer
     :tms t
@@ -731,10 +749,6 @@
 
 (defmethod operating-system-for-machine ((self windows-7-computer)) 'windows-7)
 
-(define-object-type navnet 
-    :tms t
-    :included-object-types (windows-7-computer))
-
 (define-object-type windows-8-computer
     :tms t
   :included-object-types (windows-computer))
@@ -777,6 +791,13 @@
   :included-object-types (computer))
 
 (defmethod operating-system-for-machine ((self lispm-computer)) 'genera)
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;;
+;;; IP addresses and masks
+;;;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
 
 #+genera
 (define-object-type ip-address
@@ -841,6 +862,13 @@
     :tms t
   :included-object-types (subnet-mask))
 
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;;
+;;; Subnets and network traffic
+;;;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+
 (define-object-type network-traffic
     :tms t
   :slots ((subnet :tms t))
@@ -889,11 +917,11 @@
     :tms t
     :included-object-types (shared-media-subnet))
 
-;;; This is the standard automotive and other control system
-;;; bus
-(define-object-type canbus-subnet
-    :tms t
-    :included-object-types (shared-media-subnet))
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;;
+;;; Switches and Routers
+;;;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 ;; A switch is on one subnet.
 ;; it is reponsible in a switched network for sending
@@ -954,6 +982,12 @@
     :included-object-types (subnet-mixin print-nicely-mixin)
     :slots ((subnets :set-valued t :tms t)
 	    ))
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;;
+;;; Protocols
+;;;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 (define-object-type communication-protocols
     :tms t
@@ -1024,3 +1058,86 @@
     :tms t
     :included-object-types (communication-protocols)
     )
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;;
+;;; Buses that machines plug into
+;;;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+(define-object-type bus
+    :tms t
+    :slots ((slots :set-valued t :tms t))
+    :included-object-types (print-nicely-mixin))
+
+;;; This is the standard automotive and other control system
+;;; bus.  It's not a network
+(define-object-type canbus
+    :tms t
+    :slots ((connected-systems :set-valued t :tms t))
+    :included-object-types (bus))
+
+
+(define-object-type peripheral
+    :tms t
+    :slots ((hardware-interfaces :set-valued t :tms t))
+    :included-object-types (hardware print-nicely-mixin)
+    )
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;;
+;;; Control System
+;;;   Includes a sensor, an effector and a controller
+;;;    the controller is a computer
+;;;
+;;;   Notes: maybe this should really be a sensor-set
+;;;          and an effector set
+;;;       
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+(define-object-type controller
+    :tms t
+    :included-object-types (computer)
+    :slots ((set-point :tms t)
+	    (controller-parameters :tms t)
+	    (inputs :set-valued t :tms t))
+    )
+
+(define-object-type sensor
+    :tms t
+    :included-object-types (hardware)
+    :slots ((sensed-value :tms t)
+	    (physical-signal :tms t))
+    )
+
+(define-object-type effector
+    :tms t
+    :included-object-types (hardware)
+    :slots ((command :tms t)
+	    (physical-position :tms t))
+    )
+
+(define-object-type system
+    :tms t
+    :included-object-types (print-nicely-mixin)
+    :slots ((components :set-valued t :tms t))
+    )
+
+(define-object-type control-system
+    :included-object-types (system)
+    :tms t
+    :slots ((sensors :tms t :set-valued t)
+	    (controller :tms t)
+	    (effectors :set-valued t :tms t ))
+    )
+
+(define-object-type auto-pilot
+    :tms t
+    :included-object-types (computer peripheral)
+    )
+
+
+
+
+
+
