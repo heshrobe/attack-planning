@@ -56,6 +56,7 @@
       ;; title
       (:fill attack-structure)
       pointer
+      menu
       interactor)))
   (:command-definer define-aplan-command)
   (:command-table aplan))

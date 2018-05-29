@@ -120,13 +120,13 @@
 (clim:define-presentation-method clim:present (item (type attacker) stream  (view clim:textual-view) &key)
   (write-string (string (role-name item)) stream))
 
-(define-aplan-command (com-load-model :name t)
+(define-aplan-command (com-load-model :name t :menu t)
     ((pathname 'clim:pathname))
   (clear)
   (ji:with-joshua-readtable 
       (load pathname)))
 
-(define-aplan-command (com-find-plans :name t)
+(define-aplan-command (com-find-plans :name t :menu t)
     ((computer 'computer)
      (property 'desirable-property :default 'performance)
      (resource `(computer-resource ,computer))
@@ -177,7 +177,7 @@
     (tell `[ltms:value-of (,attacker location) ,the-world])
     attacker))
 
-(define-aplan-command (com-show-plan :name t)
+(define-aplan-command (com-show-plan :name t :menu t)
     ((which 'integer) 
      &key (orientation '(clim:member-alist (("horizontal" . :horizontal) ("vertical" . :vertical))) :default :vertical)
      (pdf? 'clim:boolean :default nil :prompt "Generate to a pdf file")
@@ -211,7 +211,22 @@
             (body stream))))
         (terpri)))))
 
-(defclass attack-goal ()
+(defparameter *json-id-counter* 0)
+
+(defun reset-json-counter () (setq *json-id-counter* 0))
+
+(defun get-json-id (prefix)
+  (intern (format nil "~a-~d" (string-upcase (string prefix)) (incf *json-id-counter*)))
+  )
+
+(defclass json-id-mixin ()
+  ((json-id :accessor json-id :Initarg :json-id))
+  )
+
+(defmethod initialize-instance :after ((thing json-id-mixin) &key &allow-other-keys)
+  (setf (json-id thing) (get-json-id (json-id-key thing))))
+
+(defclass attack-goal (json-id-mixin)
   ((name :initform nil :accessor goal-name :initarg :name)
    (supporting-plans :initform nil :accessor supporting-plans :initarg :supporting-plans)
    (supported-plans :initform nil :accessor supported-plans :initarg :suported-plans)))
@@ -219,9 +234,13 @@
 (defmethod print-object ((object attack-goal) stream)
   (format stream "#<goal ~a>" (goal-name object)))
 
-(defclass attack-action ()
+(defmethod json-id-key ((thing attack-goal)) 'goal)
+
+(defclass attack-action (json-id-mixin)
   ((name :initform nil :accessor action-name :initarg :name)
    (supported-plans :initform nil :accessor supported-plans :initarg :suported-plans)))
+
+(defmethod json-id-key ((thing attack-action)) 'action)
 
 (defclass repeated-attack-action (attack-action)
   ()
@@ -233,7 +252,7 @@
 (defmethod print-object ((object repeated-attack-action) stream)
   (format stream "#<Repeated-Action ~a>" (action-name object)))
 
-(defclass attack-plan ()
+(defclass attack-plan (json-id-mixin)
   ((supergoal :initform nil :accessor supergoal :initarg :supergoal)
    (combinator :initform nil :accessor combinator :initarg :combinator)
    (steps :initform nil :accessor steps :initarg :steps)
@@ -241,8 +260,12 @@
    (actions :initform nil :accessor actions :initarg :actions)
    ))
 
-(defclass plan-or-node ()
+(defmethod json-id-key ((thing attack-plan)) 'plan)
+
+(defclass plan-or-node (json-id-mixin)
   ((supporting-plans :initform nil :initarg :supporting-plans :accessor supporting-plans)))
+
+(defmethod json-id-key ((thing plan-or-node)) 'or)
 
 ;;; What this does:
 ;;; 1) Unique-izes goals
@@ -252,6 +275,7 @@
   (let ((goal-hash-table (make-hash-table :test #'equal))
         (action-hash-table (make-hash-table :test #'equal))
         (interned-plans nil))
+    (reset-json-counter)
     (labels ((intern-goal (name)
                (let ((goal (gethash name goal-hash-table)))
                  (unless goal
@@ -371,7 +395,7 @@
 
 (defmethod merged-plan-inferior ((or-node plan-or-node)) (supporting-plans or-node))
 
-(define-aplan-command (com-show-merged-plans :name t)
+(define-aplan-command (com-show-merged-plans :name t :menu t)
     (&key (direction '(member :horizontal :vertical) :default :vertical)
 	  (text-size '(member :small :very-small :normal :large) :default :very-small)
 	  (pdf? 'clim:boolean :default nil :prompt "Generate to a pdf file")
@@ -415,7 +439,7 @@
 ;; and for each supporting plan they have a unique subgoal which only supports the plan 
 ;; then the goal and all the subgoals of the subplans may be merged 
 
-(define-aplan-command (com-simplify-merged-plan :name t)
+(define-aplan-command (com-simplify-merged-plan :name t :menu t)
                     ()
   (clean-up-plan (merged-attack-plan clim:*application-frame*)))
 
@@ -490,6 +514,6 @@
            (pushnew action (actions parent))
            (pushnew parent (supported-plans action))))
 
-(define-aplan-command (com-clear-screen :name t)
+(define-aplan-command (com-clear-screen :name t :menu t)
     ()
   (clim:window-clear (clim:get-frame-pane clim:*application-frame* 'attack-structure)))
