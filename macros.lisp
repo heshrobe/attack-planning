@@ -245,3 +245,9 @@
 (defmacro define-input (process-name data-name)
   `(tell `[input-of ,(follow-path '(,process-name)) ,(follow-path '(,data-name))]))
 
+(defmacro define-output (process-name data-name)
+  `(tell `[output-of ,(follow-path '(,process-name)) ,(follow-path '(,data-name))]))
+
+(defmacro define-impact (property-1 resource-1 property-2 resource-2)
+  `(tell `[impacts ,',property-1 ,(follow-path '(,resource-1)) ,',property-2 ,(follow-path '(,resource-2))]))
+

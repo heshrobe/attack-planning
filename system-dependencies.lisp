@@ -783,20 +783,20 @@ Transformations: compilation jarification loading
 	   (:action [issue-false-sensor-data-report ?attacker ?machine ?other-machine ?bus]))
     )
 
-(defattack-method fake-command-data
-    :to-achieve [affect ?attacker accuracy ?controller-process]
-    :bindings ([ltms:value-of (?controller-process machines) ?machine]
-	       [connected-to-bus ?machine ?interface ?bus ?slot]
-	       [connected-to-bus ?other-machine ?other-interface ?bus ?other-slot]
-	       [ltms:named-part-of ?other-machine os ?os])
-    :prerequisites ((not (eql ?machine ?other-machine))
-		    [can-be-mastered-by ?machine ?other-machine ?bus])
-    :typing ([ltms:object-type-of ?machine computer]
-	     [ltms:object-type-of ?other-machine computer]
-	     [ltms:object-type-of ?os operating-system]
-	     [ltms:object-type-of ?bus bus])
-    :plan (:sequential
-	   (:goal [remote-execution ?attacker ?entity ?os])
-	   (:action [issue-incorrect-setpoint ?attacker ?machine ?other-machine ?bus]))
-    )
+; (defattack-method fake-command-data
+;     :to-achieve [affect ?attacker accuracy ?controller-process]
+;     :bindings ([ltms:value-of (?controller-process machines) ?machine]
+; 	       [connected-to-bus ?machine ?interface ?bus ?slot]
+; 	       [connected-to-bus ?other-machine ?other-interface ?bus ?other-slot]
+; 	       [ltms:named-part-of ?other-machine os ?os])
+;     :prerequisites ((not (eql ?machine ?other-machine))
+; 		    [can-be-mastered-by ?machine ?other-machine ?bus])
+;     :typing ([ltms:object-type-of ?machine computer]
+; 	     [ltms:object-type-of ?other-machine computer]
+; 	     [ltms:object-type-of ?os operating-system]
+; 	     [ltms:object-type-of ?bus bus])
+;     :plan (:sequential
+; 	   (:goal [remote-execution ?attacker ?entity ?os])
+; 	   (:action [issue-incorrect-setpoint ?attacker ?machine ?other-machine ?bus]))
+;     )
 

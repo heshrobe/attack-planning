@@ -191,6 +191,12 @@
 	     :capability-requirements ((write server-super-user) (read server-user-read))
 	     :machines (navnet))
 
+(defresource waypoint-sequence data-resource
+	     :capability-requirements ((write server-super-user) (read server-user-read))
+	     :machines (navnet))
+  
+  
+
 (tell-positive-policy windows-email-vm email ("0.0.0.0" "0.0.0.0"))
 (tell-positive-policy windows-email-vm ssh ("0.0.0.0" "0.0.0.0"))
 
@@ -279,6 +285,10 @@
     )
 
 (define-input navigation-process typical-chart)
+(define-output navigation-process waypoint-sequence)
+(define-input auto-pilot-process waypoint-sequence)
+(define-impact data-integrity waypoint-sequence accuracy auto-pilot-process)
+(define-impact data-integrity typical-chart data-integrity waypoint-sequence)
 
 ;; Instantiate attacker
 (create-attacker 'typical-attacker :world-name 'outside)
