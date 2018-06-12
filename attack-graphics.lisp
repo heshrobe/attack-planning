@@ -517,3 +517,179 @@
 (define-aplan-command (com-clear-screen :name t :menu t)
     ()
   (clim:window-clear (clim:get-frame-pane clim:*application-frame* 'attack-structure)))
+
+(define-aplan-command (com-clear-model :name t :menu t)
+    ()
+  (clear))
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;;
+;;; JSON Dumping
+;;;
+;;; Every element of a merged attack plan has a slot called json-id
+;;; So dumping to JSON format involves two steps
+;;; 1) Open a Json Object.  This will have two key-value pairs: Nodes and Edges
+;;; 2) For the value of Nodes, open a JSON array. Map over the attack graph for each node, open
+;;;    a JSON object.  Dump the pair consisting of unique-id and the json-id
+;;;    Then dump whatever other key-value pairs are relevant to the node.
+;;;    For goal nodes this involves doing pretty much what the print method does
+;;;    but in JSON format
+;;; 3) For the value of Edges, Open a Json array.  Map over the attack graph,
+;;;    for any node that points to something else for each pointer open an object
+;;;    with key the json-id of the node and value the json id of the destination
+;;;
+;;; This provides a model of how the macros are used
+; (json:with-array ()
+;   (json:as-array-member ()
+;     (json:with-object ()
+;       (do-external-symbols (sym (find-package "FOO"))
+;         (json:as-object-member (sym)
+;           (json:with-object ()
+;             (if (boundp sym)
+;                 (let ((value (symbol-value sym)))
+;                   (json:encode-object-member 'val value)))
+;             (if (fboundp sym)
+;                 (json:encode-object-member 'fun t))))))))
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+(defun dump-plan (root-node &optional (stream *standard-output*))
+  (json:with-object (stream) 
+    (terpri stream)
+    (json:as-object-member ('nodes stream) (dump-nodes root-node stream))
+    (terpri stream)
+    (json:as-object-member ('links stream) (dump-links root-node stream))))
+
+(defun dump-plan-to-file (root-node pathname)
+  (with-open-file (f pathname :direction :output :if-exists :supersede :if-does-not-exist :create)
+    (dump-plan root-node f)))
+
+(defgeneric subordinates (graph-node))
+
+(defun traverse-merged-attack-graph (root-node action-fun)
+  (let ((visited (make-hash-table)))
+    (labels ((do-a-node (node)
+	       (unless (gethash node visited)
+		 (setf (gethash node visited) t)
+		 (funcall action-fun node)
+		 (loop for subordinate in (subordinates node)
+		     do (do-a-node subordinate)))))
+      (do-a-node root-node))))
+
+(defmethod subordinates ((node attack-goal)) (supporting-plans node))
+(defmethod subordinates ((node attack-action)) nil)
+(defmethod subordinates ((node attack-plan)) (steps node))
+(defmethod subordinates ((node plan-or-node)) (supporting-plans node))
+
+;;; so we a generic function for dumping a node's contents
+;;; and then one for dumping its pointers
+
+(defgeneric dump-node (node &optional stream))
+
+(defun dump-nodes (root-node &optional (stream *standard-output*))
+  (flet ((do-a-node (node) (terpri stream) (dump-node node stream)))
+    (json:with-array (stream)
+      (traverse-merged-attack-graph root-node #'do-a-node)
+      )))
+
+(defmethod dump-node ((node attack-goal) &optional (stream *standard-output*))
+  (destructuring-bind (goal-type &rest values) (goal-name node)
+    (let ((predicate-args (ji::find-predicate-arglist goal-type))
+	  (unique-id (json-id node)))
+      (setq predicate-args (append (butlast predicate-args) (list 'machine)))
+      (terpri stream)
+      (json:with-object (stream)
+	(json:encode-object-member 'id unique-id stream)
+	(terpri stream)
+	(json:encode-object-member 'type 'goal stream)
+	(terpri stream)
+	(json:encode-object-member 'goal goal-type stream)
+	(loop for key in predicate-args
+	    for value in values
+	    for value-token = (If (symbolp value) value (role-name value))
+	    if (eql key 'resource-or-component) do (setq key 'thing)
+	    do (terpri stream)
+	       (json:encode-object-member key value-token stream))))))
+
+(defmethod dump-node ((node attack-action) &optional (stream *standard-output*))
+  (destructuring-bind (action-type &rest values) (action-name node)
+    (let ((predicate-args (gethash action-type *action-table*))
+	  (unique-id (json-id node)))
+      (terpri stream)
+      (json:with-object (stream)
+	(json:encode-object-member 'id unique-id stream)
+	(terpri stream)
+	(json:encode-object-member 'type (typecase node (repeated-attack-action 'repeated-action) (otherwise 'action)) stream)
+	(terpri stream)
+	(json:encode-object-member 'action action-type stream)
+	(loop for key in predicate-args
+	    for value in values
+	    for value-token = (If (symbolp value) value (role-name value))
+	    if (eql key 'resource-or-component) do (setq key 'thing)
+	    do 	(terpri stream)
+		(json:encode-object-member key value-token stream))))))
+
+(defmethod dump-node ((node attack-plan) &optional (stream *standard-output*))
+  (with-slots (combinator (unique-id json-id)) node
+    (terpri stream)
+    (json:with-object (stream)
+      (json:encode-object-member 'id unique-id stream)
+      	(terpri stream)
+	(json:encode-object-member 'type 'plan stream)
+	(terpri stream)
+	(json:encode-object-member 'combinator combinator stream)
+  )))
+
+(defmethod dump-node ((node plan-or-node) &optional (stream *standard-output*))
+  (with-slots ((unique-id json-id)) node
+    (terpri stream)
+    (json:with-object (stream)
+      (json:encode-object-member 'id unique-id stream)
+      (terpri stream)
+      (json:encode-object-member 'type 'or stream)
+      )))
+
+
+(defun dump-links (root-node &optional (stream *standard-output*))
+  (flet ((do-a-node (node) (terpri stream) (dump-link-set node stream)))
+    (json:with-array (stream)
+		     (traverse-merged-attack-graph root-node #'do-a-node)
+		     )))
+
+(defmethod dump-link-set ((node attack-goal) &optional (stream *standard-output*))
+  (with-slots ((unique-id json-id) supporting-plans) node
+    (terpri stream)
+    (json:with-object (stream)
+      (json:encode-object-member 'id unique-id stream)
+      (json:as-object-member ('destinations stream)
+        (json:with-array (stream)
+	  (loop for destination in supporting-plans
+	      do (json:encode-array-member (json-id destination) stream)))
+	))))
+
+(defmethod dump-link-set ((node attack-plan) &optional (stream *standard-output*))
+  (with-slots ((unique-id json-id) steps) node
+    (terpri stream)
+    (json:with-object (stream)
+      (json:encode-object-member 'id unique-id stream)
+      (json:as-object-member ('destinations stream)
+         (json:with-array (stream)
+	   (loop for destination in steps
+	       do (json:encode-array-member (json-id destination) stream)))
+	 ))))
+
+(defmethod dump-link-set ((node plan-or-node) &optional (stream *standard-output*))
+  (with-slots ((unique-id json-id) supporting-plans) node
+    (terpri stream)
+    (json:with-object (stream)
+      (json:encode-object-member 'id unique-id stream)
+      (json:as-object-member ('destinations stream)
+         (json:with-array (stream)
+	   (loop for destination in supporting-plans
+	       do (json:encode-array-member (json-id destination) stream)))
+	 ))))
+
+
+(defmethod dump-link-set ((node attack-action) &optional (stream *standard-output*))
+  (declare (ignore stream))
+  ;; actions are terminal nodes, so nothing to do
+  (values)
+  )

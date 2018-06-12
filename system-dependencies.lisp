@@ -455,7 +455,9 @@
              )
     ;; This is the key pre-req: The process has the desired right to the object
     :prerequisites ([has-permission ?the-process ?right ?object])
-    :plan (:goal [takes-direct-control-of ?attacker (access-right ?right ?object) ?the-process])
+    :plan (:sequential
+	   (:goal [takes-direct-control-of ?attacker execution ?the-process])
+	   (:action [uses-control-to-achieve-access-right ?attacker ?right ?object]))
     )
 
 

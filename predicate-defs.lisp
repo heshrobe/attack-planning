@@ -102,11 +102,11 @@
 ;;; Direct control means you actually control the execution of the component
 ;;; by either running your own code (e.g. code injection attacks)
 ;;; or by forcing control flow to go to a place that does what you want done (code reuse attacks, e.g.)
-(define-goal takes-direct-control-of (attack component-property component))
+(define-goal takes-direct-control-of (attacker component-property component))
 
 ;;; Indirect control means causing the behavior of the component to change (e.g. through its inputs) but not
 ;;; causing a change in control flow
-(define-goal takes-indirect-control-of (attack component-property component))
+(define-goal takes-indirect-control-of (attacker component-property component))
 
 ;;; Having gained control use it to affect the property of the target
 (define-goal use-control-of-to-affect-resource (attacker controlled-thing property resource))
@@ -219,6 +219,8 @@
 (define-action launch-code-reuse-attack (attacker process))
 
 (define-action issue-false-sensor-data-report (attacker controller source bus))
+
+(define-action uses-control-to-achieve-access-right (attacker right component))
 
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
