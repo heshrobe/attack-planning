@@ -35,15 +35,6 @@
      (make-object 'authorization-pool :name ',name)
      ))
 
-
-(defmacro tell-positive-policy (bridge-or-computer connection-type (location-address location-mask)
-				&rest negative-locations-and-masks)
-  `(let ((location (make-positive-location-mask ,location-address ,location-mask)))
-     ,@(loop for (address mask) in negative-locations-and-masks
-	   collect `(push (make-location-mask 'subnet-mask ,address ,mask) (exception-masks location)))
-     (tell `[policy-for ,(follow-path '(,bridge-or-computer)) ,',connection-type ,location])))
-
-
 (defun kill-redefined-object (name)
   (let ((object (follow-path (list name) t  nil)))
     (when object 
