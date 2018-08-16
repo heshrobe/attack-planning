@@ -90,7 +90,9 @@
 	 (bus (follow-path '(,bus))))
      (tell `[connected-to-bus ,device ,',interface ,bus ,',slot])))
 
-(defmacro defswitch (name switch-type ip-address-string &key authorization-pool superuser)
+;;; PORTS ADDED FOR AUTO PILOT EXAMPLE
+;;; WHERE THE SWITCH HAS DISTINCT PORTS
+(defmacro defswitch (name switch-type ip-address-string &key authorization-pool superuser ports)
   `(with-atomic-action
        (kill-redefined-object ',name)
      (let ((switch (make-object ',switch-type :name ',name)))
@@ -99,6 +101,9 @@
           `(tell `[ltms:value-of (,switch os superuser) ,(follow-path '(,superuser))]))
        ,(when authorization-pool
           `(tell `[ltms:value-of (,switch os authorization-pool) ,(follow-path '(,authorization-pool))]))
+       ,@(when ports
+	  (loop for port in ports
+		collect `(tell `[ltms:value-of (,switch ports) ,',port])))
        switch)))
 
 ;;; The IP-Address-Strings field is a list of every IP address that this guy is reachable
@@ -241,4 +246,9 @@
 
 (defmacro define-impact (property-1 resource-1 property-2 resource-2)
   `(tell `[impacts ,',property-1 ,(follow-path '(,resource-1)) ,',property-2 ,(follow-path '(,resource-2))]))
+
+;;; AUTO PILOT IS THE MOTIVATION
+;;; BUT FALSE DATA INJECTION TO SENSORS IS A GENERAL MOTIVATION
+(defmacro define-proximity (who what means)
+  `(tell `[is-proximate-to ,(follow-path '(,who)) ,(follow-path '(,what)) ,',means]))
 

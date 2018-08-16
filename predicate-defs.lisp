@@ -222,6 +222,9 @@
 
 (define-action uses-control-to-achieve-access-right (attacker right component))
 
+;;; FOR AUTO PILOT EXAMPLE
+;;; E.G [IS-PROXIMATE-TO TYPICAL-ATTACKER GPS RADIO-COMMUNICATIO]
+(define-predicate is-proximate-to (attacker victim purpose))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;
@@ -240,3 +243,5 @@
 (define-predicate can-issue-command-to (master victim command bus) (ltms:ltms-predicate-model))
 
 (define-predicate system-role (system role-name component) (ltms:ltms-predicate-model))
+
+(define-action signal-noise-injection (attacker sensor signal))

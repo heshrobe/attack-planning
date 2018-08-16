@@ -929,6 +929,9 @@
 ;;; Doesn't it also connect to a next level router?
 (define-object-type switch 
     :tms t
+    ;; PUT IN FOR AUTOPILOT EXAMPLE
+    ;; WHERE THE SWITCH HAS PORTS
+    :slots ((ports :set-valued t :tms t))
     :included-object-types (computer))
 
 (define-object-type wireless-router
@@ -1136,7 +1139,12 @@
     :included-object-types (computer peripheral)
     )
 
-
+;;; ADDED FOR AUTOPILOT BUT PROBABLY IT SHOULD HAVE BEEN HERE
+;;; ALREADY.  SENSORS PRODUCE SIGNALS.
+(define-object-type sensor-signal
+    :tms t
+    :included-object-types (data-resource)
+    )
 
 
 

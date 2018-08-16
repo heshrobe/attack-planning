@@ -71,6 +71,8 @@
     :plan (:goal [affect ?attacker ?resource-property ?resource])
     )
 
+
+
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;
 ;;; Performance
@@ -802,3 +804,12 @@ Transformations: compilation jarification loading
 ; 	   (:action [issue-incorrect-setpoint ?attacker ?machine ?other-machine ?bus]))
 ;     )
 
+(defattack-method sensor-injection-attack
+    :to-achieve [affect ?attacker data-integrity ?signal]
+    :bindings ([ltms:value-of (?signal  machines) ?machine])
+    :prerequisites ([system-role ?system sensor ?machine]
+		    [is-proximate-to ?attacker ?victim radio])
+    :typing ([ltms:object-type-of ?machine computer]
+	     [ltms:object-type-of ?signal sensor-signal]
+	     [ltms:object-type-of ?system system])
+    :plan (:action [signal-noise-injection ?attacker ?machine ?signal]))
