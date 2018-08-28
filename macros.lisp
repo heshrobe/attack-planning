@@ -54,7 +54,10 @@
   `(with-atomic-action
        (kill-redefined-object ',name)
      (let ((computer (make-object ',computer-type :name ',name)))
-       (add-ip-address-to-computer ,ip-address-string computer)
+       ,@(if (listp ip-address-string)
+	    (loop for ip-address-string in ip-address-string
+		collect `(add-ip-address-to-computer ,ip-address-string computer))
+	   `((add-ip-address-to-computer ,ip-address-string computer)))
        ,(when superuser
           `(tell `[ltms:value-of (,computer os superuser) ,(follow-path '(,superuser))]))
        ,(when authorization-pool

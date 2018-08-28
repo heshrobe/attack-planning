@@ -68,7 +68,7 @@
 ;; Should we assume that our APNetworkSwitch acts like a router??? **********
 
 ;;; The router will reject TELNET packets from anywhere outside the 192.x.x.x range
-(tell-negative-policy APNetworkSwitch telnet ("192.0.0.0"  "255.0.0.0"))
+(tell-negative-policy placeholder-router telnet ("192.0.0.0"  "255.0.0.0"))
 
 ;; first argument is allowed range, the second argument is the blacklisted range
 ;; can take more arugments?
@@ -77,9 +77,11 @@
 ;; ********************
 ;; These are incorrect, since the only ssh & email activities won't be happening
 ;; over the LAN (i.e., between Ground Station and ControllerBoard via APCellularNetwork)
-(tell-positive-policy APNetworkSwitch ssh ("0.0.0.0"  "0.0.0.0") ("192.0.0.0"  "255.0.0.0"))
+(tell-positive-policy placeholder-router ssh ("0.0.0.0"  "0.0.0.0") ("192.0.0.0"  "255.0.0.0"))
 
-(tell-positive-policy APNetworkSwitch email ("0.0.0.0"  "0.0.0.0") ("192.0.0.0"  "255.0.0.0"))
+(tell-positive-policy placeholder-router email ("0.0.0.0"  "0.0.0.0") ("192.0.0.0"  "255.0.0.0"))
+
+(tell-positive-policy placeholder-router http ("0.0.0.0"  "0.0.0.0") ("192.0.0.0"  "255.0.0.0"))
 
 ;; Define switch access policies
 ;;; The switch will forward TELNET packets only from within its subnet
@@ -153,7 +155,7 @@
 	     :superuser sensor-administrator)
 
 ;; The controller has 2 network interfaces.  How do you specify that?  **********
-(defcomputer ControllerBoard linux-computer "192.10.1.5"
+(defcomputer ControllerBoard linux-computer ("192.20.1.3" "192.10.1.5")
 	     :authorization-pool controller-pool
 	     :superuser controller-administrator)
 
@@ -191,6 +193,16 @@
 
 (defprocess auto-pilot-process
     :process-type control-system-process
+    :machine ControllerBoard
+    )
+
+(defprocess auto-pilot-process
+  :process-type control-system-process
+  :machine ControllerBoard
+  )
+
+(defprocess ControllerBoardWebServer
+    :process-type web-server-process
     :machine ControllerBoard
     )
 
