@@ -226,10 +226,12 @@
 
 (define-object-type control-system-process
     :tms t
-    :included-object-types (process))    
+    :included-object-types (process))
+
+(define-object-type embedded-sensor-process
+    :tms t 
+    :included-object-types (process))
     
-
-
 ;;; Note:
 ;;; It might be more correct to say that there is an apache server program
 ;;; which includers an apache core process as well as request specific processes
@@ -923,16 +925,28 @@
 ;;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
+;;; An unmastered medium is something
+;;; that has promiscuous access, like a
+;;; switch (maybe more appropriate would be switched-network)
+;;; or a bus without a master, e.g. canbus
+
+(define-object-type unmastered-medium
+    :tms t
+    :slots ((connected-systems :set-valued t :tms t))
+    )
+
 ;; A switch is on one subnet.
 ;; it is reponsible in a switched network for sending
 ;; traffic between the computers connected to that subnet
 ;;; Doesn't it also connect to a next level router?
+
+
 (define-object-type switch 
     :tms t
     ;; PUT IN FOR AUTOPILOT EXAMPLE
     ;; WHERE THE SWITCH HAS PORTS
     :slots ((ports :set-valued t :tms t))
-    :included-object-types (computer))
+    :included-object-types (unmastered-medium computer))
 
 (define-object-type wireless-router
     :tms t
@@ -1071,13 +1085,13 @@
 (define-object-type bus
     :tms t
     :slots ((slots :set-valued t :tms t))
-    :included-object-types (print-nicely-mixin))
+    :included-object-types (unmastered-medium print-nicely-mixin))
 
 ;;; This is the standard automotive and other control system
 ;;; bus.  It's not a network
 (define-object-type canbus
     :tms t
-    :slots ((connected-systems :set-valued t :tms t))
+    :slots ()
     :included-object-types (bus))
 
 

@@ -770,21 +770,51 @@ Transformations: compilation jarification loading
 ;;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
+;;; If you want to affect the accuracy of a control process
+;;; find it's sensors and then find a bus (or network) that
+;;; those sensors are on and that the control process is also on
+;;; the find another process that is also on that bus
+;;; and send fake sensor data reports for that sensor to the control process
+
+
 (defattack-method fake-sensor-data
     :to-achieve [affect ?attacker accuracy ?controller-process]
-    :bindings ([ltms:value-of (?controller-process machines) ?machine]
-	       [connected-to-bus ?machine ?interface ?bus ?slot]
-	       [connected-to-bus ?other-machine ?other-interface ?bus ?other-slot]
-	       [ltms:named-part-of ?other-machine os ?os])
-    :prerequisites ((not (eql ?machine ?other-machine))
-		    [can-be-mastered-by ?machine ?other-machine ?bus])
-    :typing ([ltms:object-type-of ?machine computer]
-	     [ltms:object-type-of ?other-machine computer]
-	     [ltms:object-type-of ?os operating-system]
-	     [ltms:object-type-of ?bus bus])
+    :bindings ([ltms:value-of (?controller-process machines) ?controller-machine]
+	       ;; does that machine play the part of a controller in some control system
+	       [system-role ?system controller ?controller-machine]
+	       ;; if so find a sensor in that same system
+	       [system-role ?system sensor ?sensor-machine]
+	       ;; and a bus that both the sensor and the controller are on
+	       [connected-to ?sensor-machine ? ?bus ?]
+	       [connected-to ?controller-machine ? ?bus ?]
+	       ;; now find a another (or the same) machine that's on that machine
+	       [connected-to ?attacker-machine ? ?bus ?]
+	       ;; then find a process runnning on that machine
+	       [ltms:named-part-of ?attacker-machine os ?attacker-os]
+	       )
+    :prerequisites ([output-of ?sensor-machine ?signal]
+		    ;; the output of the sensor must be an input to 
+		    ;; the controller process
+		    [input-of ?controller-process ?signal]
+		    [or [can-be-mastered-by ?controller-machine ?attacker-machine ?bus]
+			(equal ?controller-machine ?attacker-machine)])
+    :typing ([ltms:object-type-of ?controller-machine computer]
+	     [ltms:object-type-of ?attacker-machine computer]
+	     [ltms:object-type-of ?controller-process control-system-process]
+	     [ltms:object-type-of ?system system]
+	     [ltms:object-type-of ?sensor-machine computer]
+	     [ltms:object-type-of ?signal sensor-signal]
+	     [ltms:object-type-of ?bus unmastered-medium]
+	     [ltms:object-type-of ?attacker-os operating-system]
+	     )
     :plan (:sequential
-	   (:goal [remote-execution ?attacker ?entity ?os])
-	   (:action [issue-false-sensor-data-report ?attacker ?machine ?other-machine ?bus]))
+	   ;; You have to specify what the entity here is
+	   ;; it can either be a user or a process
+	   ;; shouldn't really be in the operators that detemine how to do the remote execution
+	   (:goal [remote-execution ?attacker ?entity ?attacker-os])
+	   ;; issue a false sensor data report to the controller from the attacker machine over the bus
+	   ;; of the sensor type 
+	   (:action [issue-false-sensor-data-report ?attacker ?controller-machine ?attacker-machine ?bus ?signal]))
     )
 
 ; (defattack-method fake-command-data

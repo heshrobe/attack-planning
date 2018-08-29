@@ -91,7 +91,7 @@
 (defmacro define-connection (device interface bus slot)
   `(let ((device (follow-path '(,device)))
 	 (bus (follow-path '(,bus))))
-     (tell `[connected-to-bus ,device ,',interface ,bus ,',slot])))
+     (tell `[connected-to ,device ,',interface ,bus ,',slot])))
 
 ;;; PORTS ADDED FOR AUTO PILOT EXAMPLE
 ;;; WHERE THE SWITCH HAS DISTINCT PORTS

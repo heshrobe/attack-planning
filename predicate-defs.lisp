@@ -218,7 +218,7 @@
 
 (define-action launch-code-reuse-attack (attacker process))
 
-(define-action issue-false-sensor-data-report (attacker controller source bus))
+(define-action issue-false-sensor-data-report-to (attacker controller source bus sensor-type))
 
 (define-action uses-control-to-achieve-access-right (attacker right component))
 
@@ -228,11 +228,11 @@
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;
-;;; Predicates related to busses and connections to them
+;;; Predicates related to busses and switches and connections to them
 ;;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
-(define-predicate connected-to-bus (computer interface bus slot) (ltms:ltms-predicate-model))
+(define-predicate connected-to (computer interface bus slot) (ltms:ltms-predicate-model))
 
 (define-predicate can-master (computer bus) (ltms:ltms-predicate-model))
 

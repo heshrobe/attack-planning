@@ -13,6 +13,7 @@
 (defsite autopilot "192.0.0.0" "255.0.0.0")
 
 (defsubnet autopilot-lan switched-subnet "192.10.0.0" "255.255.0.0")
+(defsubnet extenal-lan  switched-subnet  "192.20.0.0" "255.255.0.0")
 
 (defexternal-internet outside ("192.0.0.0" "255.0.0.0"))  ;;Is this IP range correct?  **********
 
@@ -144,28 +145,58 @@
 
 (defcomputer GPS embedded-linux-computer "192.10.1.2"
 	     :authorization-pool sensor-pool
-	     :superuser sensor-administrator)
+	     :superuser sensor-administrator
+	     :interfaces (ethernet)
+	     )
+
+(defprocess gps-process
+    :process-type embedded-sensor-process
+    :machine gps)
 
 (defcomputer VOR embedded-linux-computer "192.10.1.3"
 	     :authorization-pool sensor-pool
-	     :superuser sensor-administrator)
+	     :superuser sensor-administrator
+	     :interfaces (ethernet)
+	     )
+
+(defprocess VOR-process
+    :process-type embedded-sensor-process
+    :machine VOR)
+
+(defcomputer INS embedded-linux-computer "192.10.1.7"
+	     :authorization-pool sensor-pool
+	     :superuser sensor-administrator
+	     :interfaces (ethernet))
+
+(defprocess INS-process
+    :process-type embedded-sensor-process
+    :machine INS)
 
 (defcomputer FlightControls embedded-linux-computer "192.10.1.4"
 	     :authorization-pool sensor-pool
-	     :superuser sensor-administrator)
+	     :superuser sensor-administrator
+	     :interfaces (ethernet))
 
 ;; The controller has 2 network interfaces.  How do you specify that?  **********
 (defcomputer ControllerBoard linux-computer ("192.20.1.3" "192.10.1.5")
 	     :authorization-pool controller-pool
-	     :superuser controller-administrator)
+	     :superuser controller-administrator
+	     :interfaces (ethernet-1 ethernet-2)
+	     )
 
 (defcomputer Camera embedded-linux-computer "192.10.1.6"
 	     :authorization-pool sensor-pool
-	     :superuser sensor-administrator)
+	     :superuser sensor-administrator
+	     :interfaces (ethernet))
 
-(defcomputer INS embedded-linux-computer "192.10.1.7"
-	     :authorization-pool sensor-pool
-	     :superuser sensor-administrator)
+(define-connection ControllerBoard ethernet-1 APNetworkSwitch 0)
+(define-connection Camera ethernet APNetworkSwitch 1)
+(define-connection FlightControls ethernet APNetworkSwitch 2)
+(define-connection INS ethernet APNetworkSwitch 3)
+(define-connection VOR ethernet APNetworkSwitch 4)
+(define-connection GPS ethernet APNetworkSwitch 5)
+
+
 
 (defauthorization-pool groundstation-pool)
 
@@ -196,13 +227,8 @@
     :machine ControllerBoard
     )
 
-(defprocess auto-pilot-process
-  :process-type control-system-process
-  :machine ControllerBoard
-  )
-
 (defprocess ControllerBoardWebServer
-    :process-type web-server-process
+    :process-type apache-web-server-process
     :machine ControllerBoard
     )
 
@@ -233,42 +259,37 @@
 	     :capability-requirements ((write controller-super-user) (read controller-user-read))
 	     :machines (ControllerBoard))
 
-(define-output navigation-process waypoint-sequence)
-(define-input auto-pilot-process waypoint-sequence)
-
 ;; There's a redundancy between the :machines in the defresource and the
 ;; :machine in the process referred to by define-input/define-output
 
 (define-impact data-integrity waypoint-sequence accuracy auto-pilot-process)
 
 ;; Should the :machines below include BOTH the ControllerBoard and the sensor? **********
-(defresource current-latitude sensor-signal
-	     :capability-requirements ((write sensor-super-user) (read sensor-user-read))
-	     :machines (GPS ControllerBoard))
-(defresource current-longitude sensor-signal
-	     :capability-requirements ((write sensor-super-user) (read sensor-user-read))
-	     :machines (GPS ControllerBoard))
-(defresource current-altitude sensor-signal
+(defresource gps-position sensor-signal
 	     :capability-requirements ((write sensor-super-user) (read sensor-user-read))
 	     :machines (GPS ControllerBoard))
 
-(define-output navigation-process current-latitude)
-(define-input auto-pilot-process current-latitude)
-(define-output navigation-process current-longitude)
-(define-input auto-pilot-process current-longitude)
-(define-output navigation-process current-altitude)
-(define-input auto-pilot-process current-altitude)
+(defresource vor-position sensor-signal
+	     :capability-requirements ((write sensor-super-user) (read sensor-user-read))
+	     :machines (vor ControllerBoard))
 
-(define-impact data-integrity current-latitude accuracy auto-pilot-process)
-(define-impact data-integrity current-longitude accuracy auto-pilot-process)
-(define-impact data-integrity current-altitude accuracy auto-pilot-process)
+(defresource ins-position sensor-signal
+	     :capability-requirements ((write sensor-super-user) (read sensor-user-read))
+	     :machines (ins ControllerBoard))
 
+(define-output gps gps-position)
+(define-output vor vor-position)
+(define-output ins ins-position)
+(define-output navigation-process waypoint-sequence)
 
-;;; Things to define ********************
-;;; define-input
-;;; define-output
-;;; define-impact
-;;; linkages between machines and software, e.g., ControllerBoard and AutoPilotProgram
+(define-input auto-pilot-process gps-position)
+(define-input auto-pilot-process vor-position)
+(define-input auto-pilot-process ins-position)
+(define-input auto-pilot-process waypoint-sequence)
+
+(define-impact data-integrity gps-position accuracy auto-pilot-process)
+(define-impact data-integrity vor-position accuracy auto-pilot-process)
+(define-impact data-integrity ins-position accuracy auto-pilot-process)
 
 (create-attacker 'typical-attacker :world-name 'outside)
 

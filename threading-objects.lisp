@@ -516,32 +516,32 @@
 
 (defrule add-to-connected-systems (:forward)
   if [and [object-type-of ?device hardware]
-	  [connected-to-bus ?device ? ?bus ?]
-	  [object-type-of ?bus bus]]
+	  [connected-to ?device ? ?bus ?]
+	  [object-type-of ?bus unmastered-medium]]
   then [ltms:value-of (?bus connected-systems) ?device]
   )
 
 (defrule anybody-is-master-on-canbus (:forward)
   if [and [object-type-of ?device hardware]
 	  [ltms:value-of (?device hardware-interfaces) ?interface]
-	  [object-type-of ?bus canbus]
-	  [connected-to-bus ?computer ?interface ?bus ?slot]]
+	  [object-type-of ?bus unmastered-medium]
+	  [connected-to ?computer ?interface ?bus ?slot]]
   then [can-master ?device ?bus]
   )
 
 (defrule master-on-bus-can-slave-others (:forward)
   if [and [object-type-of ?master hardware]
-	  [object-type-of ?bus bus]
+	  [object-type-of ?bus unmastered-medium]
 	  [can-master ?master ?bus]
 	  [object-type-of ?victim hardware]
-	  [connected-to-bus ?victim ?interface ?bus ?slot]
+	  [connected-to ?victim ?interface ?bus ?slot]
 	  (not (eql ?master ?victim))
 	  ]
   then [can-be-mastered-by ?master ?victim ?bus]
   )
 
 (defrule anbody-can-issue-command-on-canbus (:forward)
-  if [and [object-type-of ?bus canbus]
+  if [and [object-type-of ?bus unmastered-medium]
 	  [object-type-of ?master hardware]
 	  [can-be-mastered-by ?master ?victim ?bus]
 	  [object-type-of ?victime peripheral]
@@ -549,6 +549,11 @@
   then [can-issue-command-to ?master ?command ?victim ?bus]
   )
 
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;;
+;;; Switched Network related stuff
+;;;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;
