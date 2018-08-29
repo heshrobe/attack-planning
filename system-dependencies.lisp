@@ -797,7 +797,9 @@ Transformations: compilation jarification loading
 		    ;; the controller process
 		    [input-of ?controller-process ?signal]
 		    [or [can-be-mastered-by ?controller-machine ?attacker-machine ?bus]
-			(equal ?controller-machine ?attacker-machine)])
+			(equal ?controller-machine ?attacker-machine)]
+
+		    )
     :typing ([ltms:object-type-of ?controller-machine computer]
 	     [ltms:object-type-of ?attacker-machine computer]
 	     [ltms:object-type-of ?controller-process control-system-process]

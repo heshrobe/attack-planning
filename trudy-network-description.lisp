@@ -228,7 +228,22 @@
     :machine auto-pilot
     )
 
+(define-peripheral gps
+    :peripheral-type gps
+    :interfaces (serial)
+    :commands ()
+    )
+
+(defprocess gps-process
+    :process-type embedded-sensor-process
+    :machine gps)
+
+(defresource gps-position sensor-signal
+	     :machines (GPS))
+
+
 (define-connection auto-pilot serial navigation-bus 3)
+(define-connection gps serial navigation-bus 2)
 (define-connection navnet serial navigation-bus 0)
 
 
@@ -242,7 +257,8 @@
 
 (define-system navigation-system
     :components (navigation-bus auto-pilot )
-    :roles ((controller auto-pilot))
+    :roles ((controller auto-pilot)
+	    (sensor gps))
     )
 
 
@@ -287,8 +303,11 @@
 (define-input navigation-process typical-chart)
 (define-output navigation-process waypoint-sequence)
 (define-input auto-pilot-process waypoint-sequence)
+(define-output gps gps-position)
+(define-input auto-pilot-process gps-position)
 (define-impact data-integrity waypoint-sequence accuracy auto-pilot-process)
 (define-impact data-integrity typical-chart data-integrity waypoint-sequence)
+(define-impact data-integrity gps-position accuracy auto-pilot-process)
 
 ;; Instantiate attacker
 (create-attacker 'typical-attacker :world-name 'outside)

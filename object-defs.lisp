@@ -1153,6 +1153,11 @@
     :included-object-types (computer peripheral)
     )
 
+(define-object-type gps
+    :tms t
+    :included-object-types (computer peripheral)
+    )
+
 ;;; ADDED FOR AUTOPILOT BUT PROBABLY IT SHOULD HAVE BEEN HERE
 ;;; ALREADY.  SENSORS PRODUCE SIGNALS.
 (define-object-type sensor-signal

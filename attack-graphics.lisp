@@ -473,6 +473,8 @@
             Until (null something-happened)))
     (values number-of-merges number-of-goal-action-merges)))
 
+;;; Fix: This breaks when hitting a Plan-Or-Node
+;;; because that doesn't have sub-goal
 (defmethod is-mergeable ((goal attack-goal))
   (let* ((mergeable-subgoals nil) (sub-actions nil) 
          (subplans (supporting-plans goal))
@@ -481,7 +483,7 @@
     (loop for plan in subplans
           for subgoals = (subgoals plan)
           for (first-subgoal . remaining-subgoals) = subgoals
-          for actions =(actions plan)
+          for actions = (actions plan)
           when (and first-subgoal (null remaining-subgoals) (null actions))
           do (push first-subgoal mergeable-subgoals)
           when actions do (setq sub-actions t)
@@ -551,6 +553,13 @@
 ;                 (json:encode-object-member 'fun t))))))))
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
+(define-aplan-command (com-dump-merged-plans-to-json :name t :menu t)
+    (&key (file-name 'clim:pathname))
+  (let ((goals (merged-attack-plan clim:*application-frame*)))
+    (dump-plan-to-file goals file-name)
+    ))
+
+
 (defun dump-plan (root-node &optional (stream *standard-output*))
   (json:with-object (stream) 
     (terpri stream)
@@ -560,7 +569,7 @@
 
 (defun dump-plan-to-file (root-node pathname)
   (with-open-file (f pathname :direction :output :if-exists :supersede :if-does-not-exist :create)
-    (dump-plan root-node f)))
+    (dump-plan (first root-node) f)))
 
 (defgeneric subordinates (graph-node))
 
