@@ -143,51 +143,57 @@
   :capabilities (controller-user-write)
   :authorization-pools (controller-pool))
 
-(defcomputer GPS embedded-linux-computer "192.10.1.2"
-	     :authorization-pool sensor-pool
-	     :superuser sensor-administrator
-	     :interfaces (ethernet)
-	     )
+(defcomputer GPS embedded-linux-computer 
+  :ip-address-string "192.10.1.2"
+  :authorization-pool sensor-pool
+  :superuser sensor-administrator
+  :interfaces (ethernet)
+  )
 
 (defprocess gps-process
     :process-type embedded-sensor-process
     :machine gps)
 
-(defcomputer VOR embedded-linux-computer "192.10.1.3"
-	     :authorization-pool sensor-pool
-	     :superuser sensor-administrator
-	     :interfaces (ethernet)
-	     )
+(defcomputer VOR embedded-linux-computer 
+  :ip-address-string "192.10.1.3"
+  :authorization-pool sensor-pool
+  :superuser sensor-administrator
+  :interfaces (ethernet)
+  )
 
 (defprocess VOR-process
     :process-type embedded-sensor-process
     :machine VOR)
 
-(defcomputer INS embedded-linux-computer "192.10.1.7"
-	     :authorization-pool sensor-pool
-	     :superuser sensor-administrator
-	     :interfaces (ethernet))
+(defcomputer INS embedded-linux-computer 
+  :ip-address-string "192.10.1.7"
+  :authorization-pool sensor-pool
+  :superuser sensor-administrator
+  :interfaces (ethernet))
 
 (defprocess INS-process
     :process-type embedded-sensor-process
     :machine INS)
 
-(defcomputer FlightControls embedded-linux-computer "192.10.1.4"
-	     :authorization-pool sensor-pool
-	     :superuser sensor-administrator
-	     :interfaces (ethernet))
+(defcomputer FlightControls embedded-linux-computer 
+  :ip-address-string "192.10.1.4"
+  :authorization-pool sensor-pool
+  :superuser sensor-administrator
+  :interfaces (ethernet))
 
 ;; The controller has 2 network interfaces.  How do you specify that?  **********
-(defcomputer ControllerBoard linux-computer ("192.20.1.3" "192.10.1.5")
-	     :authorization-pool controller-pool
-	     :superuser controller-administrator
-	     :interfaces (ethernet-1 ethernet-2)
-	     )
+(defcomputer ControllerBoard linux-computer 
+  :ip-address-string ("192.20.1.3" "192.10.1.5")
+  :authorization-pool controller-pool
+  :superuser controller-administrator
+  :interfaces (ethernet-1 ethernet-2)
+  )
 
-(defcomputer Camera embedded-linux-computer "192.10.1.6"
-	     :authorization-pool sensor-pool
-	     :superuser sensor-administrator
-	     :interfaces (ethernet))
+(defcomputer Camera embedded-linux-computer 
+  :ip-address-string "192.10.1.6"
+  :authorization-pool sensor-pool
+  :superuser sensor-administrator
+  :interfaces (ethernet))
 
 (define-connection ControllerBoard ethernet-1 APNetworkSwitch 0)
 (define-connection Camera ethernet APNetworkSwitch 1)
@@ -218,9 +224,10 @@
   :capabilities (groundstation-user-write)
   :authorization-pools (groundstation-pool))
 
-(defcomputer groundstation linux-computer "192.1.1.2"
-	     :authorization-pool groundstation-pool
-	     :superuser groundstation-administrator)
+(defcomputer groundstation linux-computer 
+  :ip-address-string "192.1.1.2"
+  :authorization-pool groundstation-pool
+  :superuser groundstation-administrator)
 
 (defprocess auto-pilot-process
     :process-type control-system-process

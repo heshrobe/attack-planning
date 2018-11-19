@@ -15,38 +15,27 @@
   (:top-level (aplan-top-level))
   (:menu-bar nil)
   (:panes
-   #-mcl
-   (title :title
-          :max-height 28
-          :display-string "APLAN") 
-   #-genera
-   (pointer :pointer-documentation :borders t
-	    :height '(1 :line)
-            :max-height '(1 :line))
-   (attacks :application
-            :height .25 :width .5
-            :redisply-after-commands t
-            :incremental-redisplay t
-            :display-function 'show-attacks
-            :label "Attacks"
-            :scroll-bars t
-            :borders t)            
+   ;; #-mcl
+   ;; (title :title
+   ;;        :max-height 28
+   ;;        :display-string "APLAN") 
+   (pointer :pointer-documentation 
+	    :borders t
+	    :height 12
+            :max-height 12)
    (menu :command-menu 
 	 :max-height '(3 :line)
-         :height :compute
          :display-function '(clim:display-command-menu :n-columns 6 :row-wise t)
          :scroll-bars nil
          :borders t)
    (interactor :interactor
-	       :max-height '(7 :line)
-	       :min-height '(4 :line)
 	       :initial-cursor-visibility :off
 	       :scroll-bars :vertical
-	       :end-of-line-action :wrap)
-   
+	       :end-of-line-action :wrap
+	       :borders t)   
    (attack-structure :application
-		     :redisplay-after-commands nil
-		     :incrmental-redisplay nil
+		     #+sbcl :display-time #+allegro :display-after-command nil
+		     :incremental-redisplay nil
 		     :scroll-bars t
 		     :borders t)
    )
@@ -57,9 +46,11 @@
       (:fill attack-structure)
       pointer
       menu
-      interactor)))
+      (.25 interactor))))
   (:command-definer define-aplan-command)
-  (:command-table aplan))
+  ;; Note: McClim requires this to be a list
+  ;; while Allegro's CLIM allows a bare symbol
+  (:command-table (aplan)))
 
 
 (defvar *editor* nil)
@@ -78,8 +69,8 @@
 		OPTIONS))))
 
 (defun run-editor ()
-  (process-run-function 
-      "Frame Top Level"
+  (#+allegro process-run-function #+sbcl sb-thread:make-thread
+      #+allegro "Attack Planner"
     #'(lambda ()
 	(multiple-value-bind (width height) (screen-size)
 	  (setq *editor* (clim:make-application-frame 'aplan
@@ -87,9 +78,14 @@
 						      #-allegro :parent #-allegro (clim:find-port)
 						      :width (floor (* .7 width))
 						      :height (floor (* .8 height)))))
-	(clim:run-frame-top-level *editor*))))
+	(clim:run-frame-top-level *editor*))
+    #+sbcl :name #+sbcl "Attack Planner"))
 
-
+#+allegro
 (clim-env::define-lisp-listener-command (com-start-aplan :name t)
                                         ()
                                         (run-editor))
+#+mcclim
+(clim-listener::define-listener-command (com-start-aplan :name t)
+    ()
+  (run-editor))

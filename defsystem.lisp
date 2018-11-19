@@ -56,5 +56,29 @@
    ("trudy-network-description" (:module-class data-module))
    ("editor" (:module-class separate-destination-joshua-module))
    ("attack-graphics" (:module-class separate-destination-joshua-module))
+   ("emacs-hacks" (:module-class separate-destination-joshua-module))
    ))
+
+
+#|
+(asdf:defsystem aplan
+  :name "aplan"
+  :description "Attack Plan Generator"
+  :maintainer "Howie Shrobe"
+  :pathname "aplan:home;"
+  :components ((:file "package-definition")
+	       (:joshua-file "predicate-defs" :depends-on ("package-definition"))
+	       (:joshua-file "object-defs" :depends-on ("predicate-defs"))
+	       (:joshua-file "macros" :depends-on ("object-defs"))
+	       (:joshua-file "threading-objects" :depends-on ("macros"))
+	       (:joshua-file "ip-locations-and-masks" :depends-on ("threading-objects"))
+	       (:joshua-file "def-attack-method" :depends-on ("ip-locations-and-masks"))
+	       (:joshua-file "system-dependencies" :depends-on ("def-attack-method"))
+	       (:joshua-file "editor" :depends-on ("system-dependencies"))
+	       (:joshua-file "attack-graphics" :depends-on ("editor"))
+	       ))
+
+|#
+	       
+  
 

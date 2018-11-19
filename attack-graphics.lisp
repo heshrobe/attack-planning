@@ -45,7 +45,8 @@
     ((:sequential :parallel :singleton)
      (rest step))
     (:goal (let ((plan (getf step :plan)))
-             (list plan)))
+	     (when plan
+             (list plan))))
     ((:action :repeated-action) nil)))
 
 (eval-when (:compile-toplevel :load-toplevel :execute)
@@ -132,7 +133,7 @@
      (resource `(computer-resource ,computer))
      &key (attacker 'attacker :default (follow-path '(typical-attacker))))
   (let ((answers (do-it :property property :machine computer :attacker attacker :resource resource)))
-    (let ((stream *standard-output*))
+    (let ((stream (clim:get-frame-pane clim:*application-frame* 'attack-structure )))
       (clim:with-text-face (stream :bold)
 	(clim:with-text-size (stream :large)
 	  (format stream "~%There are ~d plans" (length answers)))))
@@ -166,16 +167,22 @@
     answers))
 
 (defun create-attacker (name &key world-name)
-  (let* ((attacker (make-object 'attacker :name name))
-	 (the-world (follow-path (list world-name)))
-	 (his-machine (make-object 'typical-computer :name (intern (string-upcase (format nil "~a-machine" name))))))
-    (tell `[ltms:value-of (,attacker world) ,the-world])
-    (tell `[ltms:value-of (,attacker machines) ,his-machine])
-    (tell `[uses-machine ,his-machine ,attacker])
-    (tell `[ltms:value-of (,his-machine subnets) ,the-world])
-    (tell `[ltms:value-of (,the-world computers) ,his-machine])
-    (tell `[ltms:value-of (,attacker location) ,the-world])
-    attacker))
+  (with-atomic-action
+      (kill-redefined-object name)
+    (let ((machine-name (intern (string-upcase (format nil "~a-machine" name)))))
+      (kill-redefined-object machine-name)
+      (let* ((attacker (make-object 'attacker :name name))
+	     (the-world (follow-path (list world-name)))
+	     (his-machine (make-object 'attacker-computer :name machine-name
+				       :typical t
+				       )))
+	(tell `[ltms:value-of (,attacker world) ,the-world])
+	(tell `[ltms:value-of (,attacker machines) ,his-machine])
+	(tell `[uses-machine ,attacker ,his-machine])
+	(tell `[ltms:value-of (,his-machine subnets) ,the-world])
+	(tell `[ltms:value-of (,the-world computers) ,his-machine])
+	(tell `[ltms:value-of (,attacker location) ,the-world])
+	attacker))))
 
 (define-aplan-command (com-show-plan :name t :menu t)
     ((which 'integer) 
@@ -201,13 +208,16 @@
 	    (with-open-file (file ps-pathname :direction :output :if-exists :supersede)
 	      (clim:with-output-to-postscript-stream (stream file)
 		(body stream)))
+	    #+Allegro
 	    (excl:run-shell-command command :wait t)
+	    #+sbcl
+	    (uiop:run-program command)
 	    (delete-file ps-pathname)))
 	 (t
           (let ((stream (clim:get-frame-pane clim:*application-frame* 'attack-structure)))
             (multiple-value-bind (x y) (clim:stream-cursor-position stream)
               (clim:stream-set-cursor-position stream x (+ y 10))
-              (clim:window-set-viewport-position stream x (+ y 10)))
+              (setf (clim:window-viewport-position stream) (values x (+ y 10))))
             (body stream))))
         (terpri)))))
 
@@ -420,13 +430,15 @@
 	  (body stream)
 	  ))
       #+Allegro
-       (excl:run-shell-command command :wait t)
-       (delete-file ps-pathname)))
+      (excl:run-shell-command command :wait t)
+      #+sbcl
+      (uiop:run-program command)
+      (delete-file ps-pathname)))
      (t
       (let ((stream (clim:get-frame-pane clim:*application-frame* 'attack-structure)))
 	(multiple-value-bind (x y) (clim:stream-cursor-position stream)
 	  (clim:stream-set-cursor-position stream x (+ y 10))
-	  (clim:window-set-viewport-position stream x (+ y 10)))
+	  (setf (clim:window-viewport-position stream) (values x (+ y 10))))
 	(body stream))))))
 
 
@@ -594,7 +606,9 @@
 (defgeneric dump-node (node &optional stream))
 
 (defun dump-nodes (root-node &optional (stream *standard-output*))
-  (flet ((do-a-node (node) (terpri stream) (dump-node node stream)))
+  (flet ((do-a-node (node) 
+	   (terpri stream)
+	   (json:as-array-member (stream) (dump-node node stream))))
     (json:with-array (stream)
       (traverse-merged-attack-graph root-node #'do-a-node)
       )))
@@ -702,3 +716,28 @@
   ;; actions are terminal nodes, so nothing to do
   (values)
   )
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;;
+;;; Graphing the capability hiearchy
+;;;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+(defun get-root-capabilities (authorization-pool-name)
+  (let* ((pool (object-named authorization-pool-name))
+	 (capabilities (capabilities pool)))
+    (loop for capability in capabilities
+	when (null (more-general capability))
+	collect capability)))
+    
+
+(defun graph-capabilities (authorization-pool-name &optional (stream *standard-output*))
+  (let ((roots (get-root-capabilities authorization-pool-name)))
+    (clim:format-graph-from-roots 
+     roots
+     #'(lambda (object stream) (format stream "~a" (role-name object)))
+     #'more-specific
+     :merge-duplicates t
+     :stream stream)
+    (values)))
+     

@@ -5,29 +5,67 @@
 
 (in-package :aplan)
 
-
-(defmacro def-symmetric-pointers (rule-name from-type from-type-variable from-slot to-type to-type-variable to-slot)
+;;; This defines the rules that set up a set of forward-backward pointers from one object to another
+(defmacro def-symmetric-pointers (rule-name from-type from-type-variable from-slot to-type to-type-variable to-slot
+				  &key from-condition to-condition)
   (let ((rule-1-name (intern (string-upcase (concatenate 'string (string rule-name) "-1"))))
         (rule-2-name (intern (string-upcase (concatenate 'string (string rule-name) "-2")))))
-    `(progn
-       (defrule ,rule-1-name (:forward)
-         if [and [ltms:object-type-of ,from-type-variable ,from-type]
-                 [ltms:value-of (,from-type-variable ,from-slot) ,to-type-variable]
-                 [ltms:object-type-of ,to-type-variable ,to-type]]
-         then [ltms:value-of (,to-type-variable ,to-slot) ,from-type-variable])
-       (defrule ,rule-2-name (:forward)
-         if [and [ltms:object-type-of ,to-type-variable ,to-type]
-                 [ltms:value-of (,to-type-variable ,to-slot) ,from-type-variable]
-                 [ltms:object-type-of ,from-type-variable ,from-type]]
-         then [ltms:value-of (,from-type-variable ,from-slot) ,to-type-variable]))))
+    (destructuring-bind (from-property from-value) from-condition
+      (destructuring-bind (to-property to-value) to-condition
+	`(progn
+	   (defrule ,rule-1-name (:forward)
+	     if [and [ltms:object-type-of ,from-type-variable ,from-type]
+		     [ltms:value-of (,from-type-variable ,from-slot) ,to-type-variable]
+		     [ltms:object-type-of ,to-type-variable ,to-type]
+		     ,@(when from-condition `([ltms:value-of (,from-type-variable ,from-property) ,from-value]))
+		     ]
+	     then [ltms:value-of (,to-type-variable ,to-slot) ,from-type-variable])
+	   (defrule ,rule-2-name (:forward)
+	     if [and [ltms:object-type-of ,to-type-variable ,to-type]
+		     [ltms:value-of (,to-type-variable ,to-slot) ,from-type-variable]
+		     [ltms:object-type-of ,from-type-variable ,from-type]
+		     ,@(when to-condition `([ltms:value-of (,to-type-variable ,to-property) ,to-value]))
+		     ]
+	     then [ltms:value-of (,from-type-variable ,from-slot) ,to-type-variable]))))))
 
-(defmacro defsite (name address-string address-mask)
+;;; An enterprise is a organization with multiple sites within it
+(defmacro define-enterprise (name &key sites)
+  `(with-atomic-action
+       (kill-redefined-object ',name)
+     (let ((enterprise (make-object 'enterprise :name ',name)))
+       (declare (ignorable enterprise))
+       ,@(loop for site-name in sites
+	     collect `(tell `[ltms:value-of (,enterprise site) ,(object-named ',site-name)])))))
+
+;;; A site is (possibly) part of an enterprise
+;;; It owns a range of net addresses, which might be broken down into subnets
+(defmacro defsite (name address-string address-mask &key (enterprise nil enterprise-p))
   `(with-atomic-action
        (kill-redefined-object ',name)
      (let* ((site (make-object 'site :name ',name))
+	    (enterprise (when ,enterprise-p (object-named ',enterprise)))
             (net-mask (follow-path `(,site net-mask))))
+       (declare (ignorable enterprise))
+       ,@(when enterprise-p `((tell `[ltms:value-of (,site enterprise) ,enterprise])))
        (fill-in-subnet-mask net-mask ,address-string ,address-mask)
        site)))
+
+;;; An ensemble is a collection of machines that identical from the attackers
+;;; point of view.  Every ensemble has a typical instance which represents
+;;; all the properties that are shared
+(defmacro defensemble (name &key (enterprise nil enterprise-p)
+				 (typical-computer nil computer-p)
+				 (typical-user nil user-p)
+				 (size 0 size-p))
+  `(with-atomic-action
+       (kill-redefined-object ',name)
+     (let* ((ensemble (make-object 'ensemble :name ',name)))
+       ,@(when enterprise-p `((tell `[ltms:value-of (,ensemble enterprise) , (object-named ',enterprise)])))
+       ,@(when computer-p `((tell `[ltms:value-of (,ensemble typical-computer) , (object-named ',typical-computer)])))
+       ,@(when user-p `((tell `[ltms:value-of (,ensemble typical-user) ,(object-named ',typical-user)])))
+       ,@(when size-p `((tell `[ltms:value-of (,ensemble size) ,(object-named ',size)])))
+       ensemble))
+    )
 
 (defmacro defauthorization-pool (name)
   `(with-atomic-action
@@ -50,7 +88,11 @@
 	       collect `(push (make-location-mask 'subnet-mask ,address ,mask) (exception-masks location)))
 	 site)))
 
-(defmacro defcomputer (name computer-type ip-address-string &key superuser authorization-pool interfaces)
+(defmacro defcomputer (name computer-type 
+		       &key ip-address-string 
+			    superuser authorization-pool interfaces
+			    (typical nil typical-p)
+			    (ensemble nil ensemble-p))
   `(with-atomic-action
        (kill-redefined-object ',name)
      (let ((computer (make-object ',computer-type :name ',name)))
@@ -58,13 +100,15 @@
 	    (loop for ip-address-string in ip-address-string
 		collect `(add-ip-address-to-computer ,ip-address-string computer))
 	   `((add-ip-address-to-computer ,ip-address-string computer)))
-       ,(when superuser
-          `(tell `[ltms:value-of (,computer os superuser) ,(follow-path '(,superuser))]))
-       ,(when authorization-pool
-          `(tell `[ltms:value-of (,computer os authorization-pool) ,(follow-path '(,authorization-pool))]))
+       ,@(when superuser
+          `((tell `[ltms:value-of (,computer os superuser) ,(follow-path '(,superuser))])))
+       ,@(when authorization-pool
+         `((tell `[ltms:value-of (,computer os authorization-pool) ,(follow-path '(,authorization-pool))])))
        ,@(when interfaces
 	   (loop for interface in interfaces
 	       collect `(tell `[ltms:value-of (,computer hardware-interfaces) ,',interface])))
+       ,@(when ensemble-p `((tell `[ltms:value-of (,computer ensemble) ,(object-named ',ensemble)])))
+       ,@(when typical-p `((tell `[ltms:value-of (,computer typical-p) ,,typical])))
        computer)))
 
 (defmacro define-peripheral (name &key peripheral-type interfaces commands)
@@ -142,7 +186,10 @@
 (defmacro defuser (name &key email-address machines (user-type 'user) 
 			     authorization-pools capabilities
 			     positive-address positive-mask
-			     negative-address negative-mask) 
+			     negative-address negative-mask
+			     (ensemble nil ensemble-p)
+			     (typical nil typical-p)
+			     ) 
   `(with-atomic-action
        (kill-redefined-object ',name)
      (let ((user (make-object ',user-type :name ',name)))
@@ -150,12 +197,14 @@
        ,@(when email-address
           `((tell `[ltms:value-of (,user email-address) ,',email-address])))
        ,@(loop for machine in machines
-               collect `(tell `[uses-machine ,(follow-path '(,machine)) ,user]))
+               collect `(tell `[uses-machine ,user ,(follow-path '(,machine))]))
        ,@(loop for pool in authorization-pools
                collect `(tell `[ltms:value-of (,user authorization-pool) ,(follow-path '(,pool))]))
        ,@(loop for cap in capabilities
 	     collect `(tell `[ltms:value-of (,user capabilities) ,(follow-path '(,cap))]))
        (apply-positive-and-negative-masks user ,positive-address ,positive-mask ,negative-address ,negative-mask)
+       ,@(when ensemble-p `((tell `[ltms:value-of (,user ensemble) , (object-named ',ensemble)])))
+       ,@(when typical-p `((tell `[ltms:value-of (,user typical-p) ,,typical])))
        user))) 
 
 (defun apply-positive-and-negative-masks (user 
@@ -196,19 +245,54 @@
 	 for client = (Follow-path (list client-name))
 	 do (tell `[email-client-of ,client ,the-server]))))
 
-(defmacro tell-positive-policy (bridge-or-computer connection-type (location-address location-mask)
+;;; This lets you say that this thing will except a connetion from the positive space (1st arg), except for holes in that space
+;;; that are the negative locations.
+(defmacro tell-positive-routing-policy (bridge connection-type (location-address location-mask)
 				&rest negative-locations-and-masks)
   `(let ((location (make-positive-location-mask ,location-address ,location-mask)))
      ,@(loop for (address mask) in negative-locations-and-masks
 	   collect `(push (make-location-mask 'subnet-mask ,address ,mask) (exception-masks location)))
-     (tell `[policy-for ,(follow-path '(,bridge-or-computer)) ,',connection-type ,location])))
+     (tell `[policy-for-bridge ,(follow-path '(,bridge)) ,',connection-type ,location])))
 
-(defmacro tell-negative-policy (bridge-or-computer connection-type (location-address location-mask)
+(defmacro tell-positive-policy-for-host (computer connection-type (location-address location-mask)
 				&rest negative-locations-and-masks)
-  `(let ((location (make-negative-location-mask ,location-address ,location-mask)))
+  `(let ((location (make-positive-location-mask ,location-address ,location-mask)))
      ,@(loop for (address mask) in negative-locations-and-masks
 	   collect `(push (make-location-mask 'subnet-mask ,address ,mask) (exception-masks location)))
-     (tell `[policy-for ,(follow-path '(,bridge-or-computer)) ,',connection-type ,location])))
+     (tell `[policy-for-host ,(follow-path '(,computer)) ,',connection-type ,location])))
+
+;;; This lets you say that this thing will block connetions from the negative-space (1st arg), except for holes in that space
+;;; that are the positive locationsl
+(defmacro tell-negative-routing-policy (bridge connection-type (location-address location-mask)
+				&rest positive-locations-and-masks)
+  `(let ((location (make-negative-location-mask ,location-address ,location-mask)))
+     ,@(loop for (address mask) in positive-locations-and-masks
+	   collect `(push (make-location-mask 'subnet-mask ,address ,mask) (exception-masks location)))
+     (tell `[policy-for-bridge ,(follow-path '(,bridge)) ,',connection-type ,location])))
+
+(defmacro tell-negative-policy-for-host (computer connection-type (location-address location-mask)
+				&rest positive-locations-and-masks)
+  `(let ((location (make-negative-location-mask ,location-address ,location-mask)))
+     ,@(loop for (address mask) in positive-locations-and-masks
+	   collect `(push (make-location-mask 'subnet-mask ,address ,mask) (exception-masks location)))
+     (tell `[policy-for-host ,(follow-path '(,computer)) ,',connection-type ,location])))
+
+(defmacro defwhitelist ((protocol  bridge-or-computer)
+			&key pass exceptions for-host) 
+  (when (and (symbolp pass) (eql pass 'everywhere))
+    (setq pass (list "0.0.0.0" "0.0.0.0")))
+  (if for-host
+      `(tell-positive-policy-for-host ,bridge-or-computer ,protocol ,pass ,@exceptions)
+    `(tell-positive-routing-policy ,bridge-or-computer ,protocol ,pass ,@exceptions)
+  ))
+
+(defmacro defblacklist ((protocol  bridge-or-computer)
+			&key block exceptions for-host)
+  (when (and (symbolp block) (eql block 'everywhere))
+    (setq block (list "0.0.0.0" "0.0.0.0")))
+  (if for-host
+      `(tell-negative-policy-for-host ,bridge-or-computer ,protocol ,block ,@exceptions)
+  `(tell-negative-routing-policy ,bridge-or-computer ,protocol ,block ,@exceptions)))
 
 (defmacro defprocess (role-name &key process-type machine program)
   `(with-atomic-action

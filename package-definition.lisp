@@ -3,7 +3,6 @@
 (in-package :cl-user)
 
 (defpackage aplan
-  #+allegro
   (:shadow "DIRECTORY" )
   #+allegro (:import-from "MP" "PROCESS-RUN-FUNCTION")
    #+allegro (:import-from excl funwrap fwrap arglist def-fwrapper call-next-fwrapper)

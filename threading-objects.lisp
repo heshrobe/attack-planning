@@ -298,7 +298,7 @@
 
 (defrule fill-in-subnet-routers (:forward)
   if [and [ltms:object-type-of ?computer router]
-          [ltms:object-type-of ?subnet subnet]
+          [ltms:object-type-of ?subnet subnet-mixin]
           [ltms:value-of (?computer subnets) ?subnet]]
    then [ltms:value-of (?subnet routers) ?computer])
 
@@ -321,11 +321,50 @@
           [ltms:object-type-of ?site site]]
   then [ltms:value-of (?computer site) ?site])
 
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;;
+;;; Computers OS etc
+;;;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+(defrule fill-in-machine-os (:forward)
+  if [and [ltms:object-type-of ?machine computer]
+	  [ltms:named-part-of ?machine os ?os-instance]
+	  ]
+  then [ltms:value-of (?os-instance machine) ?machine]
+  )
+
+(defrule fill-in-machine-os-users (:forward)
+  if [and [ltms:object-type-of ?machine computer]
+	  [ltms:named-part-of ?machine os ?os-instance]
+	  [ltms:object-type-of ?os-instance operating-system]
+	  [ltms:value-of (?machine users) ?user]
+	  [ltms:object-type-of ?user user]
+	  ]
+  then [ltms:value-of (?os-instance users) ?user]
+  )
+
+
 (defrule fill-in-machines-superuser (:forward)
   if [and [ltms:object-type-of ?machine computer]
           [ltms:value-of (?machine os superuser) ?user]
           [ltms:object-type-of ?user user]]
   then [ltms:value-of (?user machines) ?machine])
+
+
+
+
+(def-symmetric-pointers machine-users computer ?the-computer users user ?the-user machines)
+
+(def-symmetric-pointers enterprise-site enterprise ?the-enterprise sites site ?the-site enterprise)
+
+(def-symmetric-pointers ensemble-user ensemble ?the-ensemble typical-user user ?the-user ensemble)
+
+(def-symmetric-pointers ensemble-typical-computer ensemble ?the-ensemble typical-computer computer ?the-computer ensemble
+			:to-condition (typical-p t))
+
+(def-symmetric-pointers ensemble-typical-user ensemble ?the-ensemble typical-user user ?the-user ensemble
+			:to-condition (typical-p t))
 
 (def-symmetric-pointers capabilities-up-down capability ?c1 more-specific capability ?c2 more-general)
 
@@ -435,16 +474,47 @@
   then [runs-with-permissions-of ?server-process ?superuser])
 
 
-;; this forces the user to "own" every machine at his site
-;; by forward reasoning.
-(defrule user-can-use-computer (:forward)
-  if [and [ltms:object-type-of ?user user]
-          [ltms:value-of (?user location) ?location]
-	  [ltms:object-type-of ?computer computer]
-	  [ltms:value-of (?computer site) ?site]
-	  [ltms:object-type-of ?site site]
-	  (location-is-in-net-segment ?site ?location)]
-  then [ltms:value-of (?user machines) ?computer])
+;;; this forces the user to "own" every machine at his site
+;;; by forward reasoning.  
+;;; I'm not sure I want to do this, when we define a user
+;;; we can say what his machines are
+;;; plus typically we have a typical user and a typical machine
+;;; and that gets threaded by thread-user-machines
+
+;;;(defrule user-can-use-computer (:forward)
+;;;  if [and [ltms:object-type-of ?user user]
+;;;          [ltms:value-of (?user location) ?location]
+;;;	  [ltms:object-type-of ?computer computer]
+;;;	  [ltms:value-of (?computer site) ?site]
+;;;	  [ltms:object-type-of ?site site]
+;;;	  (location-is-in-net-segment ?site ?location)]
+;;;  then [ltms:value-of (?user machines) ?computer])
+
+
+;;; Note:
+;;; I guess there's a redundant represeentation
+;;; Between uses-machine and the machines slot
+;;; in the user object:
+
+(defrule uses-machine-to-machines (:forward)
+  if [and [uses-machine ?user ?machine]
+	  [ltms:object-type-of ?user user]
+	  [ltms:object-type-of ?machine computer]]
+  then [ltms:value-of (?user machines) ?machine])
+
+
+;;; This was to thread up the "location" field of users
+;;; But that field was really there for the attacker
+;;; So this isn't right.
+;;;(defrule user-at-location (:forward)
+;;;  if [and [ltms:object-type-of ?user user]
+;;;	  [ltms:value-of (?user machines) ?machine]
+;;;	  [ltms:object-type-of ?machine computer]
+;;;	  [ltms:value-of (?machine ip-addresses) ?ip-address]
+;;;	  [ltms:object-type-of ?ip-address ip-address]
+;;;	  [ltms:object-type-of ?subnet subnet]
+;;;	  (ip-address-is-on-subnet ?ip-address ?subnet)]
+;;;  then [ltms:value-of (?user location) ?subnet])
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;
@@ -506,6 +576,17 @@
 	  [ltms:object-type-of ?os-instance operating-system]
 	  [ltms:value-of (?os-instance superuser) ?user]
 	  [ltms:object-type-of ?user user]]
+  then [ltms:value-of (?user machines) ?machine])
+
+;;; Make the typical user of an ensemble
+;;; use the typical machine of that ensemble
+(defrule thread-user-machines (:forward)
+  if [and [ltms:object-type-of ?user user]
+	  [ltms:value-of (?user typical-p) t]
+	  [ltms:value-of (?user ensemble) ?ensemble]
+	  [ltms:object-type-of ?ensemble ensemble]
+	  [ltms:value-of (?ensemble typical-computer) ?machine]
+	  [ltms:object-type-of ?machine computer]]
   then [ltms:value-of (?user machines) ?machine])
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;

@@ -22,6 +22,9 @@
 ;;; connect to using which protocols
 ;;; 
 ;;;
+;;;
+;;;  To test this in the interface, use auto-pilot, accuracy, auto-pilot-process
+;;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 (in-package :aplan)
@@ -67,8 +70,8 @@
 ;;; at.  The code in threading-objects.lisp will then decide to put this guy on every subnet
 ;;; that those addresses lie on.  So if the router has address 192.168.10.1 and there's a subnet
 ;;; called foobar with range (192.168.10.0 255.255.255.0), then the router will automatically have foobar
-;;; as one of its subnets and foobqr will have the router as one of its computers.
-;;; The external networks keyword argument is a list of NAMES of external networks, e.g. The-wild
+;;; as one of its subnets and foobar will have the router as one of its computers.
+;;; The external networks keyword argument is a list of NAMES of external networks, e.g. outside
 (defrouter cradlepoint-router ("192.10.0.1" "192.20.0.1")
   :authorization-pool communication-pool
   :superuser router-administrator
@@ -162,8 +165,9 @@
   :authorization-pools (server-pool))
 
 (defuser server-user
-  :capabilities (server-user-write)
-  :authorization-pools (server-pool))
+    :typical t
+    :capabilities (server-user-write)
+    :authorization-pools (server-pool))
 
 ;; Ok, what are the different types of "computers"
 ;; that we input to this function, are they defined somewhere
@@ -171,21 +175,24 @@
 ;; Note -- I think that these are in object-defs.lisp
 ;; how would we handle 10.*.*.* ip addresses, should we
 ;; make our valid ip range really wide or what?
-(defcomputer host-laptop linux-computer "192.1.1.2"
-	     :authorization-pool server-pool
-	     :superuser server-administrator)
+(defcomputer host-laptop linux-computer 
+  :ip-address-string "192.1.1.2"
+  :authorization-pool server-pool
+  :superuser server-administrator)
 
-(defcomputer windows-email-vm windows-7-computer "192.10.0.3"
-	     :authorization-pool server-pool
-	     :superuser server-administrator)
+(defcomputer windows-email-vm windows-7-computer 
+  :ip-address-string "192.10.0.3"
+  :authorization-pool server-pool
+  :superuser server-administrator)
 
 (tell-positive-policy cradlepoint-router ssh ("0.0.0.0"  "0.0.0.0") ("192.0.0.0"  "255.0.0.0"))
 
-(defcomputer navnet windows-7-computer "192.10.0.4"
-	     :authorization-pool server-pool
-	     :superuser server-administrator
-	     :interfaces (serial)
-	     )
+(defcomputer navnet windows-7-computer 
+  :ip-address-string "192.10.0.4"
+  :authorization-pool server-pool
+  :superuser server-administrator
+  :interfaces (serial)
+  )
 
 (defresource typical-chart file
 	     :capability-requirements ((write server-super-user) (read server-user-read))

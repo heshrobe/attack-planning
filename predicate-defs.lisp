@@ -38,7 +38,7 @@
 
 (define-predicate protected-from (thing attack) (ltms:ltms-predicate-model))
 
-(define-predicate accepts-connection (machine type user path) (ltms:ltms-predicate-model))
+(define-predicate accepts-connection (machine type user-or-machine path) (ltms:ltms-predicate-model))
 
 (define-predicate uses-machine (machine user) (ltms:ltms-predicate-model))
 
@@ -51,7 +51,11 @@
  
 (define-predicate reachable-from (computer1 computer2 router) (ltms:ltms-predicate-model))
 
-(define-predicate policy-for (bridge connection-type location-mask) (ltms:ltms-predicate-model))
+(define-predicate reachable-for-remote-execution (victim-machine attacker protocol) (ltms:ltms-predicate-model))
+
+(define-predicate policy-for-bridge (bridge connection-type location-mask) (ltms:ltms-predicate-model))
+
+(define-predicate policy-for-host (host connection-type location-mask) (ltms:ltms-predicate-model))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;
@@ -116,7 +120,8 @@
 (define-goal force-load (attacker code target))
 
 ;;; Modify some featue of an object
-(define-goal modify (attacker object-property object))
+;;; given that the attacker has a foothold in some role on some machine
+(define-goal modify (attacker object-property object foothold-machine foothold-role))
 
 ;;; Used?
 (define-goal modify-contents (attacker thing))
@@ -124,7 +129,7 @@
 (define-goal achieve-knowledge-of-contents (attacker thing))
 
 ;;; achieve knowledge of a victim's password for some entity
-(define-goal achieve-knowledge-of-password (attacker victim entity))
+(define-goal achieve-knowledge-of-password (attacker victim entity foothold-machine foothold-role))
 
 (define-goal know (attacker thing property))
 
@@ -132,9 +137,13 @@
 
 (define-goal observe-network-traffic (attacker subnet))
 
-;;; The attacker achieves a particular principal's capability (operation object)
-(define-goal achieve-access-right (attacker operation thing principal))
-(define-goal use-access-right-to-modify (attacker operation principal thing))
+;;; Privilege Escalation:
+;;; The attacker achieves a particular principal's capability (operation object) 
+;;; given that he's achieved a foothold in some role on some machine
+;;; (the intent is that whatever lateral motion needed has already been done and this
+;;;  goal shouldn't be satisfied by doing more)
+(define-goal achieve-access-right (attacker operation thing principal foothold-machine foothold-role))
+(define-goal use-access-right-to-modify (attacker operation principal thing foothold-machine foothold-role))
 
 (define-goal make-member-of (attacker thing set))
 
@@ -146,28 +155,45 @@
 ;;; discover the existence of a physical resource (e.g. a machine)
 (define-goal discover (attacker thing property))
 
-(define-goal achieve-connection (attacker os-instance connection-type))
+;;; This predicate is the bedrock of lateral motion:
+;;; This takes:
+;;; 1) The attacker
+;;; 2) The path that's he's explored so far.  A list of pairs of foothold and role on the foothold
+;;;    The first item in this list is the current foothold and role that he's trying to move from
+;;; 3) The victim-os that's his target
+;;; 4) The connection type
+;;; The last two arguments are bound for the caller to provide information about
+;;; Where and in what role the attacker has a foothold.
+;;; 5) The Next to last argument is bound for the caller and is the last foothold
+;;; 6) The Last argument is bound for the caller and is the role achieved on the foothold
+(define-goal achieve-connection (attacker path-so-far victim-os connection-type next-hop as-what))
 
-;;; Note: Maybe this should specify the entity that's doing the execution
-;;; an entity might be a process or a user.  Would need a mixin system-entity
-;;; that's mixed into both user and process.
-(define-goal remote-execution (attacker entity os-instance))
+;;; This is called with a last two arguments saying what machine the attacker is operating from and what role he's operating in
+;;; at this point of the reasoning.  It's expected that this machine can make a connection 
+;;; to the victim machine
+(define-goal achieve-remote-execution (attacker entity victim-os-instance foothold-machine foothold-role))
 
-(define-goal code-injection (attacker process os-instance))
+(define-goal achieve-code-injection (attacker process victim-os-instance foothold-machine foothold-role))
 
-(define-goal code-reuse (attacker process os-instance))
+(define-goal achieve-code-reuse (attacker process victim-os-instance foothold-machine foothold-role))
+
+(define-goal achieve-remote-shell (attacker user victim-os-instance foothold-machine foothold-role))
 
 (define-predicate vulnerable-to-overflow-attack (process) (ltms:ltms-predicate-model))
-
-(define-goal remote-shell (attacker user os-instance))
 
 ;;; This is related to attacks in which for example the user is misdirected
 ;;; to a fake site or to a fake DNS resolver
 (define-goal cause-to-believe (attacker user thing property))
 
-(define-goal increase-size (attacker thing))
+(define-goal increase-size (attacker thing foothold-machine foothold-role))
 
 (define-goal decrease-size (attacker thing))
+
+;;; Put the machine into an unusable state that requires sysadmin attention
+;;; 
+(define-goal brick-machine (attacker machine))
+
+(define-goal install-malware (attacker machine malware))
 
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -190,7 +216,7 @@
                                                      
 ;;; The actor logs onto the particular OS as user
 
-(define-action login (actor user os-instance))
+(define-action login (actor user os-instance foothold-machine))
 
 (define-action use-own-password (user))
 
@@ -200,7 +226,7 @@
 
 (define-action sniff-a-password (actor victim subnet))
 
-(define-action connect-via (actor machine protocol-name))
+(define-action connect-via (actor at-location machine protocol-name))
 
 ;;; This seems like a dubious way of saying what we mean
 ;;; probably the rule is dubious as well
@@ -222,9 +248,18 @@
 
 (define-action uses-control-to-achieve-access-right (attacker right component))
 
+(define-action submit-email (attacker kind-of-email process foothold-machine foothold-role))
+
+(define-action launch-code-injection-attack (attacker victim-process foothold-machine foothold-role))
+
+(define-action launch-code-reuse-attack (attacker victim-process foothold-machine foothold-role))
+
+
 ;;; FOR AUTO PILOT EXAMPLE
 ;;; E.G [IS-PROXIMATE-TO TYPICAL-ATTACKER GPS RADIO-COMMUNICATIO]
 (define-predicate is-proximate-to (attacker victim purpose))
+
+
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;

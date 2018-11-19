@@ -15,16 +15,18 @@
            (format stream "~{~a~^.~}" path)))
         (t (call-next-method))))
 
-(define-object-type typical-object-mixin)
+(define-object-type can-be-typical-mixin
+    :slots ((typical-p :tms t :initform nil :initarg :typical-p))
+    )
 
 (define-object-type system-entity
     :tms t
-    :included-object-types (print-nicely-mixin)
+    :included-object-types (can-be-typical-mixin print-nicely-mixin)
     )
 
 (define-object-type computer-resource
     :tms t
-    :included-object-types (print-nicely-mixin)
+    :included-object-types (can-be-typical-mixin print-nicely-mixin)
     :slots ((machines :set-valued t :tms t)
 	    (capability-requirements :set-valued t :tms t)))
 
@@ -44,15 +46,16 @@
     :included-object-types (data-resource)
     )
 
+(define-object-type file-system
+    :tms t
+    :included-object-types (data-resource)
+    :slots ((files :set-valued t :tms t))
+    )
+
 (define-object-type file
     :tms t
   :included-object-types (data-resource)
   :slots ((directories :set-valued t :tms t)))
-
-(define-object-type typical-file
-    :tms t
-    :included-object-types (file typical-object-mixin)
-    )
 
 (define-object-type dynamically-loadable-code-file
     :tms t
@@ -65,10 +68,6 @@
 	    (programs :set-valued t :tms t))
     )
 
-(define-object-type typical-class-file
-    :tms t
-    :included-object-types (class-file typical-object-mixin))
-
 (define-object-type source-file
     :tms t
     :included-object-types (file)
@@ -80,11 +79,6 @@
     :included-object-types (source-file)
     )
 
-(define-object-type typical-java-file
-    :tms t
-    :included-object-types (java-file typical-object-mixin)
-    )
-
 (define-object-type complex-encoded-data-file
     :tms t
     :included-object-types (file))
@@ -92,11 +86,6 @@
 (define-object-type graphic-image-file
     :tms t
     :included-object-types (complex-encoded-data-file))
-
-(define-object-type typical-graphics-image-file
-    :tms t
-    :included-object-types (graphic-image-file typical-object-mixin)
-    )
 
 (define-object-type jpeg-file
     :tms t
@@ -109,11 +98,6 @@
 (define-object-type graphic-video-file
     :tms t
     :included-object-types (complex-encoded-data-file))
-
-(define-object-type typical-graphics-video-file
-    :tms t
-    :included-object-types (graphic-video-file typical-object-mixin)
-    )
 
 (define-object-type wmv-file
     :tms t
@@ -263,10 +247,6 @@
     :tms t
     :included-object-types (process)
     )
-
-(define-object-type typical-user-process
-    :tms t
-  :included-object-types (user-process typical-object-mixin))
 
 (define-object-type scheduler
     :tms t
@@ -421,25 +401,45 @@
 ;;; Note: For mobile users don't we need to bind authorization
 ;;; pools with site?
 
+;;; USER inherits can-be-typical-mixin from system-entity
 (define-object-type user
     :tms t
-    :slots ((location :tms t)
+    :slots (
 	    (name :tms t)
 	    (email-address :tms t)
 	    (capabilities :set-valued t :tms t)
 	    (authorization-pool :set-valued t :tms t)
-	    (machines :set-valued t :tms t))
-  :included-object-types (system-entity print-nicely-mixin))
+	    (machines :set-valued t :tms t)
+	    (ensemble :tms t :initform nil :initarg :ensemble))
+    :included-object-types (system-entity print-nicely-mixin))
 
 (define-object-type attacker
     :tms t
     :included-object-types (user)
-    :slots ((world :tms t))
+    :slots ((world :tms t)
+	    ;; location is a subnet that the
+	    ;; user might be on.  It's purpose is to provide an "IP address" for
+	    ;; the attacker, who isn't at some specific machine but is somewhere
+	    ;; in the external internet.
+	    (location :tms t :set-valued t)
+	    )
     )
 
-(define-object-type typical-user
+;;; An ensemble is a collection of machines
+;;; There are essentially the same from the attacker's perspective
+;;; For each ensemble we specify a "typical" machine and a
+;;; typical "user". The access rights for these typical elements
+;;; apply to all members of the ensemble
+
+(define-object-type ensemble
     :tms t
-  :included-object-types (user typical-object-mixin))
+    :included-object-types (print-nicely-mixin)
+    :slots ((typical-computer :tms t :initform nil :initarg :typical-computer)
+	    (typical-user :tms t :initform nil :initarg :typical-user)
+	    (enterprise :tms t :initarg :enterprise)
+	    (size :tms t :initform 0 :initarg :size)
+	    )
+    )
 
 (define-object-type user-set
     :tms t
@@ -521,6 +521,8 @@
     :slots ((workload :tms t)
 	    (user-set :tms t)
 	    (superuser :tms t)
+	    (machine :tms t)
+	    (users :tms t :set-valued t)
 	    (authorization-pool :tms t)
 	    (job-launch-queue :tms t) 
 	    (processes :set-valued t :tms t))
@@ -678,13 +680,14 @@
 	    (site :set-valued t :tms t)
 	    (communication-protocols :set-valued t :tms t)
 	    (system-type :tms t)
-	    (health-status :tms t))
-    :included-object-types (has-policy-mixin hardware print-nicely-mixin))
+	    (health-status :tms t)
+	    (ensemble :tms t :initform nil :initarg :ensemble)
+	    (users :tms t :set-valued t :initform nil :Initarg :users))
+    :included-object-types (has-policy-mixin hardware can-be-typical-mixin print-nicely-mixin))
 
-(define-object-type typical-computer
+(define-object-type attacker-computer
     :tms t
-    :included-object-types (computer typical-object-mixin)
-    )
+    :included-object-types (computer))
 
 ;;; Note: These are machines that are always on all of its subnets
 (define-object-type fixed-computer
@@ -709,7 +712,7 @@
 
 (define-object-type unix-computer
     :tms t
-  :included-object-types (computer))
+    :included-object-types (computer))
 
 (define-object-type windows-computer
     :tms t
@@ -841,8 +844,8 @@
 
 (define-object-type basic-subnet-mask
     :tms t
-  :parts ((ip-address ip-address)
-	  (mask ip-address)))
+    :parts ((ip-address ip-address)
+	    (mask ip-address)))
 
 (define-object-type subnet-mask
     :tms t
@@ -952,6 +955,11 @@
     :tms t
     :included-object-types (switch))
 
+(define-object-type wired-switch
+    :tms t
+    :included-object-types (switch)
+    )
+
 ;; router is the thing connecting subnets
 ;; One might want to specialize this later into things with 
 ;; more specific capabilities
@@ -975,11 +983,6 @@
   :included-object-types (computer)
   )
 
-(define-object-type typical-mobile-computer
-    :tms t
-    :included-object-types (mobile-computer typical-object-mixin)
-    )
-
 (define-object-type smart-phone
     :tms t
   :included-object-types (mobile-computer))
@@ -988,11 +991,19 @@
     :tms t
   :included-object-types (mobile-computer))
 
+(define-object-type enterprise
+    :tms t
+    :included-object-types (print-nicely-mixin)
+    :slots ((sites :set-valued t :tms t :initform nil :initarg :sites))
+    )
+
 (define-object-type site
     :tms t
   :included-object-types (print-nicely-mixin)
   :parts ((net-mask subnet-mask))
-  :slots ((subnets :set-valued t :tms t)))
+  :slots ((subnets :set-valued t :tms t)
+	  (enterprise :tms t :initarg :enterprise :initform nil)
+	  ))
 
 (define-object-type external-internet
     :tms t
@@ -1067,7 +1078,7 @@
 
 (define-object-type voip
     :tms t
-    :included-object-types (transfer-protocol)
+    :included-object-types (communication-protocols)
     )
 
 ;; proprietary protocols (logon port 8992)
@@ -1075,6 +1086,37 @@
     :tms t
     :included-object-types (communication-protocols)
     )
+
+(define-object-type email-send-protocol
+    :tms t
+    :included-object-types (communication-protocols)
+    )
+
+(define-object-type smtp 
+    :tms t
+    :included-object-types (email-send-protocol)
+    )
+
+(define-object-type email-receive-protocol
+    :tms t
+    :included-object-types (communication-protocols)
+    )
+
+(define-object-type email-pop
+    :tms t
+    :included-object-types (email-receive-protocol)
+    )
+
+(define-object-type imap
+    :tms t
+    :included-object-types (email-receive-protocol)
+    )
+
+(define-object-type database-protocol
+    :tms t
+    :included-object-types (communication-protocols)
+    )
+
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;
