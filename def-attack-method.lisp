@@ -85,13 +85,3 @@
                  ,@sub-goals
                  (unify ,plan-variable ,plan-structure)
                  ]))))
-
-
-
-;;; for editor support
-
-;;; This tells the editor how to kill defattack-method forms (fi:kill-definition C-c C-y)
-#+allegero
-(defmethod lep::definition-undefining-form (fspec (type (eql 'defattack-method)))
-  `(undefrule ',fspec))
-

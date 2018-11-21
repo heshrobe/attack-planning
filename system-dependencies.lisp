@@ -335,15 +335,33 @@
 
 ;;; Here ?user is again feedback to the caller about whose rights you got
 ;;; Is that different than ?foothold role ?
+;;; Fix: Need two vesions.  IF ?foothold-role already has the access right
+;;; then you do nothing.  Otherwise you go through achieve-access-right
+;;; Partially fixed
 (defattack-method modify-through-available-access-rights
     :to-achieve [modify ?attacker ?object-property ?object ?foothold-machine ?foothold-role]
     :bindings ([ltms:value-of (?object machines) ?computer])
     :typing ([ltms:object-type-of ?computer computer])
-    :prerequisites ([requires-access-right ?object write ?capability])
+    ;; Use this only if you don't already have the required capability
+    ;; (what if more than one capability implies the right?  Shouldn't
+    ;; we check that he doesn't have any of them).
+    :prerequisites ((not (has-relevant-capability ?foothold-role 'write ?object)))
     :plan (:sequential 
 	   (:goal [achieve-access-right ?attacker write ?object ?user ?foothold-machine ?foothold-role])
 	   (:action [use-access-right-to-modify ?attacker write ?user ?object ?foothold-machine ?foothold-role]))
     )
+
+(defattack-method modify-through-available-access-rights-when-have-then
+    :to-achieve [modify ?attacker ?object-property ?object ?foothold-machine ?foothold-role]
+    :bindings ([ltms:value-of (?object machines) ?computer])
+    :typing ([ltms:object-type-of ?computer computer])
+    ;; Use this only if you don't already have the required capability
+    ;; (what if more than one capability implies the right?  Shouldn't
+    ;; we check that he doesn't have any of them).
+    :prerequisites ((has-relevant-capability ?foothold-role 'write ?object))
+    :plan ()
+    )
+
 
 ;;; To increase the size of the active user set of some OS
 ;;; Find a user in the authorization pool for the OS
@@ -519,21 +537,21 @@
 
 ;;; similar comment to above about foothold etc
 (defattack-method how-to-achieve-access-right-by-remote-shell-on-target
-    :to-achieve [achieve-access-right ?attacker ?right ?object ?user ?foothold-machine ?foothold-role]
+    :to-achieve [achieve-access-right ?attacker ?right ?object ?other-user ?foothold-machine ?foothold-role]
     :bindings ([ltms:value-of (?object machines) ?machine]
                [ltms:named-part-of ?machine os ?os-instance]
                [requires-access-right ?object ?right ?capability]
 	       [ltms:value-of (?os-instance authorization-pool) ?pool]
 	       [ltms:named-part-of ?foothold-machine os ?foothold-os]
-	       [ltms:value-of (?pool users) ?user])
+	       [ltms:value-of (?pool users) ?other-user])
     :typing ([ltms:object-type-of ?object computer-resource]
              [ltms:object-type-of ?machine computer]
              [ltms:object-type-of ?os-instance operating-system]
 	     [ltms:object-type-of ?pool authorization-pool]
-             [ltms:object-type-of ?user user])
+             [ltms:object-type-of ?other-user user])
     ;; Note: has-capability is a function not an assertion
-    :prerequisites ((has-capability ?user ?capability))
-    :plan (:goal [achieve-remote-shell ?attacker ?user ?foothold-os ?foothold-machine ?foothold-role])
+    :prerequisites ((has-capability ?other-user ?capability))
+    :plan (:goal [achieve-remote-shell ?attacker ?other-user ?foothold-os ?foothold-machine ?foothold-role])
     )
 
 ;;;;;; Note & Fix: This calls itself recursively but has no protection against
@@ -602,6 +620,8 @@
            (:action [login ?attacker ?user ?os-instance ?foothold-machine])))
 
 ;;; SSH version
+;;;  Fix? There's a confusion here (to me) of what the users of an OS means vs the users
+;;;  in the authorization pool of the OS.
 (defattack-method how-to-logon-2
     :to-achieve [achieve-remote-shell ?attacker ?user ?os-instance ?foothold-machine ?foothold-role]
     :bindings ([ltms:value-of (?os-instance users) ?user]
@@ -657,9 +677,9 @@
 
 (defattack-method get-sysadmin-password-by-bricking
     :to-achieve [achieve-knowledge-of-password ?attacker ?user ?resource ?foothold-machine ?foothold-role]
-    :typing ([ltms:value-of (?user machines) ?machine])
-    :bindings ([ltms:object-type-of ?user user]
-               [ltms:object-type-of ?machine computer])
+    :bindings ([ltms:value-of (?user machines) ?machine])
+    :typing ([ltms:object-type-of ?user user]
+	     [ltms:object-type-of ?machine computer])
     :prerequisites ([ltms:value-of (?machine os superuser) ?user])
     :plan (:sequential
 	    (:goal [install-malware ?attacker ?foothold-machine key-logger])
@@ -674,6 +694,12 @@
 	   (:action [fill-disk ?attacker ?foothold-machine kill-disk])
 	   ))
 
+;;; This is a stub
+(defattack-method how-to-install-malway 
+    :to-achieve [install-malware ?attacker ?foothold-machine ?malware-type]
+    :plan (:sequential
+	   (:action [install-malware ?attacker ?malware-type ?foothold-machine])))
+
 ;note: need plan for install malware
 
 ;;; Fix This
@@ -682,7 +708,7 @@
     :bindings ([email-client-of ?user ?process]
 	       [ltms:value-of (?attacker machines) ?attacker-machine]
 	       [ltms:value-of (?process host-os) ?os-instance]
-	       [ltms:named-part-of ?machine os ?os-instance]
+	       [ltms:value-of (?os-instance machine) ?machine]
 	       (unify ?path-so-far `((,?attacker-machine ?attacker)))
 	       )
     :typing ([ltms:object-type-of ?user user]
@@ -691,7 +717,7 @@
              [ltms:object-type-of ?machine computer]
 	     [ltms:object-type-of ?attacker-machine computer])
     :plan (:sequential
-           (:goal [achieve-connection ?attacker ?path-so-far ?os-instance email nil ?foothold-machine ?foothold-role])
+           (:goal [achieve-connection ?attacker ?path-so-far ?os-instance smtp ?foothold-machine ?foothold-role])
            (:action [phishing-attack ?attacker ?user ?process ?foothold-machine]))
     )
 
@@ -745,7 +771,7 @@
 ;;; Fix: This seems to say that you can pass in either a machine or a user.  Does that make any sense?
 (defattack-method achieve-connection-by-protocol
     :to-achieve [achieve-connection ?attacker ((?attacker-machine ?attacker-role) . ?rest-of-path)
-				    ?victim-os-instance ?protocol-name ?attaker-machine ?attacker-role]
+				    ?victim-os-instance ?protocol-name ?attacker-machine ?attacker-role]
     :bindings ([ltms:named-part-of ?victim-machine os ?victim-os-instance])
     :typing ([ltms:object-type-of ?victim-os-instance operating-system]
 	     [ltms:object-type-of ?victim-machine computer]

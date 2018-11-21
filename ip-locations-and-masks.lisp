@@ -382,6 +382,7 @@
 	  (if (typep ?host-mask 'negative-location)
 	      (push ?host-mask negative-masks)
 	    (push ?host-mask positive-masks)))
+    ;; (break "~a ~a" positive-masks negative-masks)
     ;; If we're in permissive policy then add a mask that allows everything
     (when (eql *policy-default* 'permit) (push *everywhere* positive-masks))
     ;; initially we start with all the intervals covered by the external internet
@@ -394,6 +395,7 @@
 	  append (loop for interval in (intervals negative-mask)
 		     do (setq permitted-areas  (loop for permitted-area in permitted-areas
 						   append (interval-subtract permitted-area interval)))))
+      ;; (break "~a" permitted-areas)
       ;; now we check whether any of the remaining intervals
       ;; intersect with any positive mask's intervals
       (when permitted-areas

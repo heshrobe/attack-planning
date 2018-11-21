@@ -53,6 +53,10 @@
   (:command-table (aplan)))
 
 
+
+
+
+
 (defvar *editor* nil)
 (defvar *process* nil)
 
@@ -60,8 +64,23 @@
   (let ((graft (clim:find-graft)))
     (clim:rectangle-size (clim:sheet-region graft))))
 
+(defun debugger-hook (condition hook)
+  (declare (ignore hook))
+  (let* ((*application-frame* *editor*)
+	 (*error-output* (clim:frame-standard-output *application-frame*))
+	 (stream (clim:get-frame-pane *application-frame* 'interactor)))
+    (clim:stream-close-text-output-record stream)
+    (clim-utils:letf-globally
+        (((clim:stream-current-output-record stream) (clim:stream-output-history stream))
+	 ((clim:stream-recording-p stream) t)
+	 ((clim:stream-drawing-p stream) t)
+	 ((clim-internals::stream-current-redisplay-record stream) nil))
+      (setf (clim:command-menu-enabled 'clim-env:listener-restarts *application-frame*) t)
+      (clim-env:enter-debugger condition stream :own-frame t ))))
+
 (defmethod aplan-top-level ((frame aplan) &REST OPTIONS)
-  (let ((*package* (find-package (string-upcase "aplan"))))
+  (let ((*package* (find-package (string-upcase "aplan")))	
+	(*debugger-hook* #'debugger-hook))
     (ji:with-joshua-readtable
 	(APPLY #'clim:default-frame-top-level
 		frame

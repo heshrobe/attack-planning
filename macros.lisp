@@ -189,6 +189,7 @@
 			     negative-address negative-mask
 			     (ensemble nil ensemble-p)
 			     (typical nil typical-p)
+			     superuser-for
 			     ) 
   `(with-atomic-action
        (kill-redefined-object ',name)
@@ -203,8 +204,10 @@
        ,@(loop for cap in capabilities
 	     collect `(tell `[ltms:value-of (,user capabilities) ,(follow-path '(,cap))]))
        (apply-positive-and-negative-masks user ,positive-address ,positive-mask ,negative-address ,negative-mask)
-       ,@(when ensemble-p `((tell `[ltms:value-of (,user ensemble) , (object-named ',ensemble)])))
+       ,@(when ensemble-p `((tell `[ltms:value-of (,user ensemble) ,(object-named ',ensemble)])))
        ,@(when typical-p `((tell `[ltms:value-of (,user typical-p) ,,typical])))
+       ,@(when superuser-for (loop for machine in superuser-for
+				collect `(tell `[ltms:value-of (,user superuser-for) ,(follow-path (list ',machine 'os))])))
        user))) 
 
 (defun apply-positive-and-negative-masks (user 

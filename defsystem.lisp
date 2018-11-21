@@ -54,6 +54,7 @@
    ("jbi-example" (:module-class data-module))   
    ("cctv-network-description" (:module-class data-module))
    ("trudy-network-description" (:module-class data-module))
+   ("wilee-example" (:module-class data-module))
    ("editor" (:module-class separate-destination-joshua-module))
    ("attack-graphics" (:module-class separate-destination-joshua-module))
    ("emacs-hacks" (:module-class separate-destination-joshua-module))

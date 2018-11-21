@@ -410,7 +410,9 @@
 	    (capabilities :set-valued t :tms t)
 	    (authorization-pool :set-valued t :tms t)
 	    (machines :set-valued t :tms t)
-	    (ensemble :tms t :initform nil :initarg :ensemble))
+	    (ensemble :tms t :initform nil :initarg :ensemble)
+	    (superuser-for :tms t :initform nil :set-valued t)
+	    )
     :included-object-types (system-entity print-nicely-mixin))
 
 (define-object-type attacker
@@ -520,9 +522,9 @@
     :tms t
     :slots ((workload :tms t)
 	    (user-set :tms t)
-	    (superuser :tms t)
+	    (superuser :tms t :set-value t :Initform nil)
 	    (machine :tms t)
-	    (users :tms t :set-valued t)
+	    (users :tms t :set-valued t :Initform nil)
 	    (authorization-pool :tms t)
 	    (job-launch-queue :tms t) 
 	    (processes :set-valued t :tms t))

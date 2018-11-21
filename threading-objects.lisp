@@ -353,6 +353,7 @@
 
 
 
+(def-symmetric-pointers machine-superusers operating-system ?the-os superuser user ?superuser superuser-for)
 
 (def-symmetric-pointers machine-users computer ?the-computer users user ?the-user machines)
 
@@ -548,7 +549,13 @@
                  (return-from has-capability (values t)))
                (mapc #'check-one (more-specific putative-capability))))
       (mapc #'check-one his-capabilities))
-    nil)) 
+    nil))
+
+(defun has-relevant-capability (user right object)
+  (ask* `[requires-access-right ,object ,right ?capability]
+	(when (has-capability user ?capability)
+	  (return-from has-relevant-capability t)))
+  nil)
 
 (defrule requires-access-right-translation (:forward)
   if [and [ltms:object-type-of ?object computer-resource]
