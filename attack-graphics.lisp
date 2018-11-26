@@ -2,14 +2,14 @@
 
 (in-package :aplan)
 
-(defun graph-an-attack-plan (plan &optional (stream *standard-output*) (orientation :vertical) (text-size :very-small))
+(defun graph-an-attack-plan (plan &optional (stream *standard-output*) (orientation :vertical) (text-size :very-small) (action-only nil))
   (let ((*print-object-nicely* t))
     (declare (special *print-object-nicely*))
     (clim:with-text-size (stream :small)
     (clim:format-graph-from-root
      plan
      #'(lambda (step stream) (print-plan-object step stream text-size))
-     #'plan-inferior
+     (if action-only #'plan-inferior-action-only #'plan-inferior)
      :stream stream
      :merge-duplicates t
      :orientation orientation
@@ -33,6 +33,14 @@
 	       (format stream "reduces to"))))
           (:goal (clim:surrounding-output-with-border (stream :shape :rectangle :ink clim:+blue+)
                    (destructuring-bind (goal-type &rest rest) (second step)
+		     ;; total hack to reduce space consumption
+		     (let* ((arglist (ji::find-predicate-arglist goal-type))
+			    (path-so-far-position (position 'path-so-far arglist)))
+		       (when path-so-far-position
+			 (setq rest (loop for i from 0
+					for name in rest
+					unless (= i path-so-far-position)
+					       collect name))))
                      (format stream "Goal: ~A~%~{~a~^~%~}" goal-type rest))))
           ((:action :repeated-action)
 	   (clim:surrounding-output-with-border (stream :shape :rectangle :ink clim:+red+)
@@ -48,6 +56,31 @@
 	     (when plan
              (list plan))))
     ((:action :repeated-action) nil)))
+
+;;; Fix if possible: There must be a simpler way to construct this recursion
+(defun plan-inferior-action-only (step)
+  (labels ((collect-actions-below (step)
+	     (case (first step)
+	       ((:sequential :parallel)
+		(loop for thing in (rest step)
+		    append (if (member (first thing) '(:action :repeated-action :sequential :parallel))
+			       (list thing)
+			     (collect-actions-below thing))))
+	       (:singleton (collect-actions-below (second step)))
+	       (:goal (let ((plan (getf step :plan)))
+			(when plan
+			  (case (first plan)
+			    (:singleton 
+			     (if (member (first (second plan)) '(:action :repeated-action))
+				 (rest plan)
+			       (collect-actions-below (second plan))))
+			    ((:sequential :parallel :action :repeated-action)
+			     (list plan))
+			    (otherwise (break "~a" plan))
+			    ))))
+	       ((:action :repeated-action) nil))))
+    (collect-actions-below step)
+    ))
 
 (eval-when (:compile-toplevel :load-toplevel :execute)
   (clim:define-presentation-type computer ()))
@@ -189,7 +222,9 @@
      &key (orientation '(clim:member-alist (("horizontal" . :horizontal) ("vertical" . :vertical))) :default :vertical)
      (pdf? 'clim:boolean :default nil :prompt "Generate to a pdf file")
      (file-name 'clim:pathname)
-     (text-size '(clim:member :very-small :small :normal :large :very-large)))
+     (text-size '(clim:member :very-small :small :normal :large :very-large))
+     (actions-only 'clim:boolean :default nil :prompt "Only show actions?")
+     )
   (let ((plan (nth which (attack-plans clim:*application-frame*))))
     (terpri)
     (when plan
@@ -197,7 +232,7 @@
                (clim:with-text-face (stream :bold)
                  (clim:with-text-size (stream text-size)
                    (format stream "~%Attack Plan ~d~%" which)
-                   (graph-an-attack-plan plan stream orientation text-size))))
+                   (graph-an-attack-plan plan stream orientation text-size actions-only))))
 	     (make-file-name-of-type (file-name type)
 	       (merge-pathnames (make-pathname :type type) file-name)))
         (cond
