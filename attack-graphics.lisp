@@ -157,6 +157,9 @@
 (define-aplan-command (com-load-model :name t :menu t)
     ((pathname 'clim:pathname))
   (clear)
+  ;; clear makes the current version of *everywhere* invalid
+  ;; by removing its parts.
+  (setq *everywhere* (make-everywhere))
   (ji:with-joshua-readtable 
       (load pathname)))
 

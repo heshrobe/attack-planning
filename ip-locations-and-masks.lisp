@@ -338,7 +338,9 @@
   (sort (loop for subnet in (subnets location) append (intervals subnet))
 				   #'< :key #'first))
 
-(defparameter *everywhere* (make-positive-location-mask "0.0.0.0" "0.0.0.0"))
+(defun make-everywhere () (make-positive-location-mask "0.0.0.0" "0.0.0.0"))
+
+(defparameter *everywhere* (make-everywhere))
 
 ;;; Fix: Does this need to do with default-policy, or does it already.  I think it does
 ;;; via pushing everywhere into the list of permitted
