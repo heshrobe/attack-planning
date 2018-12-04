@@ -215,6 +215,10 @@
 (define-object-type embedded-sensor-process
     :tms t 
     :included-object-types (process))
+
+(define-object-type embedded-actuator-process
+    :tms t 
+    :included-object-types (process))
     
 ;;; Note:
 ;;; It might be more correct to say that there is an apache server program
@@ -962,6 +966,11 @@
     :included-object-types (switch)
     )
 
+(define-object-type cellular-modem
+    :tms t
+    :included-object-types (switch)
+    )
+
 ;; router is the thing connecting subnets
 ;; One might want to specialize this later into things with 
 ;; more specific capabilities
@@ -1202,9 +1211,29 @@
     :included-object-types (computer peripheral)
     )
 
+(define-object-type inertial-gyro
+    :tms t
+    :included-object-types (computer peripheral)
+    )
+
+(define-object-type seeker-tracker
+    :tms t 
+    :included-object-types (computer peripheral)
+    )
+
+(define-object-type fin-control
+    :tms t
+    :included-object-types (computer peripheral)
+    )
+
 ;;; ADDED FOR AUTOPILOT BUT PROBABLY IT SHOULD HAVE BEEN HERE
 ;;; ALREADY.  SENSORS PRODUCE SIGNALS.
 (define-object-type sensor-signal
+    :tms t
+    :included-object-types (data-resource)
+    )
+
+(define-object-type actuator-command
     :tms t
     :included-object-types (data-resource)
     )

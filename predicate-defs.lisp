@@ -57,6 +57,10 @@
 
 (define-predicate policy-for-host (host connection-type location-mask) (ltms:ltms-predicate-model))
 
+(define-predicate protocol-is-relevant-for (goal protocol-name))
+(define-predicate is-protocol (protocol-name))
+(define-predicate port-for-protocol (protocol-name port-number))
+
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;
 ;;; Predicate defining macros
@@ -72,6 +76,10 @@
 
 (defmacro define-action (name variables) `(setf (gethash ',name *action-table*) ',variables))
 
+(defmacro define-protcol (name port)
+  `(with-atomic-action
+       (tell [is-protocol ,name])
+     (tell [port-for-protocol ,port])))
 
 #+allegro
 (def-fwrapper wrap-arglist-2 (symbol)
@@ -98,22 +106,22 @@
 ;;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
-(define-goal affect (attacker property resource-or-component))
+(define-goal affect (property resource-or-component foothold-machine attacker))
 
 ;;; Takes-control-of means to affect the behavior of something either directly or indirectly
-(define-goal takes-control-of (attacker component-property component))
+(define-goal takes-control-of (attacker component-property component foothold-machine foothold-role))
 
 ;;; Direct control means you actually control the execution of the component
 ;;; by either running your own code (e.g. code injection attacks)
 ;;; or by forcing control flow to go to a place that does what you want done (code reuse attacks, e.g.)
-(define-goal takes-direct-control-of (attacker component-property component))
+(define-goal takes-direct-control-of (attacker component-property component foothold-machine foothold-role))
 
 ;;; Indirect control means causing the behavior of the component to change (e.g. through its inputs) but not
 ;;; causing a change in control flow
-(define-goal takes-indirect-control-of (attacker component-property component))
+(define-goal takes-indirect-control-of (attacker component-property component foothold-machine foothold-role))
 
 ;;; Having gained control use it to affect the property of the target
-(define-goal use-control-of-to-affect-resource (attacker controlled-thing property resource))
+(define-goal use-control-of-to-affect-resource (attacker controlled-thing property resource foothold-machine foothold-role))
 
 (define-goal force-compilation (attacker source-code-file compiled-code-file))
 
@@ -135,7 +143,7 @@
 
 (define-goal observe (attacker object property))
 
-(define-goal observe-network-traffic (attacker subnet))
+(define-goal observe-network-traffic (attacker subnet foothold-machine foothold-role))
 
 ;;; Privilege Escalation:
 ;;; The attacker achieves a particular principal's capability (operation object) 

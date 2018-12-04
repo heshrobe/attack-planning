@@ -186,13 +186,14 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 (defun do-it (&key (attacker (follow-path '(typical-attacker)))
+		   (attacker-machine (follow-path '(typical-attacker-machine)))
                    (property 'performance) 
 		   (machine 'dopey) 
                    (resource (follow-path '(typical-dopey-process))))
   (let ((answers nil)
 	;; (os (follow-path `(,machine os)))
 	)
-    (ask `[affect ,attacker ,property ,resource ?plan]
+    (ask `[affect ,property ,resource ,attacker-machine ,attacker ?plan]
          #'(lambda (just)
              (declare (ignore just))
 	     (let ((plan (copy-object-if-necessary ?plan)))

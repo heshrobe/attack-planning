@@ -44,31 +44,32 @@
 ;;; and use that to violate data-privacy.
 
 (defattack-method affect-property-by-controlling-impacting-component
-    :to-achieve [affect ?attacker ?desirable-property ?victim]
+    :to-achieve [affect ?desirable-property ?victim ?foothold-machine ?foothold-role]
     ;; find some component of the OS of a machine that the victim runs on
     :bindings ([ltms:value-of (?victim machines) ?computer]
                [ltms:named-part-of ?computer os ?os-instance]
-               [part-of ?os-instance ?component])
+               [part-of ?os-instance ?component]
+	       (unify ?path-so-far `((,?foothold-machine ,?foothold-role))))
     :typing ([ltms:object-type-of ?victim computer-resource]
              [ltms:object-type-of ?os-instance operating-system]
 	     [ltms:object-type-of ?component process])
     :prerequisites ([impacts ?component-property ?component ?desirable-property ?victim])
     :plan (:sequential
            ;; this breaks down into two steps:
-           ;; 1) Get control of some component of the victime
+           ;; 1) Get control of some component of the victim
            ;; 2) Use that control to affect the property of the victim
            ;; Notice that the first step is oblivous to its purpose
            ;; This certainly makes things simpler but might lead to getting control in a way
            ;; that doesn't actually work
-           (:goal [takes-control-of ?attacker ?component-property ?component] :plan ?control-plan)
-           (:goal [use-control-of-to-affect-resource ?attacker ?component ?desirable-property ?victim] :plan ?modification-plan))
+           (:goal [takes-control-of ?attacker ?component-property ?component ?foothold-machine ?foothold-role])
+           (:goal [use-control-of-to-affect-resource ?attacker ?component ?desirable-property ?victim ?foothold-machine ?foothold-role]))
     )
 
 (defattack-method affect-property-by-affecting-input
-    :to-achieve [affect ?attacker ?desirable-property ?victim]
+    :to-achieve [affect ?desirable-property ?victim ?attacker-machine ?attacker]
     :prerequisites ([impacts ?resource-property ?resource ?desirable-property ?victim])
     :typing ([ltms:object-type-of ?resource computer-resource])
-    :plan (:goal [affect ?attacker ?resource-property ?resource])
+    :plan (:goal [affect ?resource-property ?resource ?attacker-machine ?attacker])
     )
 
 
@@ -79,6 +80,11 @@
 ;;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
+;;; ToDo: More lateral motion stuff
+;;; When you do the achieve connection, you need to know what protocols
+;;; might be useful.  So we condition this by using protocol-is-relevant-for
+;;; need to do more of that.
+
 
 ;;; Note: This could be done more indirectly by saying that 
 ;;; performance is inversely proportional to workload size
@@ -86,22 +92,25 @@
 ;;; is inversely proportional to something else increaese the something else
 
 (defattack-method increase-workload-to-decrease-performance
-    :to-achieve [affect ?attacker performance ?process]
+    :to-achieve [affect performance ?process ?attacker-machine ?attacker]
     :prerequisites ([desirable-property-of ?process performance])
     :bindings ([ltms:value-of (?process host-os) ?os]
-	       [ltms:value-of (?os workload) ?workload])
+	       [ltms:value-of (?os workload) ?workload]
+	       [protocol-is-relevant-for workload-size ?protocol]
+	       (unify ?path-so-far `((,?attacker-machine ,?attacker))))
     :typing ([ltms:object-type-of ?process process]
 	     [ltms:object-type-of ?os operating-system]
 	     [ltms:object-type-of ?workload os-workload])
-    :plan (:goal [increase-size ?attacker ?workload ?foothold-machine ?foothold-size])
+    :plan (:sequential
+	   (:goal [achieve-connection ?attacker ?path-so-far ?os ?protocol ?foothold-machine ?foothold-size])
+	   (:goal [increase-size ?attacker ?workload ?foothold-machine ?foothold-size]))
     )
 
 
 (defattack-method send-lots-of-emails
-    :to-achieve [affect ?attacker performance ?process]
+    :to-achieve [affect performance ?process ?attqcker-machine  ?attacker]
     :prerequisites ([desirable-property-of ?process performance])
     :bindings ([ltms:value-of (?process host-os) ?os-instance]
-	       [ltms:value-of (?attacker machines) ?attacker-machine]
 	       (unify ?path-so-far `((,?attacker-machine ,?attacker))))
     :typing ([ltms:object-type-of ?process email-server-process]
 	     [ltms:object-type-of ?attacker-machine computer]
@@ -138,7 +147,7 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 (defattack-method read-file-property-directly
-    :to-achieve [affect ?attacker data-privacy ?file]
+    :to-achieve [affect data-privacy ?file  ?attacker-machine ?attacker]
     :prerequisites ([desirable-property-of ?file data-privacy])
     :typing ([ltms:object-type-of ?file data-resource])
     :plan (:goal [achieve-knowledge-of-contents ?attacker ?file])
@@ -151,29 +160,28 @@
 ;;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
-;;; Fix modify
+;;; Fix: Need to do an achieve-connection to get foothold
 (defattack-method write-file-property-directly
-    :to-achieve [affect ?attacker data-integrity ?file]
+    :to-achieve [affect data-integrity ?file  ?attacker-machine ?attacker]
     :typing ([ltms:object-type-of ?file file])
     :prerequisites ([desirable-property-of ?file data-integrity])
-    :plan (:goal [modify ?attacker contents ?file])
+    :plan (:goal [modify ?attacker contents ?file ?foothold-machine ?foothold-role])
     )
 
 ;;; To affect the data-integrity of some data-set
 ;;; Get control of a process that produces the data-set
 (defattack-method mung-process-output
-    :to-achieve [affect ?attacker data-integrity ?data-set]
+    :to-achieve [affect data-integrity ?data-set ?attacker-machine ?attacker]
     :bindings ([output-of ?process ?data-set])    
     :typing ([ltms:object-type-of ?process process])
     :plan (:sequential
-           (:goal [takes-control-of ?attacker data-integrity ?process])
-           (:goal [use-control-of-to-affect-resource ?attacker ?process data-integrity ?data-set]))
+           (:goal [takes-control-of ?attacker data-integrity ?process ?attacker-machine ?attacker])
+           (:goal [use-control-of-to-affect-resource ?attacker ?process data-integrity ?data-set ?attacker-machine ?attacker]))
     )
 
 (defattack-method mung-database
-    :to-achieve [affect ?attacker data-integrity ?database]
+    :to-achieve [affect data-integrity ?database ?attacker-machine ?attacker]
     :bindings ([ltms:value-of (?database capability-requirements) (write ?requirement)]
-	       [ltms:value-of (?attacker machines) ?attacker-machine]
 	       [ltms:value-of (?database machines) ?database-machine]
 	       [ltms:named-part-of ?database-machine os ?database-os]
 	       (unify ?path-so-far `((,?attacker-machine ,?attacker)))
@@ -197,8 +205,8 @@
 
 (defattack-method take-control-of-directly
     ;; Takes control of a component to ultimately affect some property of the target
-    :to-achieve [takes-control-of ?attacker ?component-property ?component]
-    :plan (:goal [takes-direct-control-of ?attacker ?component-property ?component]))
+    :to-achieve [takes-control-of ?attacker ?component-property ?component ?foothold-machine ?foothold-role]
+    :plan (:goal [takes-direct-control-of ?attacker ?component-property ?component ?foothold-machine ?foothold-role]))
 
 ;;; one way to take direct control of a process is to
 ;;; first find some way to modify the loadable file so as to affect the property of the target
@@ -206,14 +214,14 @@
 
 ;;; Fix modify
 (defattack-method control-process-through-loadable-files
-    :to-achieve [takes-direct-control-of ?attacker ?victim-property ?victim]
+    :to-achieve [takes-direct-control-of ?attacker ?victim-property ?victim ?foothold-machine ?foothold-role]
     :bindings ([ltms:value-of (?victim program) ?program]
                [ltms:value-of (?program load-files) ?file])
     :typing ([ltms:object-type-of ?victim process]
              [ltms:object-type-of ?program program]
              [ltms:object-type-of ?file dynamically-loadable-code-file])
     :plan (:sequential 
-           (:goal [modify ?attacker contents ?file])
+           (:goal [modify ?attacker contents ?file ?foothold-machine ?foothold-role])
            ;; Note: this is a hack right now.  Really it should be a goal which would involve
            ;; a series of actions to cause the file to get loaded (logging in?, robooting?)
            ;; Need to avoid a recursion where you're trying to load the file into the process
@@ -226,7 +234,7 @@
 ;;; This mentions the host-os but it doesn't actually seem to carry through
 ;;; to the plan.  Just rationality check, I guess.
 (defattack-method buffer-overflow-can-control-server-processes
-    :to-achieve [takes-direct-control-of ?attacker ?process-property ?process]
+    :to-achieve [takes-direct-control-of ?attacker ?process-property ?process ?foothold-machine ?foothold-role]
     ;; :bindings ([ltms:value-of (?process host-os) ?os-instance])
     :typing ([ltms:object-type-of ?process process]
              ;; [ltms:object-type-of ?os-instance operating-system]
@@ -268,17 +276,17 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 (defattack-method take-control-of-indirectly
-    :to-achieve [takes-control-of ?attacker ?victim-property ?victim]
-    :plan (:goal [takes-indirect-control-of ?attacker ?victim-property ?victim]))
+    :to-achieve [takes-control-of ?attacker ?victim-property ?victim ?foothold-machine ?foothold-role]
+    :plan (:goal [takes-indirect-control-of ?attacker ?victim-property ?victim ?foothold-machine ?foothold-role]))
 
 ;;; Find an input of the victim and modify its contents
 ;;; probably should say that the behavior is affected by the content
 ;;; Fix modify
 (defattack-method control-component-through-input
-    :to-achieve [takes-indirect-control-of ?attacker ?victim-property ?victim]
+    :to-achieve [takes-indirect-control-of ?attacker ?victim-property ?victim ?foothold-machine ?foothold-role]
     ;; assumption is that we know thing
     :bindings ([input-of ?thing ?input])
-    :plan (:goal [modify ?attacker contents ?input])
+    :plan (:goal [modify ?attacker contents ?input ?foothold-machine ?foothold-role])
     )
 
 
@@ -287,10 +295,11 @@
 
 ;;; fix modify
 (defattack-method control-component-through-input-size
-    :to-achieve [takes-indirect-control-of ?attacker ?victim-property ?victim]
+    :to-achieve [takes-indirect-control-of ?attacker ?victim-property ?victim ?foothold-machine ?foothold-role]
     ;; assumption is that we know thing
+    :prerequisites ([impacts size ?input ?victim-property ?victim] (break))
     :bindings ([input-of ?victim ?input])
-    :plan (:goal [modify ?attacker size ?input])
+    :plan (:goal [modify ?attacker size ?input ?foothold-machine ?foothold-role])
     )
 
 
@@ -305,11 +314,11 @@
 ;;; 1) achieve ability to modify something
 ;;; 2) Modify it in a way that affects the victim's property
 (defattack-method modify-through-part
-    :to-achieve [modify ?attacker ?victim-property ?victim ?foothole-machine ?foothold-role]
-    :typing ([ltms:object-type-of ?foothole-machine computer])
+    :to-achieve [modify ?attacker ?victim-property ?victim ?foothold-machine ?foothold-role]
+    :typing ([ltms:object-type-of ?foothold-machine computer])
     :bindings ([ltms:part-of ?victim ?component])
     :prerequisites ([impacts ?component-property ?component ?victim-property ?victim])
-    :plan (:goal [modify ?attacker ?component-property ?component ?foothole-machine ?foothold-role])
+    :plan (:goal [modify ?attacker ?component-property ?component ?foothold-machine ?foothold-role])
     )
 
 ;;; modify a data-set by controlling a process that controls the data-set
@@ -329,7 +338,7 @@
     :to-achieve [modify ?attacker ?file-property ?object-file ?Foothold-machine ?foothold-role]
     :prerequisites ([ltms:object-type-of ?object-file dynamically-loadable-code-file]
                     [ltms:value-of (?object-file source-file) ?source-file])
-    :plan (:sequential (:goal [modify ?attacker code ?source-file ?Foothold-machine ])
+    :plan (:sequential (:goal [modify ?attacker code ?source-file ?Foothold-machine ?foothold-role])
                        (:goal [force-compilation ?attacker ?source-file ?object-file ?foothold-machine ?foothold-role]))
     )
 
@@ -453,7 +462,7 @@
 ;;; If somebody has goined direct control of the job-launcher
 ;;; They can affect performance by adding jobs
 (defattack-method add-jobs-after-job-launcher-is-hacked
-    :to-achieve [use-control-of-to-affect-resource ?attacker ?controller performance ?target]
+    :to-achieve [use-control-of-to-affect-resource ?attacker ?controller performance ?target ?foothold-machine ?foothold-role]
     :bindings ([ltms:named-part-of ?os job-admitter ?controller]
                [ltms:value-of (?os-instance workload) ?input])
     :typing ([ltms:object-type-of ?controller os-job-admitter]
@@ -465,10 +474,10 @@
 ;;; If you control a process that produces an output
 ;;; you can use that control to mung the data-structure in core
 (defattack-method mung-in-core-data-structures
-    :to-achieve [use-control-of-to-affect-resource ?attacker ?process data-integrity ?data-set]
+    :to-achieve [use-control-of-to-affect-resource ?attacker ?process data-integrity ?data-set ?foothold-machine ?foothold-role]
     :bindings ([output-of ?process ?data-set])
     :typing ([ltms:object-type-of ?process process])
-    :plan (:action [modify-in-core-data-structures ?process ?data-set]))
+    :plan (:action [modify-in-core-data-structures ?process ?data-set ?foothold-machine ?foothold-role]))
 
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -492,7 +501,7 @@
 ;;; If your foothold role already has the access rights
 ;;; do nothing
 (defattack-method achieve-a-right-you-already-have 
-    :to-achieve [achieve-access-right ?attacker ?object ?right ?user ?foothole-machine ?foothold-role]
+    :to-achieve [achieve-access-right ?attacker ?object ?right ?user ?foothold-machine ?foothold-role]
     :prerequisites ([has-permission ?foothold-role ?object ?right])
     :bindings ([unify ?user ?foothold-role])
     :plan ()
@@ -511,7 +520,7 @@
 ;;; then do this.
 
 (defattack-method achieve-access-right-by-process-subversion
-    :to-achieve [achieve-access-right ?attacker ?right ?object ?user ?foothole-machine ?foothold-role]
+    :to-achieve [achieve-access-right ?attacker ?right ?object ?user ?foothold-machine ?foothold-role]
     ;; all this is asking is there a process in the workload
     ;; and if so with which user's permissions is it running
     :bindings ([ltms:value-of (?object machines) ?machine]
@@ -530,8 +539,8 @@
     ;; This is the key pre-req: The process has the desired right to the object
     :prerequisites ([has-permission ?the-process ?right ?object])
     :plan (:sequential
-	   (:goal [takes-direct-control-of ?attacker execution ?the-process ?foothole-machine])
-	   (:action [uses-control-to-achieve-access-right ?attacker ?right ?object ?foothole-machine]))
+	   (:goal [takes-direct-control-of ?attacker execution ?the-process ?foothold-machine ?foothold-role])
+	   (:action [uses-control-to-achieve-access-right ?attacker ?right ?object ?foothold-machine]))
     )
 
 
@@ -739,7 +748,7 @@
                [ltms:value-of (?machine subnets) ?subnet]
                )
     :plan (:parallel 
-           (:goal [observe-network-traffic ?attacker ?subnet])
+           (:goal [observe-network-traffic ?attacker ?subnet ?foothold-machine ?foothold-role])
            (:action [sniff-a-password ?attacker ?user ?subnet]))
     )
 
@@ -873,7 +882,7 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 (defattack-method control-the-network-stack
-    :to-achieve [takes-direct-control-of ?attacker ?stack-property ?network-stack]
+    :to-achieve [takes-direct-control-of ?attacker ?stack-property ?network-stack ?foothold-machine ?foothold-role]
     :bindings ([ltms:named-part-of ?os-instance network-monitor ?network-stack]
                [ltms:value-of (?os-instance superuser) ?superuser]
 	       [ltms:value-of (?attacker machines) ?attacker-machine])
@@ -882,18 +891,18 @@
 	     [ltms:object-type-of ?attacker-machine computer]
              [ltms:object-type-of ?superuser user])
     :plan (:sequential 
-           (:goal [achieve-remote-shell ?attacker ?superuser ?os-instance ?attacker-machine])
+           (:goal [achieve-remote-shell ?attacker ?superuser ?os-instance ?attacker-machine ?foothold-role])
            (:action [control ?attacker ?network-stack ?attacker-machine])))
 
 (defattack-method read-network-traffic
-    :to-achieve [observe-network-traffic ?attacker ?subnet]
+    :to-achieve [observe-network-traffic ?attacker ?subnet ?foothold-machine ?foothold-role]
     :bindings ([ltms:value-of (?subnet switch) ?switch]
                [ltms:value-of (?switch os) ?os]
                [ltms:named-part-of ?os network-monitor ?network-stack])
     :typing ([ltms:object-type-of ?subnet switched-subnet]
              [ltms:object-type-of ?switch switch]
              [ltms:object-type-of ?network-stack network-stack])
-    :plan (:sequential (:goal [takes-direct-control-of ?attacker network-traffic ?network-stack])
+    :plan (:sequential (:goal [takes-direct-control-of ?attacker network-traffic ?network-stack ?foothold-machine ?foothold-role])
                        (:action [observe ?attacker network-traffic ?subnet]))
     )
 
@@ -1071,7 +1080,7 @@ Transformations: compilation jarification loading
 
 
 (defattack-method fake-sensor-data
-    :to-achieve [affect ?attacker accuracy ?controller-process]
+    :to-achieve [affect accuracy ?controller-process ?attacker-machine  ?attacker]
     :bindings ([ltms:value-of (?controller-process machines) ?controller-machine]
 	       ;; does that machine play the part of a controller in some control system
 	       [system-role ?system controller ?controller-machine]
@@ -1131,7 +1140,7 @@ Transformations: compilation jarification loading
 ;     )
 
 (defattack-method sensor-injection-attack
-    :to-achieve [affect ?attacker data-integrity ?signal]
+    :to-achieve [affect data-integrity ?signal  ?attacker-machine ?attacker]
     :bindings ([ltms:value-of (?signal  machines) ?machine])
     :prerequisites ([system-role ?system sensor ?machine]
 		    [is-proximate-to ?attacker ?victim radio])
