@@ -711,7 +711,9 @@
 
 
 (defun dump-links (root-node &optional (stream *standard-output*))
-  (flet ((do-a-node (node) (terpri stream) (dump-link-set node stream)))
+  (flet ((do-a-node (node) 
+	   (terpri stream)
+	   (json:as-array-member (stream) (dump-link-set node stream))))
     (json:with-array (stream)
 		     (traverse-merged-attack-graph root-node #'do-a-node)
 		     )))
