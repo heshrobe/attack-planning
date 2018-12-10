@@ -712,11 +712,12 @@
 
 (defun dump-links (root-node &optional (stream *standard-output*))
   (flet ((do-a-node (node) 
-	   (terpri stream)
-	   (json:as-array-member (stream) (dump-link-set node stream))))
+	   (unless (typep node 'attack-action)
+	     (terpri stream)
+	     (json:as-array-member (stream) (dump-link-set node stream)))))
     (json:with-array (stream)
-		     (traverse-merged-attack-graph root-node #'do-a-node)
-		     )))
+      (traverse-merged-attack-graph root-node #'do-a-node)
+      )))
 
 (defmethod dump-link-set ((node attack-goal) &optional (stream *standard-output*))
   (with-slots ((unique-id json-id) supporting-plans) node
@@ -755,6 +756,9 @@
 (defmethod dump-link-set ((node attack-action) &optional (stream *standard-output*))
   (declare (ignore stream))
   ;; actions are terminal nodes, so nothing to do
+  (terpri stream)
+  (json:with-object (stream)
+    (json:encode-object-member 'id 'test-1 stream))
   (values)
   )
 

@@ -87,16 +87,19 @@
 		:prompt ">"
 		OPTIONS))))
 
+(defparameter *aplan-window-width* 900)
+(defparameter *aplan-window-height* 700)
 (defun run-editor ()
   (#+allegro process-run-function #+sbcl sb-thread:make-thread
       #+allegro "Attack Planner"
     #'(lambda ()
 	(multiple-value-bind (width height) (screen-size)
+	  (declare (ignore width height)) ;in case we do want to use screen size
 	  (setq *editor* (clim:make-application-frame 'aplan
 						      :pretty-name "Attack Planner"
 						      #-allegro :parent #-allegro (clim:find-port)
-						      :width (floor (* .7 width))
-						      :height (floor (* .8 height)))))
+						      :width *aplan-window-width*
+						      :height *aplan-window-height*)))
 	(clim:run-frame-top-level *editor*))
     #+sbcl :name #+sbcl "Attack Planner"))
 
