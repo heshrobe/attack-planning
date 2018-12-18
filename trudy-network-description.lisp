@@ -107,19 +107,38 @@
 ;; Define router access policies 
 
 ;;; The router will reject TELNET packets from anywhere outside the 192.x.x.x range
-(tell-negative-policy cradlepoint-router telnet ("192.0.0.0"  "255.0.0.0"))
+(defblacklist (telnet cradlepoint-router)
+    :block everywhere
+    :exceptions (("192.0.0.0"  "255.0.0.0"))
+    )
+
+;; (tell-negative-policy cradlepoint-router telnet ("192.0.0.0"  "255.0.0.0"))
 
 ;; first argument is allowed range, the second argument is the blacklisted range
 ;; can take more arugments? 
 ;;; It can take an arbitary number of blacklisted ranges
 
-(tell-positive-policy cradlepoint-router ssh ("0.0.0.0"  "0.0.0.0") ("192.0.0.0"  "255.0.0.0"))
+(defwhitelist (ssh cradlepoint-router)
+    :pass everywhere
+    :exceptions (("192.0.0.0"  "255.0.0.0"))
+    )
 
-(tell-positive-policy cradlepoint-router email ("0.0.0.0"  "0.0.0.0") ("192.0.0.0"  "255.0.0.0"))
+;; (tell-positive-policy cradlepoint-router ssh ("0.0.0.0"  "0.0.0.0") ("192.0.0.0"  "255.0.0.0"))
+
+(defwhitelist (email cradlepoint-router)
+    :pass everywhere
+    :exceptions (("192.0.0.0"  "255.0.0.0")))
+
+;; (tell-positive-policy cradlepoint-router email ("0.0.0.0"  "0.0.0.0") ("192.0.0.0"  "255.0.0.0"))
 
 ;; Define switch access policies
 ;;; The switch will forward TELNET packets only from within its subnet
-(tell-negative-policy furuno-switch telnet ("192.10.0.0" "255.255.0.0"))
+(defblacklist (telnet furuno-switch)
+    :block 'everywhere
+    :exceptions (("192.10.0.0" "255.255.0.0"))
+    )
+
+;; (tell-negative-policy furuno-switch telnet ("192.10.0.0" "255.255.0.0"))
 
 ;; why do we have this? it doesn't seem to be defining any range...
 ;;; Location masks have two paths:
@@ -130,10 +149,18 @@
 ;;; In fact anything with a mask of "0.0.0.0" will match anything
 
 ;;; The switch will pass SSH packets originating anywhere
-(tell-positive-policy furuno-switch ssh  ("0.0.0.0"  "0.0.0.0"))
+(defwhitelist (ssh furuno-switch)
+    :pass everywhere
+    )
+
+;; (tell-positive-policy furuno-switch ssh  ("0.0.0.0"  "0.0.0.0"))
 
 ;;; anybody anywhere can send email packets through this switch
-(tell-positive-policy furuno-switch email  ("0.0.0.0"  "0.0.0.0"))
+(defwhitelist (email furuno-switch)
+    :pass everywhere
+    )
+    
+;; (tell-positive-policy furuno-switch email  ("0.0.0.0"  "0.0.0.0"))
 
 ;;;;;;;;;;;;;;;;;;;;;;;
 ;; "IT Network" pooltell
@@ -185,7 +212,12 @@
   :authorization-pool server-pool
   :superuser server-administrator)
 
-(tell-positive-policy cradlepoint-router ssh ("0.0.0.0"  "0.0.0.0") ("192.0.0.0"  "255.0.0.0"))
+(defwhitelist (ssh cradlepoint-router)
+    :pass everywhere
+    :exceptions (("192.0.0.0"  "255.0.0.0"))
+    )
+
+;; (tell-positive-policy cradlepoint-router ssh ("0.0.0.0"  "0.0.0.0") ("192.0.0.0"  "255.0.0.0"))
 
 (defcomputer navnet windows-7-computer 
   :ip-address-string "192.10.0.4"
@@ -203,9 +235,16 @@
 	     :machines (navnet))
   
   
+(defwhitelist (email windows-email-vm)
+    :pass everywhere)
 
-(tell-positive-policy windows-email-vm email ("0.0.0.0" "0.0.0.0"))
-(tell-positive-policy windows-email-vm ssh ("0.0.0.0" "0.0.0.0"))
+;; (tell-positive-policy windows-email-vm email ("0.0.0.0" "0.0.0.0"))
+
+(defwhitelist (ssh windows-email-vm)
+    :pass everywhere
+    )
+
+;; (tell-positive-policy windows-email-vm ssh ("0.0.0.0" "0.0.0.0"))
 
 ;; Define resources in server pool
 (defresource emails file
