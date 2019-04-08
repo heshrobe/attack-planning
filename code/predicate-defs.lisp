@@ -106,7 +106,7 @@
 ;;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
-(define-goal affect (attacker property resource-or-component victim-machine))
+(define-goal affect (property resource-or-component foothold-machine foothold-role))
 
 ;;; Takes-control-of means to affect the behavior of something either directly or indirectly
 (define-goal takes-control-of (attacker component-property component foothold-machine foothold-role))
