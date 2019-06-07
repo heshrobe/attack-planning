@@ -22,20 +22,22 @@
 	    :height 12
             :max-height 12)
    (menu :command-menu 
-	 :max-height '(3 :line)
-         :display-function '(clim:display-command-menu :n-columns 6 :row-wise t)
-         :scroll-bars nil
-         :borders t)
+	 :max-height '(4 :line)
+         :display-function '(clim:display-command-menu :n-columns 4 :row-wise t)
+         :scroll-bars t
+         :borders t
+	 )
    (interactor :interactor
-	       :initial-cursor-visibility :off
+	       #-mcclim :initial-cursor-visibility #-mcclim :off
 	       :scroll-bars :vertical
 	       :end-of-line-action :wrap
 	       :borders t)   
    (attack-structure :application
-		     #+sbcl :display-time #+allegro :display-after-command nil
+		     #+mcclim :display-time #+allegro :display-after-command nil
 		     :incremental-redisplay nil
 		     :scroll-bars t
-		     :borders t)
+		     :borders t
+		     )
    )
   (:layouts
    (attack-viewing
@@ -57,6 +59,7 @@
   (let ((graft (clim:find-graft)))
     (clim:rectangle-size (clim:sheet-region graft))))
 
+#+(and clim allegro)
 (defun debugger-hook (condition hook)
   (declare (ignore hook))
   (let* ((*application-frame* *editor*)
@@ -73,7 +76,7 @@
 
 (defmethod aplan-top-level ((frame aplan) &REST OPTIONS)
   (let ((*package* (find-package (string-upcase "aplan")))	
-	(*debugger-hook* #'debugger-hook))
+	(*debugger-hook* #+(and clim allegro) #'debugger-hook #-(and clim allegro) nil))
     (ji:with-joshua-readtable
 	(APPLY #'clim:default-frame-top-level
 		frame
@@ -83,7 +86,7 @@
 (defparameter *aplan-window-width* 900)
 (defparameter *aplan-window-height* 700)
 (defun run-editor ()
-  (#+allegro process-run-function #+sbcl sb-thread:make-thread
+  (#+allegro mp:process-run-function #+sbcl sb-thread:make-thread
       #+allegro "Attack Planner"
     #'(lambda ()
 	(multiple-value-bind (width height) (screen-size)

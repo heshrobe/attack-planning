@@ -46,6 +46,7 @@
    ("predicate-defs" (:module-class separate-destination-joshua-module))
    ("object-defs" (:module-class separate-destination-joshua-module))
    ("macros" (:module-class separate-destination-joshua-module))
+   ("predicate-methods" (:module-class separate-destination-joshua-module))
    ("threading-objects" (:module-class separate-destination-joshua-module))
    ("ip-locations-and-masks" (:module-class separate-destination-joshua-module))
    ("def-attack-method" (:module-class separate-destination-joshua-module))

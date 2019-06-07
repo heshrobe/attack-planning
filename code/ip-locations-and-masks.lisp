@@ -2,20 +2,203 @@
 
 (in-package :aplan)
 
-(define-predicate-method (ask-data connected) (truth-value continuation)
-  (unless (eql truth-value +true+)
-    (error 'ji:model-can-only-handle-positive-queries
-	    :query self
-	    :model (type-of self)))  
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;;
+;;; Knowledge about Connectivity, Access Rights and filtering policies
+;;;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+ 
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;; Accepts Connection
+;;;
+;;; This is the top-level entry
+;;; It can answer both positive and negative queries
+;;; At some point merging all this into a single of ask-data predicate method
+;;; might make sense, but if it works as it is that's OK for now.
+;;;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+(defrule path-allows-connection-from-normal-machine (:backward)
+  then [accepts-connection ?victim-machine ?connection-type ?attacker-machine]
+  if [and [ltms:object-type-of ?victim-machine computer]
+	  [ltms:object-type-of ?attacker-machine computer]
+	  (not (eql ?victim-machine ?attacker-machine))
+	  [reachable-from ?victim-machine ?attacker-machine ?path]
+	  [ltms:value-of (?attacker-machine ip-addresses) ?attacker-ip-address]
+	  (host-allows-connection-type ?victim-machine ?attacker-ip-address ?connection-type)
+          (path-is-acceptable-for-connection-type (copy-object-if-necessary ?path)
+                                                  ?attacker-ip-address ?connection-type)
+          ]
+  )
+
+;;; Note, this rule is really here only for reasoning about what the attacker can 
+;;; do.  The "Location" slot is unique to attacker.  Normally, we'll make queries 
+;;; about machine to machine connections as in the next rule.
+(defrule path-allows-connection-from-attacker (:backward)
+  then [accepts-connection ?victim-machine ?connection-type ?attacker] 
+  if [and [ltms:object-type-of ?victim-machine computer]
+	  [ltms:object-type-of ?attacker attacker]
+	  [reachable-from ?victim-machine ?attacker ?path]
+	  [ltms:value-of (?attacker location) ?location]
+	  ;; Does the host block it on its own
+	  (host-allows-connection-type ?victim-machine ?location ?connection-type)
+	  ;; Do any of the routers on the path block it
+          (path-is-acceptable-for-connection-type (copy-object-if-necessary ?path)
+                                                  ?location ?connection-type)
+          ])
+
+;;; This one is here specifically for the attacker machine
+;;; and just passes through to the rule above
+(defrule path-allows-connection-from-attacker-machine (:backward)
+  then [accepts-connection ?machine ?connection-type ?attacker-machine] 
+  if [and [ltms:object-type-of ?attacker-machine attacker-computer]
+	  [ltms:value-of (?attacker-machine users) ?attacker]
+          [accepts-connection ?machine ?connection-type ?attacker]
+	  ])
+
+;;; We also need a set of rules for the negated case.  
+
+
+;;; The first two are normal machine to normal machine
+;;; Case one: The victim machine isn't even reachable
+(defrule path-does-not-allow-connection-from-machine-1 (:backward)
+  then [not [accepts-connection ?victim-machine ?connection-type ?attacker-machine]]
+  if [and [ltms:object-type-of ?victim-machine computer]
+	  [ltms:object-type-of ?attacker-machine computer]
+	  [not [reachable-from ?victim-machine ?attacker-machine ?path]]]
+  )
+
+;;; Case two: It is reachable but either the host or a router on the path blocks it
+(defrule path-does-not-allow-connection-from-machine-2 (:backward)
+  then [not [accepts-connection ?victim-machine ?connection-type ?attacker-machine]]
+  if [and [ltms:object-type-of ?victim-machine computer]
+	  [ltms:object-type-of ?attacker-machine computer]
+	  [reachable-from ?victim-machine ?attacker-machine ?path]
+	  [ltms:value-of (?attacker-machine ip-addresses) ?attacker-ip-address]
+	  (or (not (host-allows-connection-type ?victim-machine ?attacker-ip-address  ?connection-type))
+	      (not (path-is-acceptable-for-connection-type (copy-object-if-necessary ?path)
+							   ?attacker-ip-address ?connection-type)))
+	  ]	  
+  )
+
+;;; This one is here specifically for the attacker.
+;;; This is the only case where you can call this with a user as the attacker
+(defrule path-does-not-allow-connection-from-attacker (:backward)
+  then [not [accepts-connection ?victim-machine ?connection-type ?attacker]]
+  if [and [ltms:object-type-of ?victim-machine computer]
+	  [ltms:object-type-of ?attacker attacker]
+	  [reachable-from ?victim-machine ?attacker ?path]
+	  [ltms:value-of (?attacker location) ?location]
+	  ;; Does the host block it on its own
+	  (or (not (host-allows-connection-type ?victim-machine ?location ?connection-type))
+	      ;; Do any of the routers on the path block it
+	      (not (path-is-acceptable-for-connection-type (copy-object-if-necessary ?path)
+							   ?location ?connection-type)))
+          ])
+
+;;; This one is here specifically for the attacker machine
+;;; and just passes through to the rule above
+(defrule path-does-not-allow-connection-from-attacker-machine (:backward)
+  then [not [accepts-connection ?machine ?connection-type ?attacker-machine]]
+  if [and [ltms:object-type-of ?attacker-machine attacker-computer]
+	  [ltms:value-of (?attacker-machine users) ?attacker]
+          [not [accepts-connection ?machine ?connection-type ?attacker]]
+	  ])
+
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;;
+;;; reachable-from
+;;; 
+;;; This only reasons about whether there's a path but not about
+;;; whether anybody would block the connection because of the connection type
+;;; 
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+;;; If both things are computers just reduce to a call to connected
+(defrule reachable-machine-to-machine (:backward)
+  then [reachable-from ?target-computer ?source-computer ?path]
+  if [and [ltms:object-type-of ?target-computer computer]
+	  [ltms:object-type-of ?source-computer computer]
+	  [path-between ?target-computer ?source-computer ?path]
+	  ]
+  )
+
+;;; This finds a computer that the user uses
+;;; And then use connected to find a path between
+;;; the user computer and the target computer
+(defrule bridges-on-pathway (:backward)
+  then [reachable-from ?target-computer ?user ?path]
+  if [and [ltms:object-type-of ?user user]
+          [ltms:object-type-of ?target-computer computer]
+	  [uses-machine ?user ?user-computer]
+	  [ltms:object-type-of ?user-computer computer]
+          [path-between ?target-computer ?user-computer ?path]
+	  ]
+  )
+
+;;; We can also affirm that they aren't reachable 
+(defrule machine-cant-reach-machine (:backward)
+  then [not [reachable-from ?target-computer ?source-computer ?path]]
+  if [and [ltms:object-type-of ?target-computer computer]
+	  [ltms:object-type-of ?source-computer computer]
+	  [not [path-between ?target-computer ?source-computer ?path]]
+	  ])
+
+(defrule user-cant-reach-machine (:backward)
+  then [not [reachable-from ?target-computer ?user ?path]]
+  if [and [ltms:object-type-of ?user user]
+          [ltms:object-type-of ?target-computer computer]
+	  [uses-machine ?user ?user-computer]
+	  [ltms:object-type-of ?user-computer computer]
+          [not [path-between ?target-computer ?user-computer ?path]]
+	  ]
+  )
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;; 
+;;; Paths between
+;;;
+;;; This returns a list of routers that establish a path between the 
+;;; source and the destination.
+;;;
+;;; This predicate method depends on normal methods for find-paths-between
+;;; The only caller of the methods for find-paths-between is the ask-data predicate method
+;;; For that, the source-destination pair can be any of these:
+;;; A computer and a router
+;;; A user and a computer
+;;; A computer and a computer
+;;; A subnet and a subnet
+;;;
+;;; How this all stacks up:
+;;; The top-level functionality is the predicate Accepts-Connection which takes 2 machines (or a machine and a user) and a connection-type
+;;;          and binds the path by which they are connected (does anybody care)
+;;;   Accepts-Connection invokes Reachable-From which takes 2 machines (or a machine and a user) and binds the path but ignores the connection-type
+;;;     Reachable-From invokes Connected it takes 2 machines (or a machine and a user) and binds the path
+;;; Connected calls find-paths-between
+;;; 
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+(define-predicate-method (ask-data path-between) (truth-value continuation)
   (with-statement-destructured (thing1 thing2 path) self
     (let ((connections (find-paths-between thing1 thing2)))
-      (loop for connection in connections
-	  unless (or (member thing1 connection)
-		     (member thing2 connection))		 
+      (cond
+       ((and (eql truth-value +true+) (not (null connections)))
+	(loop for connection in connections
+				;; why is this check here?
+	    unless (or (member thing1 connection)
+		       (member thing2 connection))		 
             do (with-unification
-                 (unify connection path)
-                 (stack-let ((backward-support (list self +true+ '(ask-data conneted))))
-                   (funcall continuation backward-support)))))))
+		   (unify connection path)
+                 (stack-let ((backward-support (list self +true+ '(ask-data connected))))
+			    (funcall continuation backward-support)))))
+       ((and (eql truth-value +false+) (null connections))
+	(with-unification
+	    (unify path nil)
+	  (stack-let ((backward-support (list self +false+ `(ask-data connected))))
+		     (funcall continuation backward-support))))
+       ))))
 
 
 (defmethod find-paths-between (thing1 thing2)
@@ -103,7 +286,11 @@
            (format t "~%computer ~a is connected to computer ~a by path ~a"
                    computer1 computer2 ?path))))
 
-
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;;
+;;; Dealing with IP addresses and ranges of IP addresses and seeing if they intersect
+;;;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
  
 
 (defun parse-ip-address (ip-address-string)
@@ -481,4 +668,46 @@
 		    collect (interval-from-address-and-mask his-ip his-mask))))
     (setf (intervals location) (subtract-holes-from-interval base-interval holes)
 	  (intervals-computed? location) t)))
-  
+
+
+
+;;; this handles the case for a user whose "location" in ip-space
+;;; is known (by a mask) but for which we don't know a specific machine.
+;;; At the moment, the only such user is the attacker.
+;;; Stragey: Find a router that has an IP address that is in the range
+;;; of the user's location.  Then find a path (using connected) between
+;;; that router and the target-computer. But the attacker does have a machine
+;;; and given that bridges-on-pathway is all we need
+
+;;;(defrule bridges-on-pathway-2 (:backward)
+;;;  then [reachable-from ?computer ?user (?router . ?path)]
+;;;  if [and [ltms:object-type-of ?user attacker]
+;;;	  [ltms:value-of (?user location) ?location]
+;;;	  [ltms:object-type-of ?router router]
+;;;	  [ltms:value-of (?router ip-addresses) ?ip-address]
+;;;	  (ip-address-is-within-location ?ip-address ?location)
+;;;	  (break)
+;;;          [connected ?computer ?router ?path]]
+;;;  )
+
+
+;;;(defrule bridges-on-pathway-2 (:backward)
+;;;  then [reachable-from ?computer ?user (?router . ?path)]
+;;;  if [and [ltms:object-type-of ?user attacker]
+;;;	  ;; is the computer at some site in common with the router
+;;;	  [ltms:object-type-of ?router router]
+;;;          [ltms:value-of (?router site) ?site]
+;;;	  [ltms:object-type-of ?site site]
+;;;          [ltms:object-type-of ?computer computer]
+;;;          [ltms:value-of (?computer site) ?site]
+;;;	  ;; so now we know that the computer can talk
+;;;	  ;; to the router.  Next, can the user talk to
+;;;	  ;; the router.
+;;;	  ;; Note: The only user's with a location are the attacker
+;;;	  ;; (at the moment)
+;;;          [ltms:value-of (?user location) ?location]
+;;;	  [ltms:value-of (?router ip-addresses) ?ip-address)
+;;;	  [ltms:object-type-of ?ip-address ip-address]
+;;;          (not (location-is-in-net-segment ?site ?location))
+;;;          ;; should really check for being the router to the outside
+;;;          [connected ?computer ?router ?path]])

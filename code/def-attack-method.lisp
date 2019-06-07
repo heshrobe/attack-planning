@@ -73,7 +73,7 @@
 
       
 						
-(defmacro defattack-method (method-name &key to-achieve prerequisites typing bindings post-bindings plan)
+(defmacro defattack-method (method-name &key to-achieve prerequisites typing bindings post-bindings plan post-conditions)
   (let* ((plan-variable `(logic-variable-maker ,(gensym "?PLAN")))
          (real-head (attach-logic-variable-to-predication-maker to-achieve plan-variable))
 	 (rebuilt-plan-structure (rebuild-plan-structure plan)))
@@ -85,5 +85,6 @@
                  ,@prerequisites
                  ,@post-bindings
                  ,@sub-goals
+		 ,@post-conditions
                  (unify ,plan-variable ,plan-structure)
                  ]))))

@@ -23,9 +23,12 @@
 		   (machine 'dopey) 
                    (resource (follow-path '(typical-dopey-process))))
   (let ((answers nil)
+	(starting-context (make-initial-search-context
+			    :attacker attacker
+			    :attacker-machine attacker-machine))
 	;; (os (follow-path `(,machine os)))
 	)
-    (ask `[affect ,property ,resource ,attacker-machine ,attacker ?plan]
+    (ask `[affect ,property ,resource ,starting-context ?output-context ?plan]
          #'(lambda (just)
              (declare (ignore just))
 	     (let ((plan (copy-object-if-necessary ?plan)))

@@ -32,16 +32,13 @@
 	     (clim:with-text-face (stream :bold)
 	       (format stream "reduces to"))))
           (:goal (clim:surrounding-output-with-border (stream :shape :rectangle :ink clim:+blue+)
-                   (destructuring-bind (goal-type &rest rest) (second step)
+                   (destructuring-bind (goal-type &rest values) (second step)
 		     ;; total hack to reduce space consumption
-		     (let* ((arglist (ji::find-predicate-arglist goal-type))
-			    (path-so-far-position (position 'path-so-far arglist)))
-		       (when path-so-far-position
-			 (setq rest (loop for i from 0
-					for name in rest
-					unless (= i path-so-far-position)
-					       collect name))))
-                     (format stream "Goal: ~A~%~{~a~^~%~}" goal-type rest))))
+		     ;; (let* ((arglist (ji::find-predicate-arglist goal-type)))
+		     (format stream "Goal: ~A" goal-type)
+		     (loop for value in values
+			 unless (typep value 'search-context)
+			 do (format stream "~%~a" value)))))
           ((:action :repeated-action)
 	   (clim:surrounding-output-with-border (stream :shape :rectangle :ink clim:+red+)
 	     (clim:with-text-face (stream :bold)

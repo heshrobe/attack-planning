@@ -4,6 +4,21 @@
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;
+;;; Predicates that are used in the structure of the planner
+;;;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+(define-predicate current-foothold (input-context foothold-machine foothold-role) (ltms:ltms-predicate-model))
+(define-predicate foothold-exists (input-context foothold-machine) (ltms:ltms-predicate-model))
+(define-predicate has-foothold (input-context new-foothold-machine new-foothold-role output-context) (ltms:ltms-predicate-model))
+
+(define-predicate place-already-visited? (input-context machine protocol) (ltms:ltms-predicate-model))
+(define-predicate note-place-visited (input-context machine protocol output-context) (ltms:ltms-predicate-model))
+
+(define-predicate attacker-and-machine (input-context attacker attacker-machine) (ltms:ltms-predicate-model))
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;;
 ;;; Factual Predicates -- Describing features of the world
 ;;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -38,7 +53,8 @@
 
 (define-predicate protected-from (thing attack) (ltms:ltms-predicate-model))
 
-(define-predicate accepts-connection (machine type user-or-machine path) (ltms:ltms-predicate-model))
+;;; This used to include the path, but no caller actually cared, so I've removed that
+(define-predicate accepts-connection (victim-machine type source-user-or-machine) (ltms:ltms-predicate-model))
 
 (define-predicate uses-machine (machine user) (ltms:ltms-predicate-model))
 
@@ -47,7 +63,7 @@
 ;;; Typically, the DNS translation of a domain name to an IP address
 (define-predicate translation-of (symbolic-rep concrete-rep) (ltms:ltms-predicate-model))
 
-(define-predicate connected (subnet1 subnet2 path) (ltms:ltms-predicate-model))
+(define-predicate path-between (subnet1 subnet2 path) (ltms:ltms-predicate-model))
  
 (define-predicate reachable-from (computer1 computer2 router) (ltms:ltms-predicate-model))
 
@@ -61,6 +77,9 @@
 (define-predicate is-protocol (protocol-name))
 (define-predicate port-for-protocol (protocol-name port-number))
 
+(define-predicate protocol-for-remote-execution (execution-type protocol-name) (ltms:ltms-predicate-model))
+
+
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;
 ;;; Predicate defining macros
@@ -68,13 +87,13 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 
-(defmacro define-goal (name variables) `(define-predicate ,name ,(append variables '(plan)) (ltms:ltms-predicate-model)))
+(defmacro define-goal (name variables) `(define-predicate ,name ,(append variables '(input-context output-context plan)) (ltms:ltms-predicate-model)))
 
 ;;; (defmacro define-subgoal-with-purpose (name variables) `(define-predicate ,name ,(append variables '(purpose plan)) (ltms:ltms-predicate-model)))
 
 (defparameter *action-table* (make-hash-table))
 
-(defmacro define-action (name variables) `(setf (gethash ',name *action-table*) ',variables))
+(defmacro define-action (name variables) `(setf (gethash ',name *action-table*) '(,@variables input-context output-context)))
 
 (defmacro define-protcol (name port)
   `(with-atomic-action
@@ -82,7 +101,7 @@
      (tell [port-for-protocol ,port])))
 
 #+allegro
-(def-fwrapper wrap-arglist-2 (symbol)
+(excl:def-fwrapper wrap-arglist-2 (symbol)
   (handler-case (excl:call-next-fwrapper)
     (error nil 
       (or
@@ -91,7 +110,7 @@
     (:no-error (answer &optional flag) (values answer flag))))
 
 #+allegro
-(fwrap 'arglist 'wrap-arglist-2 'wrap-arglist-2)
+(excl:fwrap 'excl:arglist 'wrap-arglist-2 'wrap-arglist-2)
 
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -106,22 +125,22 @@
 ;;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
-(define-goal affect (property resource-or-component foothold-machine foothold-role))
+(define-goal affect (property resource-or-component))
 
 ;;; Takes-control-of means to affect the behavior of something either directly or indirectly
-(define-goal takes-control-of (attacker component-property component foothold-machine foothold-role))
+(define-goal takes-control-of (attacker component-property component))
 
 ;;; Direct control means you actually control the execution of the component
 ;;; by either running your own code (e.g. code injection attacks)
 ;;; or by forcing control flow to go to a place that does what you want done (code reuse attacks, e.g.)
-(define-goal takes-direct-control-of (attacker component-property component foothold-machine foothold-role))
+(define-goal takes-direct-control-of (attacker component-property component))
 
 ;;; Indirect control means causing the behavior of the component to change (e.g. through its inputs) but not
 ;;; causing a change in control flow
-(define-goal takes-indirect-control-of (attacker component-property component foothold-machine foothold-role))
+(define-goal takes-indirect-control-of (attacker component-property component))
 
 ;;; Having gained control use it to affect the property of the target
-(define-goal use-control-of-to-affect-resource (attacker controlled-thing property resource foothold-machine foothold-role))
+(define-goal use-control-of-to-affect-resource (attacker controlled-thing property resource))
 
 (define-goal force-compilation (attacker source-code-file compiled-code-file))
 
@@ -129,36 +148,36 @@
 
 ;;; Modify some featue of an object
 ;;; given that the attacker has a foothold in some role on some machine
-(define-goal modify (attacker object-property object foothold-machine foothold-role))
+(define-goal modify (object-property object))
 
 ;;; Used?
 (define-goal modify-contents (attacker thing))
 
-(define-goal achieve-knowledge-of-contents (attacker thing))
+(define-goal achieve-knowledge-of-contents (thing))
 
 ;;; achieve knowledge of a victim's password for some entity
-(define-goal achieve-knowledge-of-password (attacker victim entity foothold-machine foothold-role))
+(define-goal achieve-knowledge-of-password (attacker victim entity current-foothold))
 
 (define-goal know (attacker thing property))
 
 (define-goal observe (attacker object property))
 
-(define-goal observe-network-traffic (attacker subnet foothold-machine foothold-role))
+(define-goal observe-network-traffic (attacker subnet))
 
 ;;; Privilege Escalation:
 ;;; The attacker achieves a particular principal's capability (operation object) 
 ;;; given that he's achieved a foothold in some role on some machine
 ;;; (the intent is that whatever lateral motion needed has already been done and this
 ;;;  goal shouldn't be satisfied by doing more)
-(define-goal achieve-access-right (attacker operation thing principal foothold-machine foothold-role))
-(define-goal use-access-right-to-modify (attacker operation principal thing foothold-machine foothold-role))
+(define-goal achieve-access-right (operation thing principal))
+(define-goal use-access-right-to-modify (attacker operation principal thing foothold-machine foothold-role other-footholds))
 
-(define-goal make-member-of (attacker thing set))
+(define-goal make-member-of (thing set))
 
 ;;; This implies guess some piece of knowedge like a passwork
 (define-goal guess (attacker thing property))
 
-(define-goal guess-password (attacker user resource))
+(define-goal guess-password (attacker user resource victim-machine))
 
 ;;; discover the existence of a physical resource (e.g. a machine)
 (define-goal discover (attacker thing property))
@@ -174,18 +193,26 @@
 ;;; Where and in what role the attacker has a foothold.
 ;;; 5) The Next to last argument is bound for the caller and is the last foothold
 ;;; 6) The Last argument is bound for the caller and is the role achieved on the foothold
-(define-goal achieve-connection (attacker path-so-far victim-os connection-type foothold-machine foothold-role))
+(define-goal get-foothold (victim-os connection-type))
+;;; Once the attacker has an appropriate foothold it needs to actually make the connection
+;;; While this won't involve any further lateral motion and therefore doesn't need the path-so-far
+;;; It still might involve several steps (e.g. aquire credentials connect over telnet login)
+(define-goal make-connection (victim connection-type))
 
-;;; This is called with a last two arguments saying what machine the attacker is operating from and what role he's operating in
-;;; at this point of the reasoning.  It's expected that this machine can make a connection 
-;;; to the victim machine
-(define-goal achieve-remote-execution (attacker entity victim-os-instance foothold-machine foothold-role))
+;;; This is called with the last three arguments describing the attacker's footholds.
+;;; The first two of these say what machine the attacker is operating from and what role he's operating in
+;;; at this point of the reasoning.  The last is a list of other footholds that the attacker might hold
+;;; expressed as a list of machine and role pairs.
+;;; The victim-machine is the one you're trying to get execution on (input only)
+;;; The victime-role is the role (i.e. user or process) on the victim machine that you're trying to achieve (input and more commonly output)
 
-(define-goal achieve-code-injection (attacker process victim-os-instance foothold-machine foothold-role))
+(define-goal achieve-remote-execution (victim-machine victim-role))
 
-(define-goal achieve-code-reuse (attacker process victim-os-instance foothold-machine foothold-role))
+(define-goal achieve-code-injection (process victim-os-instance))
 
-(define-goal achieve-remote-shell (attacker user victim-os-instance foothold-machine foothold-role))
+(define-goal achieve-code-reuse (process victim-os-instance))
+
+(define-goal achieve-remote-shell (victim-os-instance user))
 
 (define-predicate vulnerable-to-overflow-attack (process) (ltms:ltms-predicate-model))
 
@@ -193,9 +220,9 @@
 ;;; to a fake site or to a fake DNS resolver
 (define-goal cause-to-believe (attacker user thing property))
 
-(define-goal increase-size (attacker thing foothold-machine foothold-role))
+(define-goal increase-size (thing))
 
-(define-goal decrease-size (attacker thing))
+(define-goal decrease-size (thing))
 
 ;;; Put the machine into an unusable state that requires sysadmin attention
 ;;; 
@@ -222,9 +249,9 @@
 ;;; The actor reads the file using the capabilities of the user
 (define-action read-with-rights-of (actor user file))
                                                      
-;;; The actor logs onto the particular OS as user
+;;; The actor logs onto the particular OS as user using this protocol
 
-(define-action login (actor user os-instance foothold-machine))
+(define-action login (actor user os-instance foothold-machine protocol))
 
 (define-action use-own-password (user))
 
@@ -248,9 +275,9 @@
 
 (define-action trasmit-data (actor data target))
 
-(define-action launch-code-injection-attack (attacker process))
+(define-action launch-code-injection-attack (process))
 
-(define-action launch-code-reuse-attack (attacker process))
+(define-action launch-code-reuse-attack (process))
 
 (define-action issue-false-sensor-data-report-to (attacker controller source bus sensor-type))
 
@@ -258,9 +285,9 @@
 
 (define-action submit-email (attacker kind-of-email process foothold-machine foothold-role))
 
-(define-action launch-code-injection-attack (attacker victim-process foothold-machine foothold-role))
+(define-action launch-code-injection-attack (attacker victim-process foothold-machine foothold-role other-footholds))
 
-(define-action launch-code-reuse-attack (attacker victim-process foothold-machine foothold-role))
+(define-action launch-code-reuse-attack (attacker victim-process foothold-machine foothold-role other-footholds))
 
 (define-action port-scan (attacker victim-machine attacker-machine ports-or-port-ranges))
 
