@@ -35,11 +35,15 @@
 	   :query self
 	   :model (type-of self)))
   (with-statement-destructured (input-context attacker attacker-machine) self
+    (when (unbound-logic-variable-p input-context)
+      (error 'ji:model-cant-handle-query
+	     :query self
+	     :model (type-of self)))
     (with-unification 
-	(unify attacker-machine (attacker-machine input-context))
-      (unify attacker (attacker input-context))
-      (stack-let ((backward-support (list self +true+ '(ask-data attacker-and-machine))))
-		 (funcall continuation backward-support)))))
+     (unify attacker-machine (attacker-machine input-context))
+     (unify attacker (attacker input-context))
+     (stack-let ((backward-support (list self +true+ '(ask-data attacker-and-machine))))
+       (funcall continuation backward-support)))))
 
 (define-predicate-method (ask-data current-foothold) (truth-value continuation)
   (unless (eql truth-value +true+)
@@ -47,6 +51,10 @@
 	   :query self
 	   :model (type-of self)))
   (with-statement-destructured (input-context foothold-machine foothold-role) self
+    (when (unbound-logic-variable-p input-context)
+      (error 'ji:model-cant-handle-query
+	     :query self
+	     :model (type-of self)))
     (destructuring-bind (machine role) (first (footholds-held input-context))
       (with-unification 
        (unify machine foothold-machine)
@@ -57,15 +65,19 @@
 
 (define-predicate-method (ask-data foothold-exists) (truth-value continuation)
   (with-statement-destructured (input-context foothold-machine) self
+    (when (unbound-logic-variable-p input-context)
+      (error 'ji:model-cant-handle-query
+	     :query self
+	     :model (type-of self)))
     (cond
      ((eql truth-value +true+)
       (when (member foothold-machine (footholds-held input-context) :key #'first)
 	(stack-let ((backward-support (list self +true+ '(ask-data foothold-exists))))
-		   (funcall continuation backward-support))))
+	  (funcall continuation backward-support))))
      ((eql truth-value +false+)
       (unless (member foothold-machine (footholds-held input-context) :key #'first)
 	(stack-let ((backward-support (list self +true+ '(ask-data foothold-exists))))
-		   (funcall continuation backward-support))))
+	  (funcall continuation backward-support))))
      (t (error 'model-cant-handle-query
 	       :query self
 	       :model (type-of self))))))
@@ -76,30 +88,38 @@
 	   :query self
 	   :model (type-of self)))
   (with-statement-destructured (input-context foothold-machine foothold-role output-context) self
+    (when (unbound-logic-variable-p input-context)
+      (error 'ji:model-cant-handle-query
+	     :query self
+	     :model (type-of self)))
     (with-unification 
-	(if (member foothold-machine (footholds-held input-context) :key #'first)
-	    (unify output-context input-context)
-	  (let ((new-context (copy-search-context input-context)))
-	    (push (list foothold-machine foothold-role) (footholds-held new-context))
-	    (unify output-context new-context)))
-      ;; (format *error-output* "~%Adding foothold ~a to ~a yielding ~a" foothold-machine input-context output-context)
-      (stack-let ((backward-support (list self +true+ '(ask-data has-foothold))))
-		 (funcall continuation backward-support)))))
+     (if (member foothold-machine (footholds-held input-context) :key #'first)
+	 (unify output-context input-context)
+       (let ((new-context (copy-search-context input-context)))
+	 (push (list foothold-machine foothold-role) (footholds-held new-context))
+	 (unify output-context new-context)))
+     ;; (format *error-output* "~%Adding foothold ~a to ~a yielding ~a" foothold-machine input-context output-context)
+     (stack-let ((backward-support (list self +true+ '(ask-data has-foothold))))
+       (funcall continuation backward-support)))))
 
 
 (define-predicate-method (ask-data place-already-visited?) (truth-value continuation)
   (with-statement-destructured (input-context machine protocol) self
+    (when (unbound-logic-variable-p input-context)
+      (error 'ji:model-cant-handle-query
+	     :query self
+	     :model (type-of self)))
     (let ((it-exists (loop for (visited-machine visited-protocol) in (places-visited input-context)
 			 thereis (and (eql machine visited-machine) (eql protocol visited-protocol)))))
       (cond
        ((eql truth-value +true+)
 	(when it-exists
 	  (stack-let ((backward-support (list self +true+ '(ask-data place-already-visited?))))
-		     (funcall continuation backward-support))))
+	    (funcall continuation backward-support))))
        ((eql truth-value +false+)
 	(unless it-exists
 	  (stack-let ((backward-support (list self +false+ '(ask-data place-already-visited?))))
-		     (funcall continuation backward-support))))
+	    (funcall continuation backward-support))))
        (t (error 'model-cant-handle-query
 		 :query self
 		 :model (type-of self)))))))
@@ -110,14 +130,18 @@
 	   :query self
 	   :model (type-of self)))
   (with-statement-destructured (input-context machine protocol output-context) self
+    (when (unbound-logic-variable-p input-context)
+      (error 'ji:model-cant-handle-query
+	     :query self
+	     :model (type-of self)))
     (with-unification 
-	(unless (loop for (visited-machine visited-protocol) in (places-visited input-context)
-		    thereis (and (eql machine visited-machine) (eql protocol visited-protocol)))
-	  (let ((new-context (copy-search-context input-context)))
-	    (push (list machine protocol) (places-visited new-context))
-	    (unify output-context new-context)
-	    (stack-let ((backward-support (list self +true+ '(ask-data note-place-visited))))
-		       (funcall continuation backward-support)))))))
+     (unless (loop for (visited-machine visited-protocol) in (places-visited input-context)
+		 thereis (and (eql machine visited-machine) (eql protocol visited-protocol)))
+       (let ((new-context (copy-search-context input-context)))
+	 (push (list machine protocol) (places-visited new-context))
+	 (unify output-context new-context)
+	 (stack-let ((backward-support (list self +true+ '(ask-data note-place-visited))))
+	   (funcall continuation backward-support)))))))
 
 
 ;;; How to do the supertyping

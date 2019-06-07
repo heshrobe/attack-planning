@@ -352,3 +352,14 @@
 (defmacro define-proximity (who what means)
   `(tell `[is-proximate-to ,(follow-path '(,who)) ,(follow-path '(,what)) ,',means]))
 
+(defmacro define-protocol (name port &optional major-purpose sub-purpose)
+  `(with-atomic-action
+    (tell [is-protocol ,name])
+    ,@(if (atom port)
+	  `((tell [port-for-protocol ,name ,port]))
+	(loop for number in port
+	    collect `(tell [port-for-protocol ,name ,number])))
+    ,@(when (and major-purpose sub-purpose)
+	`((tell [protocol-for ,major-purpose ,sub-purpose ,name]))))
+  )
+

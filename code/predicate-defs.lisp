@@ -4,6 +4,40 @@
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;
+;;; Retellable predicates
+;;;
+;;; There are some facts about the world that we want to preserve even after
+;;; we've cleared the joshua database to clear out an "environment model" 
+;;; 
+;;; We'll have a list of predicates to retell and appropriate
+;;; predicate-methods to make this work
+;;;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+(defparameter *predicates-to-retell* nil)
+
+(define-predicate-model restorable-predicate () (ltms:ltms-predicate-model))
+
+(define-predicate-method (tell restorable-predicate :after) (truth-value justification)
+  ;; I'm assuming that all of these are premises
+  (declare (ignore justification))
+  (pushnew (list (predication-statement self) truth-value) *predicates-to-retell* :test #'equal))
+
+(define-predicate-method (after-clear restorable-predicate :after) (&optional clear-database undefrules)
+  (when (and clear-database (not undefrules))
+    (loop for (statement truth-value) in *predicates-to-retell*
+	if (eql truth-value +true+)
+	do (let ((pred (make-predication statement)))
+	     (ji:tell-internal pred +true+ :premise)
+	     )
+	else do
+	   (let* ((inner-pred (make-predication statement))
+		  (outer-pred `[not ,inner-pred]))
+	     (tell outer-pred :justification :premise)))))
+
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;;
 ;;; Predicates that are used in the structure of the planner
 ;;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -73,11 +107,14 @@
 
 (define-predicate policy-for-host (host connection-type location-mask) (ltms:ltms-predicate-model))
 
-(define-predicate protocol-is-relevant-for (goal protocol-name))
-(define-predicate is-protocol (protocol-name))
-(define-predicate port-for-protocol (protocol-name port-number))
+;; (define-predicate protocol-is-relevant-for (goal protocol-name))
 
-(define-predicate protocol-for-remote-execution (execution-type protocol-name) (ltms:ltms-predicate-model))
+(define-predicate is-protocol (protocol-name) (restorable-predicate))
+
+(define-predicate port-for-protocol (protocol-name port-number) (restorable-predicate))
+
+;;; An example of this: [protocol-for remote-execution remote-shell telnet]
+(define-predicate protocol-for (major-purpose sub-type protocol-name) (restorable-predicate))
 
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -94,11 +131,6 @@
 (defparameter *action-table* (make-hash-table))
 
 (defmacro define-action (name variables) `(setf (gethash ',name *action-table*) '(,@variables input-context output-context)))
-
-(defmacro define-protcol (name port)
-  `(with-atomic-action
-       (tell [is-protocol ,name])
-     (tell [port-for-protocol ,port])))
 
 #+allegro
 (excl:def-fwrapper wrap-arglist-2 (symbol)
@@ -279,7 +311,7 @@
 
 (define-action launch-code-reuse-attack (process))
 
-(define-action issue-false-sensor-data-report-to (attacker controller source bus sensor-type))
+(define-action issue-false-sensor-data-report-to (controller source bus sensor-type))
 
 (define-action uses-control-to-achieve-access-right (attacker right component))
 

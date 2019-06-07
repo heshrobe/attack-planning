@@ -5,6 +5,16 @@
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;
+;;;  Protocol Definitions
+;;;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+(define-protocol telnet (23 2323) remote-execution remote-shell)
+(define-protocol ssh 22 remote-execution remote-shell)
+
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;;
 ;;; Knowledge about Connectivity, Access Rights and filtering policies
 ;;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -532,7 +542,7 @@
 ;;; This is necessary so that when a model is loaded (which is usually preceded by a (clear)
 ;;; *everywhere* is up to date.  The clear operation deletes it's sub-parts
 
-(define-predicate-method (clear  default-predicate-model :after) (&optional clear-database undefrules)
+(define-predicate-method (after-clear default-predicate-model :after) (&optional clear-database undefrules)
   (when (and clear-database (not undefrules))
     (setq *everywhere* (make-everywhere))))
 

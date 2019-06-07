@@ -122,13 +122,11 @@
 	(json:encode-object-member 'goal goal-type stream)
 	(loop for key in predicate-args
 	    for value in values
-	    for value-token = (cond ((eql key 'path-so-far)) ((symbolp value) value) (t (role-name value)))
+	    for value-token = (cond ((or (symbolp value) (numberp value)) value) ((typep value 'search-context) value) (t (role-name value)))
 	    if (eql key 'resource-or-component) do (setq key 'resource)
-	    unless (eql key 'path-so-far)
+	    unless (typep value-token 'search-context)
 	    do (terpri stream)
 	       (json:encode-object-member key value-token stream))))))
-
-
 
 (defmethod dump-node ((node attack-action) &optional (stream *standard-output*))
   (destructuring-bind (action-type &rest values) (action-name node)
@@ -143,9 +141,9 @@
 	(json:encode-object-member 'action action-type stream)
 	(loop for key in predicate-args
 	    for value in values
-	    for value-token = (cond ((eql key 'path-so-far)) ((symbolp value) value) (t (role-name value)))
+	    for value-token = (cond ((or (symbolp value) (numberp value)) value) ((typep value 'search-context) value) (t (role-name value)))
 	    when (eql key 'resource-or-component) do (setq key 'resource)
-	    unless (eql key 'path-so-far)
+	    unless (typep value-token 'search-context)
 	    do 	(terpri stream)
 		(json:encode-object-member key value-token stream))))))
 

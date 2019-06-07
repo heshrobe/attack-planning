@@ -444,7 +444,7 @@
 	       [ltms:value-of (?victim-os-instance authorization-pool) ?pool]
 	       [ltms:value-of (?victim-os-instance machine) ?victim-machine]
 	       [current-foothold ?input-context ?current-foothold-machine ?current-foothold-role]
-	       [protocol-for-remote-execution remote-shell ?protocol])
+	       [protocol-for remote-execution remote-shell ?protocol])
     :typing ([ltms:object-type-of ?victim-os-instance operating-system]
              [ltms:object-type-of ?pool authorization-pool]
 	     [ltms:object-type-of ?victim-machine computer]
@@ -455,14 +455,6 @@
            (:action [login ?victim-user ?victim-os-instance ?current-foothold-machine ?current-foothold-role]))
     :post-conditions ([current-foothold ?foothold-context ?next-foothold-machine ?next-foothold-role]
 		      [has-foothold ?password-context ?victim-machine ?victim-user ?output-context]))
-
-(defrule telnet-for-remote-shell (:backward)
-  :then [protocol-for-remote-execution remote-shell telnet]
-  :if t)
-
-(defrule ssh-for-remote-shell (:backward)
-  :then [protocol-for-remote-execution remote-shell ssh]
-  :if t)
 
 (defattack-method remote-execution-to-code-injection
     :to-achieve [achieve-remote-execution ?victim-machine ?os-instance ?input-context ?output-context]
