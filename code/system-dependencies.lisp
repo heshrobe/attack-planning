@@ -366,13 +366,14 @@
 (defattack-method modify-through-available-access-rights-when-have-then
     :to-achieve [modify ?object-property ?object ?input-context ?output-context]
     :bindings ([ltms:value-of (?object machines) ?computer]
-	       [current-foothold ?input-context ?current-foothold-machine ?current-foothold-role])
+	       [current-foothold ?input-context ?current-foothold-machine ?current-foothold-role]
+	       [attacker-and-machine ?input-context ?attacker ?attacker-machine])
     :typing ([ltms:object-type-of ?computer computer])
     ;; Use this only if you don't already have the required capability
     ;; (what if more than one capability implies the right?  Shouldn't
     ;; we check that he doesn't have any of them).
     :prerequisites ((has-relevant-capability ?current-foothold-role 'write ?object))
-    :plan ((:action [use-access-right-to-modify ?attacker write ?user ?object ?current-foothold-machine ?current-foothold-role]))
+    :plan (:action [use-access-right-to-modify ?attacker write ?current-foothold-role ?object ?current-foothold-machine ?current-foothold-role])
     :post-conditions ([unify ?input-context ?output-context])
     )
 
