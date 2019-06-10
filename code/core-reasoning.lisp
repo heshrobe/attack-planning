@@ -149,7 +149,7 @@
         (interned-plans nil))
     (reset-json-counter)
     (labels ((intern-goal (goal-statement)
-               (let* ((goal-without-contexts (butlast goal-statement 2))
+               (let* ((goal-without-contexts (loop for thing in goal-statement unless (typep thing 'search-context) collect thing))
 		      (goal (gethash goal-without-contexts goal-hash-table)))
                  (unless goal
                    (setq goal (make-instance 'attack-goal :name goal-without-contexts))
