@@ -254,7 +254,8 @@
 	(let ((combinator (combinator plan)))
 	  (format stream "~a" (case combinator
 				((:sequential :parallel) combinator)
-				(:singleton :reduces-to))))
+				(:singleton :reduces-to)
+				(:otherwise (break "~a ~a" combinator plan)))))
         ))))
 
 (defmethod print-merged-plan-object ((or-node plan-or-node) stream)

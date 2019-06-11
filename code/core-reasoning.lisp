@@ -168,7 +168,7 @@
 					 (null (set-exclusive-or (steps plan) steps)))
 				   do (return plan))))
                  (unless the-plan
-                   (setq the-plan (make-instance 'attack-plan 
+                   (setq the-plan (make-instance 'attack-plan
 				    :combinator combinator
 				    :steps steps
 				    :subgoals (loop for step in steps when (typep step 'attack-goal) collect step)
@@ -191,7 +191,9 @@
 		   ((:sequential :parallel :singleton)
 		    (let ((steps (loop for his-step in (rest step)
 				     collect (traverse his-step supergoal))))
-		      (intern-plan type steps supergoal)))))))
+		      (intern-plan type steps supergoal)))
+		   (:otherwise (break "What is this ~a" step))
+		   ))))
       (loop for raw-plan in raw-plans 
 	  for goal = (intern-goal (getf raw-plan :goal))
 	  for plan = (getf raw-plan :plan)
@@ -202,6 +204,7 @@
 	when (not (null (rest supporting-plans)))
 	do (setf (supporting-plans goal)
 	     (list (make-instance 'plan-or-node :supporting-plans supporting-plans))))
+    (loop for plan in interned-plans for super-goal = (supergoal plan) when (null super-goal) do (break "Bad Plan ~a" plan))
     (values (loop for goal being the hash-values of goal-hash-table
 		when  (loop for supported-plan in (supported-plans goal) always (null (supergoal supported-plan)))
 		collect goal)

@@ -324,11 +324,13 @@
           [ltms:value-of (?computer subnets) ?subnet]]
   then [ltms:value-of (?subnet switch) ?computer])
 
-(defrule router-on-switched-network-is-switch (:forward)
-  if [and [ltms:object-type-of ?computer router]
-          [ltms:object-type-of ?subnet switched-subnet]
-          [ltms:value-of (?computer subnets) ?subnet]]
-   then [ltms:value-of (?subnet switch) ?computer])
+;;; Why would the router be the switch of a switched network?
+; (defrule router-on-switched-network-is-switch (:forward)
+;   if [and [ltms:object-type-of ?computer router]
+;           [ltms:object-type-of ?subnet switched-subnet]
+;           [ltms:value-of (?computer subnets) ?subnet]]
+;    then [ltms:value-of (?subnet switch) ?computer])
+
 
 (defrule fill-in-computer-site (:forward)
   if [and [ltms:object-type-of ?subnet subnet]

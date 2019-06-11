@@ -109,7 +109,7 @@
 ;;; The router will reject TELNET packets from anywhere outside the 192.x.x.x range
 (defblacklist (telnet cradlepoint-router)
     :block everywhere
-    :exceptions (("192.0.0.0"  "255.0.0.0"))
+    :exceptions ()
     )
 
 ;; (tell-negative-policy cradlepoint-router telnet ("192.0.0.0"  "255.0.0.0"))
@@ -135,7 +135,7 @@
 ;;; The switch will forward TELNET packets only from within its subnet
 (defblacklist (telnet furuno-switch)
     :block everywhere
-    :exceptions (("192.10.0.0" "255.255.0.0"))
+    :exceptions ()
     )
 
 ;; (tell-negative-policy furuno-switch telnet ("192.10.0.0" "255.255.0.0"))

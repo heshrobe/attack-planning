@@ -200,14 +200,14 @@
 	    unless (or (member thing1 connection)
 		       (member thing2 connection))		 
             do (with-unification
-		   (unify connection path)
-                 (stack-let ((backward-support (list self +true+ '(ask-data connected))))
-			    (funcall continuation backward-support)))))
+		(unify connection path)
+		(stack-let ((backward-support (list self +true+ '(ask-data connected))))
+		  (funcall continuation backward-support)))))
        ((and (eql truth-value +false+) (null connections))
 	(with-unification
-	    (unify path nil)
-	  (stack-let ((backward-support (list self +false+ `(ask-data connected))))
-		     (funcall continuation backward-support))))
+	 (unify path nil)
+	 (stack-let ((backward-support (list self +false+ `(ask-data connected))))
+	   (funcall continuation backward-support))))
        ))))
 
 
@@ -254,7 +254,10 @@
 ;;; fix to include the switch on the path
 (defmethod find-paths-between ((thing1 subnet-mixin) (thing2 subnet-mixin))
   (cond 
-   ((eql thing1 thing2) (list nil))
+   ((eql thing1 thing2) (typecase thing1
+			  (switched-subnet (list (list (switch thing1))))
+			  ;; what to do for non-switched network?
+			  (:otherwise (list nil))))			  
    (t (let ((answers nil))
         (labels ((do-one-hop (next-router path-so-far source-subnet)
                    (cond ((member thing2 (subnets next-router))
@@ -679,6 +682,29 @@
     (setf (intervals location) (subtract-holes-from-interval base-interval holes)
 	  (intervals-computed? location) t)))
 
+(defun parse-cidr (string)
+  (let* ((pos (position #\/ string :test #'char-equal))
+	 (prefix (parse-ip-address (subseq string 0 pos)))
+	 (missing-octets (loop repeat (- 4 (length prefix)) collect 0))
+	 (full-prefix (append prefix missing-octets))
+	 (full-prefix-string (format nil "~{~a~^.~}" full-prefix))
+	 (size (read-from-string (subseq string (1+ pos))))
+	 (mask-integer (loop with answer = 0
+			   for pos downfrom 31
+			   repeat size
+			   do (setq answer (dpb 1 (byte 1 pos) answer))
+			   finally (return answer)))
+	 (mask-bytes (reverse (loop for pos from 0 by 8
+				  repeat 4
+				  collect (ldb (byte 8 pos) mask-integer))))
+	 (full-mask (format nil "~{~a~^.~}" mask-bytes)))
+    (values full-prefix-string full-mask)))
+
+	 
+	 
+
+	 
+	      
 
 
 ;;; this handles the case for a user whose "location" in ip-space

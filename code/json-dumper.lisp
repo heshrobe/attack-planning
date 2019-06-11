@@ -267,7 +267,8 @@
     (json:as-object-member ('excluded stream)
 	(json:with-array (stream)
 	  (loop for mask in exclusion-subnets
-	      do (dump-mask mask stream)
+	      do (json:as-array-member (stream)
+		   (dump-mask mask stream))
 		 )))))
 
 (defmethod dump-subnet-data ((ensemble ensemble) &optional (stream *standard-output*))
@@ -282,7 +283,7 @@
 (defmethod dump-subnet-data ((machine computer) &optional (stream *standard-output*))
   (if (typical-p machine)
       (dump-subnet-data (ensemble machine) stream)
-    (list :addresses (loop for address in (ip-addresses machine) collect (ip-address-string machine)))))
+    (list :addresses (loop for address in (ip-addresses machine) collect (ip-address-string address)))))
 
 (defmethod dump-mask ((mask subnet-mask) &optional (stream *standard-output*))
   (let ((address (ip-address-string (follow-path (list mask 'ip-address))))
@@ -313,7 +314,8 @@
   (json:with-array (stream)
     (loop for user in users
 	do (terpri stream)
-	   (json:as-array-member (stream) (dump-user user stream))))
+	   (json:as-array-member (stream) 
+	     (dump-user user stream))))
   )
 
 (defmethod dump-user ((user user) &optional (stream *standard-output*))
@@ -328,6 +330,7 @@
     (json:as-object-member ('computers stream)
 	(json:with-array (stream)
 	  (Loop for computer in (machines user) 
-		do (json:with-object (stream)
-		     (json:encode-object-member 'name (role-name computer) stream)))))
+		do (json:as-array-member (stream)
+		     (json:with-object (stream)
+		       (json:encode-object-member 'name (role-name computer) stream))))))
     (terpri stream)))

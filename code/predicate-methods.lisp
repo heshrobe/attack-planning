@@ -31,7 +31,7 @@
 
 (define-predicate-method (ask-data attacker-and-machine) (truth-value continuation)
   (unless (eql truth-value +true+)
-    (error 'model-can-only-handle-positive-queries
+    (error 'ji:model-can-only-handle-positive-queries
 	   :query self
 	   :model (type-of self)))
   (with-statement-destructured (input-context attacker attacker-machine) self
@@ -47,7 +47,7 @@
 
 (define-predicate-method (ask-data current-foothold) (truth-value continuation)
   (unless (eql truth-value +true+)
-    (error 'model-can-only-handle-positive-queries
+    (error 'ji:model-can-only-handle-positive-queries
 	   :query self
 	   :model (type-of self)))
   (with-statement-destructured (input-context foothold-machine foothold-role) self
@@ -84,7 +84,7 @@
 
 (define-predicate-method (ask-data has-foothold) (truth-value continuation)
   (unless (eql truth-value +true+)
-    (error 'model-can-only-handle-positive-queries
+    (error 'ji:model-can-only-handle-positive-queries
 	   :query self
 	   :model (type-of self)))
   (with-statement-destructured (input-context foothold-machine foothold-role output-context) self
@@ -124,9 +124,10 @@
 		 :query self
 		 :model (type-of self)))))))
 
+;; This can either be machine and protocol (for foothold) or machine and role (for remote-execution)
 (define-predicate-method (ask-data note-place-visited) (truth-value continuation)
   (unless (eql truth-value +true+)
-    (error 'model-can-only-handle-positive-queries
+    (error 'ji:model-can-only-handle-positive-queries
 	   :query self
 	   :model (type-of self)))
   (with-statement-destructured (input-context machine protocol output-context) self

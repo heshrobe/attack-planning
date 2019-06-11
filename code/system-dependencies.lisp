@@ -432,11 +432,13 @@
     :to-achieve [achieve-remote-execution ?victim-machine ?victim-user ?input-context ?output-context]
     :bindings ([ltms:named-part-of ?victim-machine os ?victim-os]
 	       [ltms:value-of (?victim-os users) ?victim-user]
+	       [note-place-visited ?input-context ?victim-machine ?victim-user ?visited-context]
 	       )
     :typing ([ltms:object-type-of ?victim-os operating-system]
              [ltms:object-type-of ?victim-user user]
 	     [ltms:object-type-of ?victim-machine computer])
-    :plan (:goal [achieve-remote-shell ?victim-os ?victim-user ?input-context ?output-context])
+    :prerequisites ([not [place-already-visited? ?input-context ?victim-machine ?victim-user]])
+    :plan (:goal [achieve-remote-shell ?victim-os ?victim-user ?visited-context ?output-context])
     :post-conditions ())
 
 (defattack-method how-to-logon
@@ -458,7 +460,7 @@
 		      [has-foothold ?password-context ?victim-machine ?victim-user ?output-context]))
 
 (defattack-method remote-execution-to-code-injection
-    :to-achieve [achieve-remote-execution ?victim-machine ?os-instance ?input-context ?output-context]
+    :to-achieve [achieve-remote-execution ?victim-machine ?victim-process ?input-context ?output-context]
     :bindings ([ltms:named-part-of ?victim-machine os ?os-instance] 
 	       [ltms:value-of (?os-instance processes) ?victim-process])
     :typing ([ltms:object-type-of ?os-instance operating-system]

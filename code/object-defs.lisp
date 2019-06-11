@@ -869,10 +869,10 @@
 
 (define-object-type subnet-mask
     :tms t
-  :other-instance-variables ((exception-masks :accessor exception-masks :initform nil)
-			     (intervals :accessor intervals :initform nil)
-			     (intervals-computed? :accessor intervals-computed? :initform nil))
-  :included-object-types (basic-subnet-mask print-nicely-mixin))
+    :other-instance-variables ((exception-masks :accessor exception-masks :initform nil)
+			       (intervals :accessor intervals :initform nil)
+			       (intervals-computed? :accessor intervals-computed? :initform nil))
+    :included-object-types (basic-subnet-mask print-nicely-mixin))
 
 (defmethod intervals :around ((mask subnet-mask))
   (unless (intervals-computed? mask)
@@ -888,7 +888,6 @@
   :included-object-types (subnet-mask))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;;;
 ;;; Subnets and network traffic
 ;;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
