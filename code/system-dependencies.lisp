@@ -7,27 +7,20 @@
 ;;; consisting of :sequential/:parallel groupings
 ;;; of (:goal ... :plan ...) structures
 ;;; and (:action ... structures
+;;;
+;;; Note: Several of the operators could take advantage of the guards field
+;;; rather than the pre-requisite.  Guards get tested before bindings are done
+;;; but they might need to do some of their own binding
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
-
-;;; take control of the component that controls the property
 
 (in-package :aplan)
 
+
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;;
 ;;; the top level queries
-
-
-
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;;;
-;;; the purpose field of the sub-goals
-;;;     All the sub-goals have an extra argument which is the purpose of that subgoal
-;;;     This field is a goal stack being passed down to sub-goals
-;;;     So the format is ((mnemonic . args) . rest-of-stack)
-;;;
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;
 ;;; Any desirable property
 ;;;
@@ -97,6 +90,7 @@
     :to-achieve [affect performance ?process ?input-context ?output-context]
     :prerequisites ([desirable-property-of ?process performance])
     :bindings ([ltms:value-of (?process host-os) ?os]
+	       [ltms:value-of (?os machine) ?computer]
 	       [ltms:value-of (?os workload) ?workload]
 	       [protocol-is-relevant-for workload-size ?protocol]
 	       [attacker-and-machine ?input-context ?attacker  ?attacker-machine])
@@ -104,7 +98,7 @@
 	     [ltms:object-type-of ?os operating-system]
 	     [ltms:object-type-of ?workload os-workload])
     :plan (:sequential
-	   (:goal [get-foothold ?os ?protocol ?input-context ?foothold-context])
+	   (:goal [get-foothold ?computer ?protocol ?input-context ?foothold-context])
 	   (:goal [increase-size ?workload ?foothold-context ?output-context]))
     )
 
@@ -113,13 +107,14 @@
     :to-achieve [affect performance ?process ?input-context ?output-context]
     :prerequisites ([desirable-property-of ?process performance])
     :bindings ([ltms:value-of (?process host-os) ?os-instance]
+	       [ltms:value-of (?os machine) ?computer]
 	       [current-foothold ?input-context ?foothold-machine ?foothold-role]
 	       [attacker-and-machine ?input-context ?attacker ?attacker-machine])
     :typing ([ltms:object-type-of ?process email-server-process]
 	     [ltms:object-type-of ?foothold-machine computer]
 	     )
     :plan (:sequential
-	   (:goal [get-foothold ?os-instance email ?input-context ?foothold-context])
+	   (:goal [get-foothold ?computer email ?input-context ?foothold-context])
 	   (:repeated-action [submit-email ?attacker large-email ?process ?foothold-machine ?foothold-role]))
     :post-conditions ([current-foothold ?foothold-context ?foothold-machine ?foothold-role]
 		      [unify ?foothold-context ?output-context])
@@ -205,7 +200,7 @@
 	   ;; Also note that it might bind these to the same thine as the current foothold
 	   ;; Also note that it returns in a state where you have remote-execution on the new-foothold-machine
 	   ;; And you've opened a connecion to the victim machine
-	   (:goal [get-foothold ?database-os database-protocol ?input-context ?foothold-context])
+	   (:goal [get-foothold ?database-machine database-protocol ?input-context ?foothold-context])
 	   (:goal [make-connection ?database-machine database-protocol ?foothold-context ?connected-context])
 	   (:goal [modify data-integrity ?database ?connected-context ?output-context])
 	   )
@@ -430,14 +425,15 @@
 
 (defattack-method remote-execution-to-remote-shell
     :to-achieve [achieve-remote-execution ?victim-machine ?victim-user ?input-context ?output-context]
+    :guards ([not [place-already-visited? ?input-context ?victim-machine remote-execution ?victim-user]])
     :bindings ([ltms:named-part-of ?victim-machine os ?victim-os]
 	       [ltms:value-of (?victim-os users) ?victim-user]
-	       [note-place-visited ?input-context ?victim-machine ?victim-user ?visited-context]
+	       [note-place-visited ?input-context ?victim-machine remote-execution ?victim-user ?visited-context]
 	       )
     :typing ([ltms:object-type-of ?victim-os operating-system]
              [ltms:object-type-of ?victim-user user]
 	     [ltms:object-type-of ?victim-machine computer])
-    :prerequisites ([not [place-already-visited? ?input-context ?victim-machine ?victim-user]])
+    :prerequisites ()
     :plan (:goal [achieve-remote-shell ?victim-os ?victim-user ?visited-context ?output-context])
     :post-conditions ())
 
@@ -453,7 +449,7 @@
 	     [ltms:object-type-of ?victim-machine computer]
 	     [ltms:object-type-of ?victim-user user])
     :plan (:sequential
-	   (:goal [get-foothold ?victim-os-instance ?protocol ?input-context ?foothold-context])	   
+	   (:goal [get-foothold ?victim-machine ?protocol ?input-context ?foothold-context])	   
            (:goal [achieve-knowledge-of-password ?current-foothold-role ?victim-user ?pool ?victim-machine ?foothold-context ?password-context])
            (:action [login ?victim-user ?victim-os-instance ?current-foothold-machine ?current-foothold-role]))
     :post-conditions ([current-foothold ?foothold-context ?next-foothold-machine ?next-foothold-role]
@@ -461,11 +457,14 @@
 
 (defattack-method remote-execution-to-code-injection
     :to-achieve [achieve-remote-execution ?victim-machine ?victim-process ?input-context ?output-context]
+    :guards ([not [place-already-visited? ?input-context ?victim-machine remote-execution ?victim-process]])
     :bindings ([ltms:named-part-of ?victim-machine os ?os-instance] 
-	       [ltms:value-of (?os-instance processes) ?victim-process])
+	       [ltms:value-of (?os-instance processes) ?victim-process]
+	       [note-place-visited ?input-context ?victim-machine remote-execution ?victim-process ?visited-context])
     :typing ([ltms:object-type-of ?os-instance operating-system]
 	     [ltms:object-type-of ?victim-process process])
-    :plan (:goal [achieve-code-injection ?victim-process ?os-instance ?input-context ?output-context]))
+    :prerequisites ()
+    :plan (:goal [achieve-code-injection ?victim-process ?os-instance ?visited-context ?output-context]))
 
 (defattack-method code-injection-against-web-server
     :to-achieve [achieve-code-injection ?process ?os-instance ?input-context ?output-context]
@@ -478,12 +477,15 @@
     )
 
 (defattack-method remote-execution-to-code-reuse
-    :to-achieve [achieve-remote-execution ?victim-machine ?process ?input-context ?output-context]
+    :to-achieve [achieve-remote-execution ?victim-machine ?victim-process ?input-context ?output-context]
+    :guards ([not [place-already-visited? ?input-context ?victim-machine remote-execution ?victim-process]])
     :bindings ([ltms:named-part-of ?victim-machine os ?os-instance]
-	       [ltms:value-of (?os-instance processes) ?process])
+	       [ltms:value-of (?os-instance processes) ?victim-process]
+	       [note-place-visited ?input-context ?victim-machine remote-execution ?victim-process ?visited-context])
     :typing ([ltms:object-type-of ?os-instance operating-system]
-	     [ltms:object-type-of ?process process])
-    :plan (:goal [achieve-code-reuse ?process ?os-instance ?input-context ?output-context]))
+	     [ltms:object-type-of ?victim-process process])
+    :prerequisites ()
+    :plan (:goal [achieve-code-reuse ?victim-process ?os-instance ?visited-context ?output-context]))
 
 (defattack-method code-reuse-against-web-server
     :to-achieve [achieve-code-reuse ?process ?os-instance ?input-context ?output-context]
@@ -771,7 +773,7 @@
              [ltms:object-type-of ?machine computer]
 	     [ltms:object-type-of ?attacker-machine computer])
     :plan (:sequential
-           (:goal [get-foothold ?os-instance smtp ?input-context ?output-context])
+           (:goal [get-foothold ?attacker-machine smtp ?input-context ?output-context])
            (:action [phishing-attack ?attacker ?user ?process ?current-foothold-machine ?current-foothold-role]))
     :post-conditions ([current-foothold ?output-context ?current-foothold-machine ?current-foothold-role])
     )
@@ -906,27 +908,28 @@
 	     ;; [ltms:object-type-of ?new-foothold-os-instance operating-system]
 
 (defattack-method lateral-motion
-    :to-achieve [get-foothold ?victim-os-instance ?protocol-name ?input-context ?output-context]
-    :bindings ([ltms:value-of (?victim-os-instance machine) ?victim-machine]
+    :to-achieve [get-foothold ?victim-machine ?protocol-name ?input-context ?output-context]
+    :guards ([not [place-already-visited? ?input-context ?victim-machine foothold ?protocol-name]]
+	     ;; Use this method only if you can't get a connection to the victim from where you are
+	     [not [accepts-connection ?victim-machine ?protocol-name ?current-foothold-machine]]
+		    [not [foothold-exists ?input-context ?new-foothold-machine]]
+	     )
+    :bindings ([ltms:named-part-of ?victim-machine os ?victim-os]
 	       [current-foothold ?input-context ?current-foothold-machine ?current-foothold-role]
-	       ;; this is the next place we're going to go to
+	       ;; Now find somebody that can make the connection, accepts connection will find one if there is one
 	       [accepts-connection ?victim-machine ?protocol-name ?new-foothold-machine]
+	       ;; and make sure you're not looping back to a foothold you've already visited
 	       ;; note that we've been there so that we don't loop 
-	       [note-place-visited ?input-context ?victim-machine ?protocol-name ?visited-context]
+	       [note-place-visited ?input-context ?victim-machine foothold ?protocol-name ?visited-context]
 	       )
-    :typing ([ltms:object-type-of ?victim-os-instance operating-system]
+    :typing ([ltms:object-type-of ?victim-os operating-system]
 	     [ltms:object-type-of ?victim-machine computer]
 	     [ltms:object-type-of ?current-foothold-machine computer]
 	     )
-    :prerequisites (;; Use this method only if you can't get a connection to the victim from where you are
-		    [not [accepts-connection ?victim-machine ?protocol-name ?current-foothold-machine]]
-		    ;; Now find somebody that can make the connection, accepts connection will find one if there is one
-		    ;; and make sure you're not looping back to a foothold you've already visited
-		    [not [foothold-exists ?input-context ?new-foothold-machine]]
-		    [not [place-already-visited? ?input-context ?input-context ?protocol-name]]
-		    )
+    :prerequisites ()
     :plan (:sequential
-	   ;; Now see if the attacker can gain remote execution on the new-foothold-machine and in what role (?new-foothold-role is a return value)
+	   ;; Now see if the attacker can gain remote execution on the new-foothold-machine and in what role 
+	   ;; (?new-foothold-role is a return value)
 	   (:goal [achieve-remote-execution ?new-foothold-machine ?new-foothold-role ?visited-context ?remote-execution-context])
 	   ;;If so then actually make the connection to the victim from the new foothold
 	   ;; (:goal [make-connection ?victim-os-instance ?protocol-name ?remote-execution-context ?output-contet])
@@ -936,11 +939,14 @@
 ;;; Direct Method, applicable when you can get from your current foothold to the target-machine 
 ;;; so the foothold is the where this step is taking place from and the role is the attacker
 (defattack-method get-foothold-by-protocol
-    :to-achieve [get-foothold ?victim-os-instance ?protocol-name ?input-context ?output-context]
-    :bindings ([ltms:value-of (?victim-os-instance machine) ?victim-machine]
+    :to-achieve [get-foothold ?victim-machine ?protocol-name ?input-context ?output-context]
+    :guards ([not [place-already-visited? ?input-context ?victim-machine foothold ?protocol-name]])
+    :bindings ([ltms:named-part-of ?victim-machine os ?victim-os]
 	       [current-foothold ?input-context ?current-foothold-machine ?current-foothold-role]
-	       [unify ?input-context ?output-context])
-    :typing ([ltms:object-type-of ?victim-os-instance operating-system]
+	       [unify ?input-context ?output-context]
+	       ;; probably irrelevant because we're just doing an action
+	       [note-place-visited ?input-context ?victim-machine foothold ?protocol-name ?visited-context])
+    :typing ([ltms:object-type-of ?victim-os operating-system]
 	     [ltms:object-type-of ?victim-machine computer]
 	     [ltms:object-type-of ?current-foothold-machine computer])
     :prerequisites ([accepts-connection ?victim-machine ?protocol-name ?current-foothold-machine])
@@ -1187,7 +1193,7 @@ Transformations: compilation jarification loading
 	       )
     :plan (:sequential
 	   (:action [port-scan ?attacker ?victim-machine ?attacker-machine telnet-ports])
-	   (:goal [get-foothold ?victim-os telnet ?input-context ?foothold-context])
+	   (:goal [get-foothold ?victim-machine telnet ?input-context ?foothold-context])
 	   (:action [login ?attacker white-list-member ?victim-os ?foothold-machine])
 	   (:action [download-malware-from-source ?attacker ?foothold-machine ?victim-machine mirai-client]))
     :post-conditions ([current-foothold ?foothold-context ?foothold-machine ?foothold-role]

@@ -103,14 +103,26 @@
        (funcall continuation backward-support)))))
 
 
+;;; If the purpose is remote-execution all we check is that there is a previous
+;;; entry for the same machine.
 (define-predicate-method (ask-data place-already-visited?) (truth-value continuation)
-  (with-statement-destructured (input-context machine protocol) self
+  (with-statement-destructured (input-context machine purpose protocol) self
+    (declare (ignore protocol))
     (when (unbound-logic-variable-p input-context)
       (error 'ji:model-cant-handle-query
 	     :query self
 	     :model (type-of self)))
-    (let ((it-exists (loop for (visited-machine visited-protocol) in (places-visited input-context)
-			 thereis (and (eql machine visited-machine) (eql protocol visited-protocol)))))
+    (let ((it-exists (case purpose
+		       ;; For remote execution, if you got here as a subgoal of getting a foothold for this machine
+		       ;; you're in a loop.  Obviously if you got here as a subgoal of getting remote execution that's 
+		       ;; a loop as well
+		       (remote-execution (loop for (visited-machine) in (places-visited input-context)
+					     thereis (eql machine visited-machine)))
+		       ;; For foothold, we might be here as a subgoal of getting remote execution so we only look
+		       ;; at foothold entries.  We consider recursing with a different protocol to also be a loop
+		       ;; so protocol is actually ignored.
+		       (foothold (loop for (visited-machine visited-purpose) in (places-visited input-context)
+				       thereis (and (eql machine visited-machine) (eql purpose visited-purpose)))))))
       (cond
        ((eql truth-value +true+)
 	(when it-exists
@@ -124,22 +136,26 @@
 		 :query self
 		 :model (type-of self)))))))
 
-;; This can either be machine and protocol (for foothold) or machine and role (for remote-execution)
+;;; This includes the machine, the purpose (either remote-execution or foothold) an the protocol 
+;;; protocol is used on foothold.
 (define-predicate-method (ask-data note-place-visited) (truth-value continuation)
   (unless (eql truth-value +true+)
     (error 'ji:model-can-only-handle-positive-queries
 	   :query self
 	   :model (type-of self)))
-  (with-statement-destructured (input-context machine protocol output-context) self
+  (with-statement-destructured (input-context machine purpose protocol output-context) self
     (when (unbound-logic-variable-p input-context)
       (error 'ji:model-cant-handle-query
 	     :query self
 	     :model (type-of self)))
     (with-unification 
-     (unless (loop for (visited-machine visited-protocol) in (places-visited input-context)
-		 thereis (and (eql machine visited-machine) (eql protocol visited-protocol)))
+     (unless 
+	 ;; check to see if an equal entry already exists in the output-context
+	 (loop for (visited-machine visited-purpose visited-protocol) in (places-visited input-context)
+	     thereis (and (eql machine visited-machine) (eql purpose visited-purpose) (eql protocol visited-protocol)))
+       ;; if not make a new entry in the output contex
        (let ((new-context (copy-search-context input-context)))
-	 (push (list machine protocol) (places-visited new-context))
+	 (push (list machine purpose protocol) (places-visited new-context))
 	 (unify output-context new-context)
 	 (stack-let ((backward-support (list self +true+ '(ask-data note-place-visited))))
 	   (funcall continuation backward-support)))))))

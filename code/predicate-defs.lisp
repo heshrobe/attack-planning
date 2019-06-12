@@ -40,14 +40,33 @@
 ;;;
 ;;; Predicates that are used in the structure of the planner
 ;;;
+;;; These keep track of what footholds the attacker has already achieved 
+;;; To prevent trying to get the same foothold twice
+;;;
+;;; It also keeps track of steps it has taken to try to achieve remote-execution
+;;; and to obtain footholds so that it doesn't chain back to trying to trying to 
+;;; achieve as a sub-goal the exact same thing it is trying to achieve as a super-goal
+;;;
+;;; Note: For remote execution, this is the machine we're trying to get execution on
+;;;       For foothold, this is the machine we're trying to get a foothold to
+;;;       As a result, for foothold query a preceding remote-execution for the same machine
+;;;                     is OK.  
+;;;                    But for remote execution, a prior foothold entry a prior foothold request 
+;;;                    for that machine is indicative of a loop.
+;;;                       
+;;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 (define-predicate current-foothold (input-context foothold-machine foothold-role) (ltms:ltms-predicate-model))
 (define-predicate foothold-exists (input-context foothold-machine) (ltms:ltms-predicate-model))
 (define-predicate has-foothold (input-context new-foothold-machine new-foothold-role output-context) (ltms:ltms-predicate-model))
 
-(define-predicate place-already-visited? (input-context machine protocol) (ltms:ltms-predicate-model))
-(define-predicate note-place-visited (input-context machine protocol output-context) (ltms:ltms-predicate-model))
+;;; here purpose is either remote-execution or foothold
+;;; if it's for a foothold we'll also remember the protocol that that foothold needs to be able
+;;; to use to talk to the target
+(define-predicate note-place-visited (input-context machine purpose protocol output-context) (ltms:ltms-predicate-model))
+(define-predicate place-already-visited? (input-context machine purpose protocol) (ltms:ltms-predicate-model))
+
 
 (define-predicate attacker-and-machine (input-context attacker attacker-machine) (ltms:ltms-predicate-model))
 

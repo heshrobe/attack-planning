@@ -73,14 +73,15 @@
 
       
 						
-(defmacro defattack-method (method-name &key to-achieve prerequisites typing bindings post-bindings plan post-conditions)
+(defmacro defattack-method (method-name &key to-achieve guards prerequisites typing bindings post-bindings plan post-conditions)
   (let* ((plan-variable `(logic-variable-maker ,(gensym "?PLAN")))
          (real-head (attach-logic-variable-to-predication-maker to-achieve plan-variable))
 	 (rebuilt-plan-structure (rebuild-plan-structure plan)))
     (destructuring-bind (sub-goals plan-structure) (or rebuilt-plan-structure (list nil nil))
       `(defrule ,method-name (:backward)
          then ,real-head
-         if [and ,@bindings
+         if [and ,@guards
+		 ,@bindings
                  ,@typing
                  ,@prerequisites
                  ,@post-bindings
