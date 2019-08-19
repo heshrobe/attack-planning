@@ -18,17 +18,13 @@
   )
 
 (defun do-it (&key (attacker (follow-path '(typical-attacker)))
-		   (attacker-machine (follow-path '(typical-attacker-machine)))
                    (property 'performance) 
-		   (machine 'dopey) 
-                   (resource (follow-path '(typical-dopey-process))))
+		   machine 
+                   resource)
   (let ((answers nil)
-	(starting-context (make-initial-search-context
-			    :attacker attacker
-			    :attacker-machine attacker-machine))
 	;; (os (follow-path `(,machine os)))
 	)
-    (ask `[affect ,property ,resource ,starting-context ?output-context ?plan]
+    (ask `[achieve-goal [affect ,property ,resource] initial ?output-context ?plan]
          #'(lambda (just)
              (declare (ignore just))
 	     (let ((plan (copy-object-if-necessary ?plan)))
@@ -54,6 +50,8 @@
 	(tell `[ltms:value-of (,his-machine subnets) ,the-world])
 	(tell `[ltms:value-of (,the-world computers) ,his-machine])
 	(tell `[ltms:value-of (,attacker location) ,the-world])
+	(tell `[in-state [has-foothold ,his-machine ,attacker foothold] initial])
+	(tell `[in-state [attacker-and-machine ,attacker ,his-machine] initial])
 	attacker))))
 
 (defun do-a-case (environment-pathname  &key attacker 
@@ -149,7 +147,7 @@
         (interned-plans nil))
     (reset-json-counter)
     (labels ((intern-goal (goal-statement)
-               (let* ((goal-without-contexts (loop for thing in goal-statement unless (typep thing 'search-context) collect thing))
+               (let* ((goal-without-contexts goal-statement)
 		      (goal (gethash goal-without-contexts goal-hash-table)))
                  (unless goal
                    (setq goal (make-instance 'attack-goal :name goal-without-contexts))

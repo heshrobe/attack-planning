@@ -565,6 +565,16 @@
   then [has-permission ?user ?operation ?object]
   )
 
+(defrule user-doesnt-have-permission (:forward)
+  if [and [ltms:object-type-of ?object computer-resource]
+          [ltms:value-of (?object capability-requirements) ?requirement]
+          [ltms:object-type-of ?user user]
+	  (unify ?operation (first ?requirement))
+	  (not (has-capability ?user (second ?requirement)))
+	  ]
+  then [not [has-permission ?user ?operation ?object]]
+  )
+
 (defun has-capability (user capability)
   (let ((his-capabilities (capabilities user)))
     (labels ((check-one (putative-capability)
@@ -574,11 +584,23 @@
       (mapc #'check-one his-capabilities))
     nil))
 
-(defun has-relevant-capability (user right object)
-  (ask* `[requires-access-right ,object ,right ?capability]
-	(when (has-capability user ?capability)
-	  (return-from has-relevant-capability t)))
-  nil)
+;;;(defrule has-relevant-capability-rule (:backward)
+;;;  then [has-relevant-capability ?user ?right ?object]
+;;;  if [and [requires-access-right ?object ?right ?capability]
+;;;	  (has-capability ?user ?capability)])
+;;;
+;;;
+;;;(defrule does-not-have-relevant-capability-rule (:backward)
+;;;  then [not [has-relevant-capability ?user ?right ?object]]
+;;;  if [and [requires-access-right ?object ?right ?capability]
+;;;	  (not (has-capability ?user ?capability))])
+
+
+;;;(defun has-relevant-capability (user right object)
+;;;  (ask* `[requires-access-right ,object ,right ?capability]
+;;;	(when (has-capability user ?capability)
+;;;	  (return-from has-relevant-capability t)))
+;;;  nil)
 
 (defrule requires-access-right-translation (:forward)
   if [and [ltms:object-type-of ?object computer-resource]

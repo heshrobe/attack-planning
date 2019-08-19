@@ -10,5 +10,9 @@
 #+allegero
 (defmethod lep::definition-undefining-form (fspec (type (eql 'defattack-method)))
   `(undefrule ',fspec))
+
+#+allegro
+(defmethod lep::definition-undefining-form (fspec (type (eql 'define-action)))
+  `(undefrule ',fspec))
 				       
 

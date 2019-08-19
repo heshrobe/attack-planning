@@ -5,6 +5,17 @@
 
 (in-package :aplan)
 
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;;
+;;;  Some useful utilities
+;;;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+(defun kill-redefined-object (name)
+  (let ((object (follow-path (list name) t  nil)))
+    (when object 
+      (kill object))))
+
 ;;; This defines the rules that set up a set of forward-backward pointers from one object to another
 (defmacro def-symmetric-pointers (rule-name from-type from-type-variable from-slot to-type to-type-variable to-slot
 				  ;; Note: In SCBL destructuring-bind is very strict and so
@@ -31,6 +42,14 @@
 		     ,@(when to-condition-p `([ltms:value-of (,to-type-variable ,to-property) ,to-value]))
 		     ]
 	     then [ltms:value-of (,from-type-variable ,from-slot) ,to-type-variable]))))))
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;;
+;;; Defining the structure of an enterprise
+;;;  its sites and enclaves of machines
+;;; And the external internet
+;;;  
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 ;;; An enterprise is a organization with multiple sites within it
 (defmacro define-enterprise (name &key sites)
@@ -75,18 +94,8 @@
 		   (subnet-mask (make-location-mask 'subnet-mask address mask)))
 	      (tell `[ltms:value-of (,ensemble ip-range) ,subnet-mask]))))
        ensemble))
-    )
+  )
 
-(defmacro defauthorization-pool (name)
-  `(with-atomic-action
-       (kill-redefined-object ',name)
-     (make-object 'authorization-pool :name ',name)
-     ))
-
-(defun kill-redefined-object (name)
-  (let ((object (follow-path (list name) t  nil)))
-    (when object 
-      (kill object))))
 
 (defmacro defexternal-internet (name &rest excluded-subnets)
   `(with-atomic-action
@@ -97,6 +106,37 @@
 	 ,@(loop for (address mask) in excluded-subnets
 	       collect `(push (make-location-mask 'subnet-mask ,address ,mask) (exception-masks location)))
 	 site)))
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;;
+;;; Authorization Pools, Capabilities
+;;;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+
+(defmacro defauthorization-pool (name)
+  `(with-atomic-action
+       (kill-redefined-object ',name)
+     (make-object 'authorization-pool :name ',name)
+     ))
+(defmacro defcapability (name authorization-pool &key greater lesser)
+  `(with-atomic-action
+       (kill-redefined-object ',name)
+     (let ((capability (make-object 'capability :name ',name)))
+       (tell `[ltms:value-of (,capability authorization-pool) ,(follow-path '(,authorization-pool))])
+       ,@(loop for g in greater
+               collect `(tell `[ltms:value-of (,capability more-general) ,(follow-path '(,g))]))
+       ,@(loop for l in lesser
+               collect `(tell `[ltms:value-of (,capability more-specific) ,(follow-path '(,l))])) 
+       )))
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;;
+;;; Stuff for defining the structure of a computer
+;;; Its peripherals and its users
+;;; Its processes and other resources
+;;;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 (defmacro defcomputer (name computer-type 
 		       &key ip-address-string 
@@ -147,6 +187,82 @@
 	 (bus (follow-path '(,bus))))
      (tell `[connected-to ,device ,',interface ,bus ,',slot])))
 
+(defmacro defprocess (role-name &key process-type machine program)
+  `(with-atomic-action
+       (kill-redefined-object ',role-name)
+     (instantiate-a-process ',process-type '(,machine) :role-name ',role-name :program ',program)))
+
+(defun instantiate-a-process (process-type machine &key role-name program)
+  (let* ((process-name (or role-name (gentemp (concatenate 'string (string-upcase (string process-type)) "-"))))
+         (machine (follow-path machine))
+         (os (follow-path (list machine 'os)))
+         (process (make-object process-type :name process-name))
+         (workload (follow-path (list os 'workload))))
+    (when program
+      (let ((program (follow-path program)))
+	(tell `[ltms:value-of (,process program) ,program])))
+    (tell `[ltms:value-of (,process host-os) ,os])
+    (tell `[ltms:value-of (,process machines) ,machine])
+    (typecase process
+      ((or server-process system-process) (tell `[ltms:value-of (,workload server-workload processes) ,process]))
+      (otherwise (tell `[ltms:value-of (,workload user-workload processes) ,process])))
+    process))
+
+(defmacro defuser (name &key email-address machines (user-type 'user) 
+			     authorization-pools capabilities
+			     positive-address positive-mask
+			     negative-address negative-mask
+			     (ensemble nil ensemble-p)
+			     (typical nil typical-p)
+			     superuser-for
+			     ) 
+  `(with-atomic-action
+       (kill-redefined-object ',name)
+     (let ((user (make-object ',user-type :name ',name)))
+       (tell `[ltms:value-of (,user name) ,',name])
+       ,@(when email-address
+          `((tell `[ltms:value-of (,user email-address) ,',email-address])))
+       ,@(loop for machine in machines
+               collect `(tell `[uses-machine ,user ,(follow-path '(,machine))]))
+       ,@(loop for pool in authorization-pools
+               collect `(tell `[ltms:value-of (,user authorization-pool) ,(follow-path '(,pool))]))
+       ,@(loop for cap in capabilities
+	     collect `(tell `[ltms:value-of (,user capabilities) ,(follow-path '(,cap))]))
+       (apply-positive-and-negative-masks user ,positive-address ,positive-mask ,negative-address ,negative-mask)
+       ,@(when ensemble-p `((tell `[ltms:value-of (,user ensemble) ,(object-named ',ensemble)])))
+       ,@(when typical-p `((tell `[ltms:value-of (,user typical-p) ,,typical])))
+       ,@(when superuser-for (loop for machine in superuser-for
+				collect `(tell `[ltms:value-of (,user superuser-for) ,(follow-path (list ',machine 'os))])))
+       user))) 
+
+(defun apply-positive-and-negative-masks (user 
+					  positive-mask-address positive-mask-mask
+					  negative-mask-address negative-mask-mask)
+    (when (and positive-mask-address positive-mask-mask)
+      (with-atomic-action
+        (let ((positive-mask (make-positive-location-mask positive-mask-address positive-mask-mask)))
+          (tell `[ltms:value-of (,user location) ,positive-mask]))))
+    (when (and negative-mask-address negative-mask-mask)
+      (with-atomic-action
+        (let ((negative-mask (make-negative-location-mask negative-mask-address negative-mask-mask)))
+          (tell `[ltms:value-of (,user location) ,negative-mask])))))
+
+(defmacro defresource (name resource-type &key capability-requirements machines)
+  `(with-atomic-action
+       (kill-redefined-object ',name)
+       (let ((resource (make-object ',resource-type :name ',name)))
+       ,@(loop for machine in machines
+	     collect `(tell `[ltms:value-of (,resource machines) ,(follow-path '(,machine))]))
+       ,@(loop for (operation capability) in capability-requirements
+	     collect `(tell `[ltms:value-of (,resource capability-requirements) (,',operation ,(follow-path '(,capability)))])))))
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;;
+;;; Network related stuff like protocols "firewall" rules
+;;; switches, routers, subnets
+;;; 
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
 ;;; PORTS ADDED FOR AUTO PILOT EXAMPLE
 ;;; WHERE THE SWITCH HAS DISTINCT PORTS
 (defmacro defswitch (name switch-type ip-address-string &key authorization-pool superuser ports)
@@ -193,70 +309,16 @@
        (fill-in-subnet-mask mask ,ip-address-string ,subnet-mask-string)
        subnet)))
 
-(defmacro defuser (name &key email-address machines (user-type 'user) 
-			     authorization-pools capabilities
-			     positive-address positive-mask
-			     negative-address negative-mask
-			     (ensemble nil ensemble-p)
-			     (typical nil typical-p)
-			     superuser-for
-			     ) 
+(defmacro define-protocol (name port &optional major-purpose sub-purpose)
   `(with-atomic-action
-       (kill-redefined-object ',name)
-     (let ((user (make-object ',user-type :name ',name)))
-       (tell `[ltms:value-of (,user name) ,',name])
-       ,@(when email-address
-          `((tell `[ltms:value-of (,user email-address) ,',email-address])))
-       ,@(loop for machine in machines
-               collect `(tell `[uses-machine ,user ,(follow-path '(,machine))]))
-       ,@(loop for pool in authorization-pools
-               collect `(tell `[ltms:value-of (,user authorization-pool) ,(follow-path '(,pool))]))
-       ,@(loop for cap in capabilities
-	     collect `(tell `[ltms:value-of (,user capabilities) ,(follow-path '(,cap))]))
-       (apply-positive-and-negative-masks user ,positive-address ,positive-mask ,negative-address ,negative-mask)
-       ,@(when ensemble-p `((tell `[ltms:value-of (,user ensemble) ,(object-named ',ensemble)])))
-       ,@(when typical-p `((tell `[ltms:value-of (,user typical-p) ,,typical])))
-       ,@(when superuser-for (loop for machine in superuser-for
-				collect `(tell `[ltms:value-of (,user superuser-for) ,(follow-path (list ',machine 'os))])))
-       user))) 
-
-(defun apply-positive-and-negative-masks (user 
-					  positive-mask-address positive-mask-mask
-					  negative-mask-address negative-mask-mask)
-    (when (and positive-mask-address positive-mask-mask)
-      (with-atomic-action
-        (let ((positive-mask (make-positive-location-mask positive-mask-address positive-mask-mask)))
-          (tell `[ltms:value-of (,user location) ,positive-mask]))))
-    (when (and negative-mask-address negative-mask-mask)
-      (with-atomic-action
-        (let ((negative-mask (make-negative-location-mask negative-mask-address negative-mask-mask)))
-          (tell `[ltms:value-of (,user location) ,negative-mask])))))
-
-(defmacro defcapability (name authorization-pool &key greater lesser)
-  `(with-atomic-action
-       (kill-redefined-object ',name)
-     (let ((capability (make-object 'capability :name ',name)))
-       (tell `[ltms:value-of (,capability authorization-pool) ,(follow-path '(,authorization-pool))])
-       ,@(loop for g in greater
-               collect `(tell `[ltms:value-of (,capability more-general) ,(follow-path '(,g))]))
-       ,@(loop for l in lesser
-               collect `(tell `[ltms:value-of (,capability more-specific) ,(follow-path '(,l))])) 
-       )))
-
-(defmacro defresource (name resource-type &key capability-requirements machines)
-  `(with-atomic-action
-       (kill-redefined-object ',name)
-       (let ((resource (make-object ',resource-type :name ',name)))
-       ,@(loop for machine in machines
-	     collect `(tell `[ltms:value-of (,resource machines) ,(follow-path '(,machine))]))
-       ,@(loop for (operation capability) in capability-requirements
-	     collect `(tell `[ltms:value-of (,resource capability-requirements) (,',operation ,(follow-path '(,capability)))])))))
-
-(defmacro def-email-clients (email-server &rest clients)
-  `(let ((the-server (Follow-path (list ',email-server))))
-     (loop for client-name in ',clients
-	 for client = (Follow-path (list client-name))
-	 do (tell `[email-client-of ,client ,the-server]))))
+    (tell [is-protocol ,name])
+    ,@(if (atom port)
+	  `((tell [port-for-protocol ,name ,port]))
+	(loop for number in port
+	    collect `(tell [port-for-protocol ,name ,number])))
+    ,@(when (and major-purpose sub-purpose)
+	`((tell [protocol-for ,major-purpose ,sub-purpose ,name]))))
+  )
 
 ;;; This lets you say that this thing will except a connetion from the positive space (1st arg), except for holes in that space
 ;;; that are the negative locations.
@@ -307,26 +369,12 @@
       `(tell-negative-policy-for-host ,bridge-or-computer ,protocol ,block ,@exceptions)
   `(tell-negative-routing-policy ,bridge-or-computer ,protocol ,block ,@exceptions)))
 
-(defmacro defprocess (role-name &key process-type machine program)
-  `(with-atomic-action
-       (kill-redefined-object ',role-name)
-     (instantiate-a-process ',process-type '(,machine) :role-name ',role-name :program ',program)))
-
-(defun instantiate-a-process (process-type machine &key role-name program)
-  (let* ((process-name (or role-name (gentemp (concatenate 'string (string-upcase (string process-type)) "-"))))
-         (machine (follow-path machine))
-         (os (follow-path (list machine 'os)))
-         (process (make-object process-type :name process-name))
-         (workload (follow-path (list os 'workload))))
-    (when program
-      (let ((program (follow-path program)))
-	(tell `[ltms:value-of (,process program) ,program])))
-    (tell `[ltms:value-of (,process host-os) ,os])
-    (tell `[ltms:value-of (,process machines) ,machine])
-    (typecase process
-      ((or server-process system-process) (tell `[ltms:value-of (,workload server-workload processes) ,process]))
-      (otherwise (tell `[ltms:value-of (,workload user-workload processes) ,process])))
-    process))
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;;
+;;; Stuff for defining a "system" of components that fill specific roles
+;;;  for example a control system with roles like controller, sensor, actuator
+;;;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 (defmacro define-system (name &key (system-type 'system) components roles)
   `(with-atomic-action
@@ -347,19 +395,19 @@
 (defmacro define-impact (property-1 resource-1 property-2 resource-2)
   `(tell `[impacts ,',property-1 ,(follow-path '(,resource-1)) ,',property-2 ,(follow-path '(,resource-2))]))
 
-;;; AUTO PILOT IS THE MOTIVATION
 ;;; BUT FALSE DATA INJECTION TO SENSORS IS A GENERAL MOTIVATION
 (defmacro define-proximity (who what means)
   `(tell `[is-proximate-to ,(follow-path '(,who)) ,(follow-path '(,what)) ,',means]))
 
-(defmacro define-protocol (name port &optional major-purpose sub-purpose)
-  `(with-atomic-action
-    (tell [is-protocol ,name])
-    ,@(if (atom port)
-	  `((tell [port-for-protocol ,name ,port]))
-	(loop for number in port
-	    collect `(tell [port-for-protocol ,name ,number])))
-    ,@(when (and major-purpose sub-purpose)
-	`((tell [protocol-for ,major-purpose ,sub-purpose ,name]))))
-  )
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;;
+;;; Server specific stuff (like for email
+;;;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+(defmacro def-email-clients (email-server &rest clients)
+  `(let ((the-server (Follow-path (list ',email-server))))
+     (loop for client-name in ',clients
+	 for client = (Follow-path (list client-name))
+	 do (tell `[email-client-of ,client ,the-server]))))
 

@@ -11,6 +11,7 @@
 
 (define-protocol telnet (23 2323) remote-execution remote-shell)
 (define-protocol ssh 22 remote-execution remote-shell)
+(define-protocol database-protocol  1433 database-access sql)
 
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -702,6 +703,30 @@
 
 	 
 	 
+
+(defun reachable-for-remote-execution (victim attacker)
+  (ask* `[reachable-for-remote-execution ,victim ,attacker ?protocol]
+	(return-from reachable-for-remote-execution ?protocol))
+  nil)
+
+;;; These are the ways an attacker could possibly
+;;; make a connection to get remote execution
+(defrule can-be-reached-for-remote-execution-ssh (:backward)
+  then [reachable-for-remote-execution ?victim ?attacker ssh]
+  if [accepts-connection ?victim ssh ?attacker])
+
+(defrule can-be-reached-for-remote-execution-telnet (:backward)
+  then [reachable-for-remote-execution ?victim ?attacker telnet]
+  if [accepts-connection ?victim telnet ?attacker])
+
+(defrule can-be-reached-for-remote-executon-email (:backward)
+  then [reachable-for-remote-execution ?victim ?attacker email]
+  if [accepts-connection ?victim email ?attacker])
+
+(defrule can-be-reached-for-remote-execution-http (:backward)
+  then [reachable-for-remote-execution ?victim ?attacker http]
+  if [accepts-connection ?victim http ?attacker])
+
 
 	 
 	      

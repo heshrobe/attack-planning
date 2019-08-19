@@ -37,13 +37,13 @@
 ;;; and use that to violate data-privacy.
 
 (defattack-method affect-property-by-controlling-impacting-component
-    :to-achieve [affect ?desirable-property ?victim ?input-context ?output-context]
+    :to-achieve [affect ?desirable-property ?victim]
     ;; find some component of the OS of a machine that the victim runs on
     :bindings ([ltms:value-of (?victim machines) ?computer]
                [ltms:named-part-of ?computer os ?os-instance]
                [part-of ?os-instance ?component]
-	       [current-foothold ?input-context ?foothold-machine ?foothold-role]
-	       [attacker-and-machine ?input-context ?attacker ?attacker-machine])
+	       [current-foothold ?foothold-machine ?foothold-role]
+	       [attacker-and-machine ?attacker ?attacker-machine])
     :typing ([ltms:object-type-of ?victim computer-resource]
              [ltms:object-type-of ?os-instance operating-system]
 	     [ltms:object-type-of ?component process])
@@ -55,16 +55,16 @@
            ;; Notice that the first step is oblivous to its purpose
            ;; This certainly makes things simpler but might lead to getting control in a way
            ;; that doesn't actually work
-           (:goal [takes-control-of ?attacker ?component-property ?component ?input-context ?controlled-context])
-           (:goal [use-control-of-to-affect-resource ?attacker ?component ?desirable-property ?victim ?controlled-context ?output-context]))
+           (:goal [takes-control-of ?attacker ?component-property ?component])
+           (:goal [use-control-of-to-affect-resource ?attacker ?component ?desirable-property ?victim]))
     )
 
 (defattack-method affect-property-by-affecting-input
-    :to-achieve [affect ?desirable-property ?victim ?input-context ?output-context]
+    :to-achieve [affect ?desirable-property ?victim]
     :prerequisites ([impacts ?resource-property ?resource ?desirable-property ?victim])
-    :bindings ([attacker-and-machine ?input-context ?attacker ?attacker-machine])
+    :bindings ([attacker-and-machine ?attacker ?attacker-machine])
     :typing ([ltms:object-type-of ?resource computer-resource])
-    :plan (:goal [affect ?resource-property ?resource ?input-context ?output-context])
+    :plan (:goal [affect ?resource-property ?resource])
     )
 
 
@@ -87,37 +87,35 @@
 ;;; is inversely proportional to something else increaese the something else
 
 (defattack-method increase-workload-to-decrease-performance
-    :to-achieve [affect performance ?process ?input-context ?output-context]
+    :to-achieve [affect performance ?process]
     :prerequisites ([desirable-property-of ?process performance])
     :bindings ([ltms:value-of (?process host-os) ?os]
 	       [ltms:value-of (?os machine) ?computer]
 	       [ltms:value-of (?os workload) ?workload]
 	       [protocol-is-relevant-for workload-size ?protocol]
-	       [attacker-and-machine ?input-context ?attacker  ?attacker-machine])
+	       [attacker-and-machine ?attacker  ?attacker-machine])
     :typing ([ltms:object-type-of ?process process]
 	     [ltms:object-type-of ?os operating-system]
 	     [ltms:object-type-of ?workload os-workload])
     :plan (:sequential
-	   (:goal [get-foothold ?computer ?protocol ?input-context ?foothold-context])
-	   (:goal [increase-size ?workload ?foothold-context ?output-context]))
+	   (:goal [get-foothold ?computer ?protocol])
+	   (:goal [increase-size ?workload]))
     )
 
-
 (defattack-method send-lots-of-emails
-    :to-achieve [affect performance ?process ?input-context ?output-context]
+    :to-achieve [affect performance ?process]
     :prerequisites ([desirable-property-of ?process performance])
     :bindings ([ltms:value-of (?process host-os) ?os-instance]
 	       [ltms:value-of (?os machine) ?computer]
-	       [current-foothold ?input-context ?foothold-machine ?foothold-role]
-	       [attacker-and-machine ?input-context ?attacker ?attacker-machine])
+	       [current-foothold ?foothold-machine ?foothold-role]
+	       [attacker-and-machine ?attacker ?attacker-machine])
     :typing ([ltms:object-type-of ?process email-server-process]
 	     [ltms:object-type-of ?foothold-machine computer]
 	     )
     :plan (:sequential
-	   (:goal [get-foothold ?computer email ?input-context ?foothold-context])
+	   (:goal [get-foothold ?computer email])
 	   (:repeated-action [submit-email ?attacker large-email ?process ?foothold-machine ?foothold-role]))
-    :post-conditions ([current-foothold ?foothold-context ?foothold-machine ?foothold-role]
-		      [unify ?foothold-context ?output-context])
+    :post-conditions ([current-foothold ?foothold-context ?foothold-machine ?foothold-role])
     )
 
 ;;; now what we want to say is:
@@ -129,17 +127,17 @@
 ;;; 2) Increase the size of the job launch queue
 
 (defattack-method increase-workload-by-increasing-job-launch-queue
-    :to-achieve [increase-size ?workload ?input-context ?output-context]
+    :to-achieve [increase-size ?workload]
     :bindings ([ltms:value-of (?workload os) ?os]
 	       [ltms:value-of (?os job-launch-queue) ?queue]
 	       [ltms:named-part-of ?queue user-job-launch-request-queue ?user-job-launch-queue]
-	       [current-foothold ?input-context ?foothold-machine ?foothold-role]
+	       [current-foothold ?foothold-machine ?foothold-role]
 	       )
     :typing ([ltms:object-type-of ?workload os-workload]
 	     [ltms:object-type-of ?os operating-system]
 	     [ltms:object-type-of ?queue os-job-launch-request-queue]
 	     [ltms:object-type-of ?user-job-launch-queue job-launch-request-queue])
-    :plan (:goal [increase-size ?user-job-launch-queue ?input-context ?output-context]))
+    :plan (:goal [increase-size ?user-job-launch-queue]))
 
 
 
@@ -150,10 +148,10 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 (defattack-method read-file-property-directly
-    :to-achieve [affect data-privacy ?file ?input-context ?output-context]
+    :to-achieve [affect data-privacy ?file]
     :prerequisites ([desirable-property-of ?file data-privacy])
     :typing ([ltms:object-type-of ?file data-resource])
-    :plan (:goal [achieve-knowledge-of-contents ?file ?input-context ?output-context])
+    :plan (:goal [achieve-knowledge-of-contents ?file])
     )
 
 
@@ -165,30 +163,30 @@
 
 ;;; Fix: Need to do an get-foothold to get foothold
 (defattack-method write-file-property-directly
-    :to-achieve [affect data-integrity ?file ?input-context ?output-context]
+    :to-achieve [affect data-integrity ?file]
     :typing ([ltms:object-type-of ?file file])
     :prerequisites ([desirable-property-of ?file data-integrity])
-    :plan (:goal [modify contents ?file ?input-context ?output-context])
+    :plan (:goal [modify contents ?file])
     )
 
 ;;; To affect the data-integrity of some data-set
 ;;; Get control of a process that produces the data-set
 (defattack-method mung-process-output
-    :to-achieve [affect data-integrity ?data-set ?input-context ?output-context]
+    :to-achieve [affect data-integrity ?data-set]
     :bindings ([output-of ?process ?data-set]
-	       [attacker-and-machine ?input-context ?attacker ?attacker-machine])    
+	       [attacker-and-machine ?attacker ?attacker-machine])    
     :typing ([ltms:object-type-of ?process process])
     :plan (:sequential
-           (:goal [takes-control-of ?attacker data-integrity ?process ?input-context ?controlled-context])
-           (:goal [use-control-of-to-affect-resource ?attacker ?process data-integrity ?data-set ?controlled-context ?output-context]))
+           (:goal [takes-control-of ?attacker data-integrity ?process])
+           (:goal [use-control-of-to-affect-resource ?attacker ?process data-integrity ?data-set]))
     )
 
 (defattack-method mung-database
-    :to-achieve [affect data-integrity ?database ?input-context ?output-context]
+    :to-achieve [affect data-integrity ?database]
     :bindings ([ltms:value-of (?database capability-requirements) (write ?requirement)]
 	       [ltms:value-of (?database machines) ?database-machine]
 	       [ltms:named-part-of ?database-machine os ?database-os]
-	       [current-foothold ?input-context ?current-foothold-machine ?current-foothold-role]
+	       [current-foothold ?current-foothold-machine ?current-foothold-role]
 	       )
     :typing ([ltms:object-type-of ?database database]
 	     [ltms:object-type-of ?current-foothold-role attacker]
@@ -200,17 +198,17 @@
 	   ;; Also note that it might bind these to the same thine as the current foothold
 	   ;; Also note that it returns in a state where you have remote-execution on the new-foothold-machine
 	   ;; And you've opened a connecion to the victim machine
-	   (:goal [get-foothold ?database-machine database-protocol ?input-context ?foothold-context])
-	   (:goal [make-connection ?database-machine database-protocol ?foothold-context ?connected-context])
-	   (:goal [modify data-integrity ?database ?connected-context ?output-context])
+	   (:goal [get-foothold ?database-machine database-protocol])
+	   (:goal [make-connection ?database-machine database-protocol])
+	   (:goal [modify data-integrity ?database])
 	   )
     )
 
 (defattack-method actually-make-connection
-    :to-achieve [make-connection ?victim-machine ?connection-type ?input-context ?output-context]
-    :bindings ([current-foothold ?input-context ?current-foothold-machine ?current-foothold-role])
+    :to-achieve [make-connection ?victim-machine ?connection-type]
+    :bindings ([current-foothold ?current-foothold-machine ?current-foothold-role])
     :plan (:action [connect-via ?current-foothold-machine ?current-foothold-role ?victim-machine ?connection-type])
-    :post-conditions ([unify ?input-context ?output-context])
+
     )
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -221,8 +219,8 @@
 
 (defattack-method take-control-of-directly
     ;; Takes control of a component to ultimately affect some property of the target
-    :to-achieve [takes-control-of ?attacker ?component-property ?component ?input-context ?output-context]
-    :plan (:goal [takes-direct-control-of ?attacker ?component-property ?component ?input-context ?output-context]))
+    :to-achieve [takes-control-of ?attacker ?component-property ?component]
+    :plan (:goal [takes-direct-control-of ?attacker ?component-property ?component]))
 
 ;;; one way to take direct control of a process is to
 ;;; first find some way to modify the loadable file so as to affect the property of the target
@@ -230,39 +228,61 @@
 
 ;;; Fix modify
 (defattack-method control-process-through-loadable-files
-    :to-achieve [takes-direct-control-of ?attacker ?victim-property ?victim ?input-context ?output-context]
+    :to-achieve [takes-direct-control-of ?attacker ?victim-property ?victim]
     :bindings ([ltms:value-of (?victim program) ?program]
                [ltms:value-of (?program load-files) ?file])
     :typing ([ltms:object-type-of ?victim process]
              [ltms:object-type-of ?program program]
              [ltms:object-type-of ?file dynamically-loadable-code-file])
     :plan (:sequential 
-           (:goal [modify contents ?file ?input-context ?modified-context])
+           (:goal [modify contents ?file ?input-context])
 	   ;; Note: this is a hack right now.  Really it should be a goal which would involve
 	   ;; a series of actions to cause the file to get loaded (logging in?, robooting?)
            (:action [load-file ?attacker ?file ?victim]))
-    ;; Really the action should cause a change of context.
-    ;; These post-conditions are standing in for that.
-    :post-conditions ([unify ?modified-context ?loaded-context]
-		      [unify ?loaded-context ?output-context])
     )
 
 ;;; Fixed:
 ;;; This mentions the host-os but it doesn't actually seem to carry through
 ;;; to the plan.  Just rationality check, I guess.
 (defattack-method buffer-overflow-can-control-server-processes
-    :to-achieve [takes-direct-control-of ?attacker ?process-property ?process ?input-context ?output-context]
+    :to-achieve [takes-direct-control-of ?attacker ?process-property ?process]
     ;; :bindings ([ltms:value-of (?process host-os) ?os-instance])
     :typing ([ltms:object-type-of ?process process]
              ;; [ltms:object-type-of ?os-instance operating-system]
              )
     :prerequisites ((is-vulnerable-to ?process 'buffer-overflow-attack))
     :plan (:action [take-control-with-buffer-overflow ?attacker ?process])
-    ;; The action here should cause a change of context
-    ;; This simulates that for the moment
-    :post-conditions ([unify ?input-context ?post-overflow-context]
-		      [unify ?post-overflow-context ?output-context])
     )
+
+(defrule check-vulnerabiity (:backward)
+  then [is-vulnerable-to ?process ?attack]
+  if (is-vulnerable-to ?process ?attack))
+
+;;; How to do the supertyping
+(defun is-vulnerable-to (process attack)
+  (labels ((do-one-type (type)
+             (let ((type-name (ji::object-type-name type)))
+               (ask `[protected-from ,type-name ,attack]
+                    #'(lambda (just)
+                        (declare (ignore just))
+                        (return-from is-vulnerable-to (values nil))))
+               (ask `[vulnerable-to ,type-name ,attack]
+                    #'(lambda (just)
+                        (declare (ignore just))
+                        (return-from is-vulnerable-to (values t))))
+               (loop for his-super in (ji::object-type-supertypes type)
+                   do (do-one-type his-super)))))
+    (let ((his-type (ji::basic-object-type process)))
+      (do-one-type his-type))
+    nil))
+
+(defrule web-servers-are-vulnerable (:backward)
+  then [vulnerable-to web-server-process buffer-overflow-attack]
+  if t)
+
+(defrule common-lisp-http-server-is-safe (:backward)
+  then [protected-from cl-http-server-process buffer-overflow-attack]
+  if t)
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;
@@ -271,17 +291,17 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 (defattack-method take-control-of-indirectly
-    :to-achieve [takes-control-of ?attacker ?victim-property ?victim ?input-context ?output-context]
-    :plan (:goal [takes-indirect-control-of ?attacker ?victim-property ?victim ?input-context ?output-context]))
+    :to-achieve [takes-control-of ?attacker ?victim-property ?victim]
+    :plan (:goal [takes-indirect-control-of ?attacker ?victim-property ?victim]))
 
 ;;; Find an input of the victim and modify its contents
 ;;; probably should say that the behavior is affected by the content
 ;;; Fix modify
 (defattack-method control-component-through-input
-    :to-achieve [takes-indirect-control-of ?attacker ?victim-property ?victim ?input-context ?output-context]
+    :to-achieve [takes-indirect-control-of ?attacker ?victim-property ?victim]
     ;; assumption is that we know thing
     :bindings ([input-of ?thing ?input])
-    :plan (:goal [modify contents ?input ?input-context ?output-context])
+    :plan (:goal [modify contents ?input])
     )
 
 
@@ -290,11 +310,11 @@
 
 ;;; fix modify
 (defattack-method control-component-through-input-size
-    :to-achieve [takes-indirect-control-of ?attacker ?victim-property ?victim ?input-context ?output-context]
+    :to-achieve [takes-indirect-control-of ?attacker ?victim-property ?victim]
     ;; assumption is that we know thing
     :prerequisites ([impacts size ?input ?victim-property ?victim])
     :bindings ([input-of ?victim ?input])
-    :plan (:goal [modify size ?input ?input-context ?output-context])
+    :plan (:goal [modify size ?input])
     )
 
 
@@ -309,33 +329,33 @@
 ;;; 1) achieve ability to modify something
 ;;; 2) Modify it in a way that affects the victim's property
 (defattack-method modify-through-part
-    :to-achieve [modify ?victim-property ?victim ?input-context ?output-context]
+    :to-achieve [modify ?victim-property ?victim]
     :typing ()
     :bindings ([ltms:part-of ?victim ?component])
     :prerequisites ([impacts ?component-property ?component ?victim-property ?victim])
-    :plan (:goal [modify ?component-property ?component ?input-context ?output-context])
+    :plan (:goal [modify ?component-property ?component])
     )
 
 ;;; modify a data-set by controlling a process that controls the data-set
 (defattack-method modify-through-controller
-    :to-achieve [modify ?victim-property ?victim ?input-context ?output-context]
-    :bindings ([attacker-and-machine ?input-context ?attacker ?attacker-machine])
+    :to-achieve [modify ?victim-property ?victim]
+    :bindings ([attacker-and-machine ?attacker ?attacker-machine])
     :typing ([ltms:object-type-of ?controller process]
              [ltms:object-type-of ?victim data-set])
     :prerequisites ([process-controls-data-set ?controller ?victim])
     :plan (:sequential 
-           (:goal [takes-control-of (controlled-data-set ?victim) ?controller ?input-context ?controlled-context])
-           (:goal [use-control-of-to-affect-resource ?attacker ?controller ?victim-property ?victim ?controlled-context ?output-context])) 
+           (:goal [takes-control-of (controlled-data-set ?victim) ?controller])
+           (:goal [use-control-of-to-affect-resource ?attacker ?controller ?victim-property ?victim])) 
     )
 
 ;;; NOTE: This should be expressed in a more general way about transforming formats
 ;;; but it will do for now.
 (defattack-method modify-loadable-code
-    :to-achieve [modify ?file-property ?object-file ?input-context ?output-context] 
+    :to-achieve [modify ?file-property ?object-file] 
     :prerequisites ([ltms:object-type-of ?object-file dynamically-loadable-code-file]
                     [ltms:value-of (?object-file source-file) ?source-file])
-    :plan (:sequential (:goal [modify code ?source-file ?input-context ?modified-context])
-                       (:goal [force-compilation ?attacker ?source-file ?object-file ?modified-context ?output-context]))
+    :plan (:sequential (:goal [modify code ?source-file])
+                       (:goal [force-compilation ?attacker ?source-file ?object-file]))
     )
 
 ;;; Here ?user is again feedback to the caller about whose rights you got
@@ -344,32 +364,31 @@
 ;;; then you do nothing.  Otherwise you go through achieve-access-right
 ;;; Partially fixed
 (defattack-method modify-through-available-access-rights
-    :to-achieve [modify ?object-property ?object ?input-context ?output-context]
+    :to-achieve [modify ?object-property ?object]
     :bindings ([ltms:value-of (?object machines) ?computer]
-	       [current-foothold ?input-context ?current-foothold-machine ?current-foothold-role])
+	       [attacker-and-machine ?attacker ?attacker-machine]
+	       [current-foothold ?current-foothold-machine ?current-foothold-role])
     :typing ([ltms:object-type-of ?computer computer])
     ;; Use this only if you don't already have the required capability
     ;; (what if more than one capability implies the right?  Shouldn't
     ;; we check that he doesn't have any of them).
     :prerequisites ((not (has-relevant-capability ?current-foothold-role 'write ?object)))
     :plan (:sequential 
-	   (:goal [achieve-access-right write ?object ?user ?input-context ?have-rights-context])
-	   (:action [use-access-right-to-modify write ?user ?object]))
-    :post-conditions ([unify ?have-rights-context ?output-context])
+	   (:goal [achieve-access-right write ?object ?user])
+	   (:action [use-access-right-to-modify ?attacker write ?user ?object]))
     )
 
 (defattack-method modify-through-available-access-rights-when-have-then
-    :to-achieve [modify ?object-property ?object ?input-context ?output-context]
+    :to-achieve [modify ?object-property ?object]
     :bindings ([ltms:value-of (?object machines) ?computer]
-	       [current-foothold ?input-context ?current-foothold-machine ?current-foothold-role]
-	       [attacker-and-machine ?input-context ?attacker ?attacker-machine])
+	       [current-foothold ?current-foothold-machine ?current-foothold-role]
+	       [attacker-and-machine ?attacker ?attacker-machine])
     :typing ([ltms:object-type-of ?computer computer])
     ;; Use this only if you don't already have the required capability
     ;; (what if more than one capability implies the right?  Shouldn't
     ;; we check that he doesn't have any of them).
     :prerequisites ((has-relevant-capability ?current-foothold-role 'write ?object))
-    :plan (:action [use-access-right-to-modify ?attacker write ?current-foothold-role ?object ?current-foothold-machine ?current-foothold-role])
-    :post-conditions ([unify ?input-context ?output-context])
+    :plan (:action [use-access-right-to-modify ?attacker write ?user ?object])
     )
 
 
@@ -377,12 +396,12 @@
 ;;; Find a user in the authorization pool for the OS
 ;;; and make that user a member of the active user set
 (defattack-method modify-size-by-increase-size
-    :to-achieve [modify size ?object ?input-context ?output-context]
-    :plan (:goal [increase-size ?object ?input-context ?output-context])
+    :to-achieve [modify size ?object]
+    :plan (:goal [increase-size ?object])
     )
 
 (defattack-method modify-active-user-set
-    :to-achieve [increase-size ?active-user-set ?input-context ?output-context]
+    :to-achieve [increase-size ?active-user-set]
     :bindings ([ltms:value-of (?active-user-set os) ?os-instance]
                [ltms:value-of (?os-instance authorization-pool) ?authorization-pool]
                [ltms:value-of (?authorization-pool users) ?user])
@@ -390,7 +409,7 @@
              [ltms:object-type-of ?os-instance operating-system]
              [ltms:object-type-of ?authorization-pool authorization-pool]
              [ltms:object-type-of ?user user])
-    :plan (:goal [make-member-of ?user ?active-user-set ?input-context ?output-context])
+    :plan (:goal [make-member-of ?user ?active-user-set])
     )
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -424,95 +443,75 @@
 ;;; we can generate them.
 
 (defattack-method remote-execution-to-remote-shell
-    :to-achieve [achieve-remote-execution ?victim-machine ?victim-user ?input-context ?output-context]
-    :guards ([not [place-already-visited? ?input-context ?victim-machine remote-execution ?victim-user]])
+    :to-achieve [achieve-remote-execution ?victim-machine ?victim-user]
+    :guards ([not [place-already-visited? ?victim-machine remote-execution]])
     :bindings ([ltms:named-part-of ?victim-machine os ?victim-os]
 	       [ltms:value-of (?victim-os users) ?victim-user]
-	       [note-place-visited ?input-context ?victim-machine remote-execution ?victim-user ?visited-context]
 	       )
     :typing ([ltms:object-type-of ?victim-os operating-system]
              [ltms:object-type-of ?victim-user user]
 	     [ltms:object-type-of ?victim-machine computer])
-    :prerequisites ()
-    :plan (:goal [achieve-remote-shell ?victim-os ?victim-user ?visited-context ?output-context])
-    :post-conditions ())
+    :plan (:sequential
+	   (:note [place-visited ?victim-machine remote-execution])
+	   (:goal [achieve-remote-shell ?victim-os ?victim-user])))
 
 (defattack-method how-to-logon
-    :to-achieve [achieve-remote-shell ?victim-os-instance ?victim-user ?input-context ?output-context]
-    :bindings ([ltms:value-of (?victim-os-instance users) ?victim-user]
-	       [ltms:value-of (?victim-os-instance authorization-pool) ?pool]
-	       [ltms:value-of (?victim-os-instance machine) ?victim-machine]
-	       [current-foothold ?input-context ?current-foothold-machine ?current-foothold-role]
+    :to-achieve [achieve-remote-shell ?victim-os-instance ?victim-user]
+    :bindings ([ltms:value-of (?victim-os-instance machine) ?victim-machine]
+	       [current-foothold ?current-foothold-machine ?current-foothold-role]
+	       [attacker-and-machine ?attacker ?attacker-machine]
 	       [protocol-for remote-execution remote-shell ?protocol])
     :typing ([ltms:object-type-of ?victim-os-instance operating-system]
-             [ltms:object-type-of ?pool authorization-pool]
 	     [ltms:object-type-of ?victim-machine computer]
 	     [ltms:object-type-of ?victim-user user])
     :plan (:sequential
-	   (:goal [get-foothold ?victim-machine ?protocol ?input-context ?foothold-context])	   
-           (:goal [achieve-knowledge-of-password ?current-foothold-role ?victim-user ?pool ?victim-machine ?foothold-context ?password-context])
-           (:action [login ?victim-user ?victim-os-instance ?current-foothold-machine ?current-foothold-role]))
-    :post-conditions ([current-foothold ?foothold-context ?next-foothold-machine ?next-foothold-role]
-		      [has-foothold ?password-context ?victim-machine ?victim-user ?output-context]))
+	   (:goal [get-foothold ?victim-machine ?protocol])
 
+           (:goal [achieve-knowledge-of-password ?attacker ?victim-user ?victim-machine])
+           (:action [login ?victim-user ?victim-os-instance ?current-foothold-machine ?current-foothold-role]))
+    )
+
+;;; The stuff with noting place visited is there to prevet goal reduction loops
+;;; We note that we've already tried to achieve execution on this machine and this
+;;; produces a new context which is the context for achieving the goal
 (defattack-method remote-execution-to-code-injection
-    :to-achieve [achieve-remote-execution ?victim-machine ?victim-process ?input-context ?output-context]
-    :guards ([not [place-already-visited? ?input-context ?victim-machine remote-execution ?victim-process]])
+    :to-achieve [achieve-remote-execution ?victim-machine ?victim-process]
+    :guards ([not [place-already-visited? ?victim-machine remote-execution]])
     :bindings ([ltms:named-part-of ?victim-machine os ?os-instance] 
-	       [ltms:value-of (?os-instance processes) ?victim-process]
-	       [note-place-visited ?input-context ?victim-machine remote-execution ?victim-process ?visited-context])
+	       [ltms:value-of (?os-instance processes) ?victim-process])
     :typing ([ltms:object-type-of ?os-instance operating-system]
 	     [ltms:object-type-of ?victim-process process])
-    :prerequisites ()
-    :plan (:goal [achieve-code-injection ?victim-process ?os-instance ?visited-context ?output-context]))
+    :plan (:sequential
+	   (:note [place-visited ?victim-machine remote-execution])
+	   (:goal [achieve-code-injection ?victim-process ?os-instance])))
 
-(defattack-method code-injection-against-web-server
-    :to-achieve [achieve-code-injection ?process ?os-instance ?input-context ?output-context]
+(defattack-method code-injection-against-process
+    :to-achieve [achieve-code-injection ?process ?os-instance]
     :bindings ([ltms:value-of (?os-instance processes) ?process]
-	       [current-foothold ?input-context ?foothold-machine ?foothold-role])
+	       [current-foothold ?foothold-machine ?foothold-role])
     :typing ([ltms:object-type-of ?process web-server-process])
     :prerequisites ([vulnerable-to-overflow-attack ?process])
     :plan (:action [launch-code-injection-attack ?process ?foothold-machine ?foothold-role])
-    :post-conditions ([unify ?input-context ?output-context])
     )
 
 (defattack-method remote-execution-to-code-reuse
-    :to-achieve [achieve-remote-execution ?victim-machine ?victim-process ?input-context ?output-context]
-    :guards ([not [place-already-visited? ?input-context ?victim-machine remote-execution ?victim-process]])
+    :to-achieve [achieve-remote-execution ?victim-machine ?victim-process]
+    :guards ([not [place-already-visited? ?victim-machine remote-execution]])
     :bindings ([ltms:named-part-of ?victim-machine os ?os-instance]
-	       [ltms:value-of (?os-instance processes) ?victim-process]
-	       [note-place-visited ?input-context ?victim-machine remote-execution ?victim-process ?visited-context])
+	       [ltms:value-of (?os-instance processes) ?victim-process])
     :typing ([ltms:object-type-of ?os-instance operating-system]
 	     [ltms:object-type-of ?victim-process process])
-    :prerequisites ()
-    :plan (:goal [achieve-code-reuse ?victim-process ?os-instance ?visited-context ?output-context]))
+    :plan (:sequential
+	   (:note [place-visited ?victim-machine remote-execution]) 
+	   (:goal [achieve-code-reuse ?victim-process ?os-instance])))
 
 (defattack-method code-reuse-against-web-server
-    :to-achieve [achieve-code-reuse ?process ?os-instance ?input-context ?output-context]
-    :bindings ([current-foothold ?input-context ?foothold-machine ?foothold-role])
+    :to-achieve [achieve-code-reuse ?process ?os-instance]
+    :bindings ([current-foothold ?foothold-machine ?foothold-role])
     :typing ([ltms:object-type-of ?process web-server-process])
     :prerequisites ([vulnerable-to-overflow-attack ?process])
     :plan (:action [launch-code-reuse-attack ?process ?foothold-machine ?foothold-role])
-    :post-conditions ([unify ?input-context ?output-context]))
-
-;;; Note: It's more general if we just say to achieve remote-execution
-;;; and let the system determine whether that meant remote-shell, code-injection, code-reuse, etc.
-;;; In deterimining how to do that it also determines what entity to do it as.
-
-(defattack-method modify-job-request-queue
-    :to-achieve [increase-size ?user-job-launch-queue ?input-context ?output-context]
-    :bindings ([ltms:named-part-of ?full-job-launch-queue user-job-launch-request-queue ?user-job-launch-queue]
-               [ltms:value-of (?full-job-launch-queue os) ?os-instance]
-	       [ltms:value-of (?os-instance job-launch-queue) ?full-job-launch-queue]
-	       [ltms:value-of (?attacker machines) ?attacker-machine]
-	       )
-    :typing ([ltms:object-type-of ?user-job-launch-queue job-launch-request-queue]
-             [ltms:object-type-of ?full-job-launch-queue os-job-launch-request-queue]
-             [ltms:object-type-of ?os-instance operating-system]
-	     [ltms:object-type-of ?attacker-machine computer])
-    :plan (:sequential
-           (:goal [achieve-remote-execution ?os-instance ?entity ?input-context ?output-context])
-           (:repeated-action [submit-user-jobs ?entity ?user-job-launch-queue])))
+    )
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;
@@ -523,7 +522,7 @@
 ;;; If somebody has goined direct control of the job-launcher
 ;;; They can affect performance by adding jobs
 (defattack-method add-jobs-after-job-launcher-is-hacked
-    :to-achieve [use-control-of-to-affect-resource ?attacker ?controller performance ?target ?input-context ?output-context]
+    :to-achieve [use-control-of-to-affect-resource ?attacker ?controller performance ?target]
     :bindings ([ltms:named-part-of ?os job-admitter ?controller]
                [ltms:value-of (?os-instance workload) ?input])
     :typing ([ltms:object-type-of ?controller os-job-admitter]
@@ -531,18 +530,32 @@
              [ltms:object-type-of ?input os-workload]
 	     [ltms:object-type-of ?target process])
     :plan (:action [add-user-jobs ?attacker ?input])
-    :post-conditions ([unify ?input-context ?output-context])
     )
+
+(defattack-method modify-job-request-queue
+    :to-achieve [increase-size ?user-job-launch-queue]
+    :bindings ([ltms:named-part-of ?full-job-launch-queue user-job-launch-request-queue ?user-job-launch-queue]
+               [ltms:value-of (?full-job-launch-queue os) ?os-instance]
+	       [ltms:value-of (?os-instance job-launch-queue) ?full-job-launch-queue]
+	       [ltms:value-of (?attacker machines) ?attacker-machine]
+	       )
+    :typing ([ltms:object-type-of ?user-job-launch-queue job-launch-request-queue]
+             [ltms:object-type-of ?full-job-launch-queue os-job-launch-request-queue]
+             [ltms:object-type-of ?os-instance operating-system]
+	     [ltms:object-type-of ?attacker-machine computer])
+    :plan (:sequential
+           (:goal [achieve-remote-execution ?os-instance ?entity])
+           (:repeated-action [submit-user-jobs ?entity ?user-job-launch-queue])))
     
 ;;; If you control a process that produces an output
 ;;; you can use that control to mung the data-structure in core
 (defattack-method mung-in-core-data-structures
-    :to-achieve [use-control-of-to-affect-resource ?attacker ?process data-integrity ?data-set ?input-context ?output-context]
+    :to-achieve [use-control-of-to-affect-resource ?attacker ?process data-integrity ?data-set]
     :bindings ([output-of ?process ?data-set]
-	       [current-foothold ?input-context ?foothold-machine ?foothold-role])
+	       [current-foothold ?foothold-machine ?foothold-role])
     :typing ([ltms:object-type-of ?process process])
     :plan (:action [modify-in-core-data-structures ?process ?data-set ?foothold-machine ?foothold-role])
-    :post-conditions ([unify ?input-context ?output-context]))
+    )
 
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -553,29 +566,27 @@
 
 ;;; Eventually we need to treat actions as real things that change the state
 (defattack-method how-to-read-a-file
-    :to-achieve [achieve-knowledge-of-contents ?file ?input-context ?output-context]
+    :to-achieve [achieve-knowledge-of-contents ?file]
     :bindings ([ltms:value-of (?file machines) ?machine]
-	       [attacker-and-machine ?input-context ?attacker ?attacker-machine])
-    :prerequisites ([achieve-remote-execution ?victim-machine ?user ?input-context ?execution-context])
+	       [attacker-and-machine ?attacker ?attacker-machine])
+    :prerequisites ()
     :typing ([ltms:object-type-of ?file file])
     :plan (:sequential
-           (:goal [achieve-access-right ?user read ?file ?privileged-user ?input-context ?have-rights-context])
+	   (:goal [achieve-remote-execution ?victim-machine ?user])
+           (:goal [achieve-access-right ?user read ?file ?privileged-user])
            (:action [read-with-rights-of ?attacker ?privileged-user ?file])
 	   (:action [open-ftp-connection ?attacker ?attacker-machine])
 	   (:action [trasmit-data ?attacker ?file ?attacker-machine])
-	   )
-    :post-conditions ([unify ?have-rights-context ?output-context])
-    )
+	   ))
 
 ;;; If your foothold role already has the access rights
 ;;; do nothing
 (defattack-method achieve-a-right-you-already-have 
-    :to-achieve [achieve-access-right ?object ?right ?user ?input-context ?output-context]
-    :bindings ([current-foothold ?input-context ?foothold-machine ?foothold-role])
+    :to-achieve [achieve-access-right ?object ?right ?user]
+    :bindings ([current-foothold ?foothold-machine ?foothold-role])
     :prerequisites ([has-permission ?foothold-role ?object ?right])    
-    :bindings ([unify ?user ?foothold-role])
+    :bindings ([unifiable ?user ?foothold-role])
     :plan ()
-    :post-conditions ([unify ?input-context ?output-context])
     )
 
 ;;; The ?user part of this is actually to feed back to the higher
@@ -591,7 +602,7 @@
 ;;; then do this.
 
 (defattack-method achieve-access-right-by-process-subversion
-    :to-achieve [achieve-access-right ?right ?object ?user ?input-context ?output-context]
+    :to-achieve [achieve-access-right ?right ?object ?user]
     ;; all this is asking is there a process in the workload
     ;; and if so with which user's permissions is it running
     :bindings ([ltms:value-of (?object machines) ?machine]
@@ -600,8 +611,8 @@
                [or [ltms:value-of (?os-workload server-workload processes) ?the-process]
                    [ltms:value-of (?os-workload user-workload processes) ?the-process]]
                [runs-with-permissions-of ?the-process ?user]
-	       [attacker-and-machine ?input-context ?attacker ?attacker-machine]
-	       [current-foothold ?input-context ?foothold-machine ?foothold-role]
+	       [attacker-and-machine ?attacker ?attacker-machine]
+	       [current-foothold ?foothold-machine ?foothold-role]
                )
     :typing ([ltms:object-type-of ?object computer-resource]
              [ltms:object-type-of ?machine computer]
@@ -612,19 +623,18 @@
     ;; This is the key pre-req: The process has the desired right to the object
     :prerequisites ([has-permission ?the-process ?right ?object])
     :plan (:sequential
-	   (:goal [takes-direct-control-of ?attacker execution ?the-process ?input-context ?controlled-context])
+	   (:goal [takes-direct-control-of ?attacker execution ?the-process])
 	   (:action [uses-control-to-achieve-access-right ?attacker ?right ?object ?foothold-machine]))
-    :post-conditions ([unify ?controlled-context ?output-context])
     )
 
 ;;; similar comment to above about foothold etc
 (defattack-method how-to-achieve-access-right-by-remote-shell-on-target
-    :to-achieve [achieve-access-right ?right ?object ?other-user ?input-context ?output-context]
+    :to-achieve [achieve-access-right ?right ?object ?other-user]
     :bindings ([ltms:value-of (?object machines) ?machine]
                [ltms:named-part-of ?machine os ?os-instance]
                [requires-access-right ?object ?right ?capability]
 	       [ltms:value-of (?os-instance authorization-pool) ?pool]
-	       [current-foothold ?input-context ?foothold-machine ?foothold-role]
+	       [current-foothold ?foothold-machine ?foothold-role]
 	       [ltms:named-part-of ?foothold-machine os ?foothold-os]
 	       [ltms:value-of (?pool users) ?other-user])
     :typing ([ltms:object-type-of ?object computer-resource]
@@ -634,7 +644,7 @@
              [ltms:object-type-of ?other-user user])
     ;; Note: has-capability is a function not an assertion
     :prerequisites ((has-capability ?other-user ?capability))
-    :plan (:goal [achieve-remote-shell ?foothold-os ?other-user ?input-context ?output-context])
+    :plan (:goal [achieve-remote-shell ?foothold-os ?other-user])
     )
 
 ;;;;;; Note & Fix: This calls itself recursively but has no protection against
@@ -678,14 +688,12 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 (defattack-method join-active-user-set
-    :to-achieve [make-member-of ?user ?active-user-set ?input-context ?output-context]
+    :to-achieve [make-member-of ?user ?active-user-set]
     :bindings ([ltms:value-of (?active-user-set os) ?os-instance])
     :typing ([ltms:object-type-of ?active-user-set user-set]
              [ltms:object-type-of ?os-instance operating-system])
-    :plan (:goal [achieve-remote-shell ?os-instance ?user ?input-context ?output-context])
+    :plan (:goal [achieve-remote-shell ?os-instance ?user])
     )
-
-
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;
@@ -694,88 +702,84 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 (defattack-method user-knows-own-password
-    :to-achieve [achieve-knowledge-of-password ?attacker ?user ?pool ?victim-machine ?input-context ?output-context]
-    :prerequisites ((prog1 t "have password ~a ~" ?attacker ?user)
-		    (equal ?attacker ?user))
-    :plan (:action [use-own-password ?user ?pool ?victim-machine])
-    :post-conditions ([unify ?input-context ?output-context])
+    :to-achieve [achieve-knowledge-of-password ?attacker ?user ?victim-machine]
+    :guards ([unifiable ?attacker ?user])
+    :plan (:action [use-own-password ?user ?victim-machine])
     )
             
 (defattack-method how-to-get-password-by-guessing
-    :to-achieve [achieve-knowledge-of-password ?attacker ?user ?pool ?victim-machine ?input-context ?output-context]
-    :prerequisites ((prog1 t "guess password ~a ~" ?attacker ?user) 
-		    (not (equal ?attacker ?user)))
-    :plan (:goal [guess-password ?attacker ?user ?pool ?victim-machine ?input-context ?output-context ])
-    :post-conditions ([unify ?input-context ?output-context])
+    :to-achieve [achieve-knowledge-of-password ?attacker ?user ?victim-machine]
+    :guards ([not [unifiable ?attacker ?user]])
+    :plan (:goal [guess-password ?attacker ?user ?victim-machine])
     )
 
 (defattack-method guess-typical-user
-    :to-achieve [guess-password ?attacker ?user ?pool ?victim-machine ?input-context ?output-context]
+    :to-achieve [guess-password ?attacker ?user ?victim-machine]
     :typing ([ltms:object-type-of ?user user]
 	     [ltms:value-of (?user typical-p) t]
-             [ltms:object-type-of ?attacker attacker])
-    :plan (:action [password-dictionary-lookup-attack ?attacker ?user ?victim-machine ?pool])
-    :post-conditions ([unify ?input-context ?output-context])
+	     [ltms:object-type-of ?attacker attacker])
+    :plan (:action [password-dictionary-lookup-attack ?attacker ?user ?victim-machine])
     )
 
 (defattack-method guess-superuser-passwords
-    :to-achieve [guess-password ?attacker ?user ?pool ?victim-machine ?input-context ?output-context]
+    :to-achieve [guess-password ?attacker ?user ?victim-machine]
     :typing ([ltms:value-of (?user machines) ?machine]
              [ltms:value-of (?machine os superuser) ?user])
     :bindings ([ltms:object-type-of ?user user]
                [ltms:object-type-of ?machine computer])
-    :plan (:action [password-dictionary-lookup-attack ?attacker ?user ?pool])
-    :post-conditions ([unify ?input-context ?output-context])
+    :plan (:action [password-dictionary-lookup-attack ?attacker ?user ?victim-machine])
     )
 
 (defattack-method get-sysadmin-password-by-bricking
-    :to-achieve [achieve-knowledge-of-password ?attacker ?victim-user ?resource ?victim-machine ?input-context ?output-context]
+    :to-achieve [achieve-knowledge-of-password ?attacker ?victim-user ?victim-machine]
     :bindings ([ltms:value-of (?victim-user machines) ?victim-machine]
-	       [current-foothold ?input-context ?foothold-machine ?foothold-role])
+	       [current-foothold ?foothold-machine ?foothold-role])
     :typing ([ltms:object-type-of ?victim-user user]
 	     [ltms:object-type-of ?victim-machine computer])
     :prerequisites ([ltms:value-of (?victim-machine os superuser) ?victim-user])
     :plan (:sequential
-	    (:goal [install-malware ?attacker ?victim-machine key-logger ?input-context ?post-malware-context])
-	    (:goal [brick-machine ?attacker ?victim-machine ?post-malware-context ?output-context])
+	    (:goal [install-malware ?attacker ?victim-machine key-logger])
+	    (:goal [brick-machine ?attacker ?victim-machine])
 	    (:action [capture-password-through-keylogger ?attacker ?victim-user ?victim-machine])
 	    ))
 
 (defattack-method brick-machine-by-kill-disk
-    :to-achieve [brick-machine ?attacker ?foothold-machine ?input-context ?output-context]
+    :to-achieve [brick-machine ?attacker ?victim-machine]
+    :prerequisites ([has-remote-execution ?attacker ?victim-machine ?role])
     :plan (:sequential
-	   (:goal [install-malware ?attacker ?foothold-machine kill-disk ?input-context ?output-context])
-	   (:action [fill-disk ?attacker ?foothold-machine kill-disk])
+	   (:goal [install-malware ?attacker ?victim-machine kill-disk])
+	   (:action [fill-disk ?attacker ?victim-machine kill-disk])
 	   ))
 
 ;;; This is a stub
 (defattack-method how-to-install-malware
-    :to-achieve [install-malware ?attacker ?victim-machine ?malware-type ?input-context ?output-context]
+    :to-achieve [install-malware ?attacker ?victim-machine ?malware-type]
     :prerequisites ()
-    :plan (:sequential
-	   (:action [install-malware ?attacker ?malware-type ?victim-machine]))
-    :post-conditions ([unify ?input-context ?output-context]))
+    :plan (:action [install-malware ?attacker ?malware-type ?victim-machine]))
 
 
 ;note: need plan for install malware
 
-;;; Fix This
+;;; Fix This:
+;;; To pull off a phishing attack:
+;;;  The attacker must have a foothold for the email server of the victim-user
+;;;  
 (defattack-method how-to-get-password-by-phishing
-    :to-achieve [achieve-knowledge-of-password ?attacker ?user ?resource ?victim-machine ?input-context ?output-context]
-    :bindings ([email-client-of ?user ?process]
+    :to-achieve [achieve-knowledge-of-password ?attacker ?victim-user ?victim-machine]
+    :bindings ([email-client-of ?victim-user ?process]
 	       [ltms:value-of (?attacker machines) ?attacker-machine]
 	       [ltms:value-of (?process host-os) ?os-instance]
-	       [ltms:value-of (?os-instance machine) ?machine]
+	       [ltms:value-of (?os-instance machine) ?email-server-machine]
 	       )
-    :typing ([ltms:object-type-of ?user user]
+    :typing ([ltms:object-type-of ?victim-user user]
 	     [ltms:object-type-of ?process email-server-process]
 	     [ltms:object-type-of ?os-instance operating-system]
-             [ltms:object-type-of ?machine computer]
+             [ltms:object-type-of ?email-server-machine computer]
 	     [ltms:object-type-of ?attacker-machine computer])
     :plan (:sequential
-           (:goal [get-foothold ?attacker-machine smtp ?input-context ?output-context])
-           (:action [phishing-attack ?attacker ?user ?process ?current-foothold-machine ?current-foothold-role]))
-    :post-conditions ([current-foothold ?output-context ?current-foothold-machine ?current-foothold-role])
+           (:goal [get-foothold ?email-server-machine smtp])
+           (:action [phishing-attack ?attacker ?email-server-machine ?victim-user ?process]))
+    :post-conditions ([current-foothold ?current-foothold-machine ?current-foothold-role])
     )
 
 
@@ -788,14 +792,13 @@
 ; 			     )))))
 
 (defattack-method how-to-get-password-by-sniffing
-    :to-achieve [achieve-knowledge-of-password ?attacker ?user ?resource ?victim-machine ?input-context ?output-context]
+    :to-achieve [achieve-knowledge-of-password ?attacker ?user ?victim-machine]
     :typing ([ltms:object-type-of ?user user]
              [ltms:object-type-of ?victim-machine computer]
              [ltms:object-type-of ?subnet subnet])
-    :bindings ([ltms:value-of (?victim-machine subnets) ?subnet]
-               )
+    :bindings ([ltms:value-of (?victim-machine subnets) ?subnet])
     :plan (:parallel 
-           (:goal [observe-network-traffic ?attacker ?subnet ?input-context ?output-context])
+           (:goal [observe-network-traffic ?attacker ?subnet])
            (:action [sniff-a-password ?attacker ?user ?subnet]))
     )
 
@@ -810,142 +813,43 @@
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;
-;;; Connecting
-;;; get-foothold is given the following "In Arguments"
-;;;  The attacker
-;;;  Where  the attacker is starting from
-;;;  The victim os instance
-;;;  and what protocol he's trying
-;;;  the 
-;;; There is an "Out Argument" which is the first machine on the path from here
-;;; and this machine is guaranteed to be directly reachable by the attacker
+;;; Lateral Motion
+;;; If the attacker is trying to achieve a connection to a target machine "A" using some specific protocol
+;;; There are two cases:
+;;; 1) The attacker can reach A from its current position
+;;; 2) The attacker can't reach A using that protocol from its current position.
+;;;    In this case the attacker follows this strategy
+;;;    a) Find a machine B that can make the intended connection 
+;;;    b) Get some form of remote execution on B
+;;;    c) Have B make the connection to A
+;;;    Achieving remote execution on B, however, may not be directly achievable
+;;;    Because that requires connecting to B from the attacker's position using
+;;;    whatever protocol is relevant for the exploit that allow remote execution
+;;;    So the operator that achieves remote execution on B may need to get a foothold
+;;;    on some machine C that can reach B, and so on recursively.
+;;;    
+;;;    One thing that complicates this reasoning is that when B isn't directly reachable and the attacker tries
+;;;    to find a foothold to B (which was the foothold to get to A), we might discover that A could serve as the foothold
+;;;    to B.  But then we'd be in an infinite goal descent.
+;;; So to prevent this we do something hokey:
+;;; 1) We put a guard on the operator, saying that it's only valid if it hasn't already been visited
+;;; 2) We add a "note" in the plan saying that we should note that we've visited this place
 ;;;
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-
-
-;;; Lateral MotionAchieve
-;;; If you're trying to achieve a connection to a machine
-;;; One way to do so is to find a different machine in the same enterprise
-;;; Gain remote-execution on that machine and then
-;;; Achieve the connection from the remote machine
-;;; Note: the way this currently works, the recusive call doesn't specify the next intermediate machine
-;;; which will allow it to form multi-hop routes.  Note that the intermediate-machine that's bound here
-;;; is the first hop from the attacker on the path to the victim
-
-;;; This seems remarkably screwed up --- HES
-;;; First of all in the pre-prequisites it says that the intermediate machine has to be reachable
-;;; for ssh.  That makes no sense.  I think this condition should be nuked out.
-;;; What you want to say is 
-;;; 1) Find a machine that make the connection you want (this is the 2nd prerequiste)
-;;; 2) Achieve remote execution on the intermediate machine somehow
-;;; 3) Make the connection you wanted to begin with (i.e. not achieve as a goal but make as an action)
-;;;
-;;; The rules for achieving remote execution might recursively invoke a rule for achieving a connection
-;;; The obvious case would be (in a 2 hop scheme) You find a machine that can connect to the victim in the desired way
-;;; Then you ask to achieve remote execution on that machine
-;;; If you're already running on that machine there's nothing to do
-;;; But if not, then you want to find a machine that can connect to this 2nd victim machine in one of a number of ways
-;;; depending on how you want to achieve remote execution on it.  Maybe you can telnet or ssh to it, or you can code inject
-;;; (or ROP) on some process running on that machine and take over its execution.  Each of these requires you to be able to make
-;;; a connection of a particular kind.
-;;; Or you can find a 3rd machine that you can get remote execution which can talk to the 2nd machine in the appropriate way
-;;; and you try to get a connection to that one.
-
-
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;; Corresponding to the two cases there are two methods
+;;; There are two attack-methods: 
+;;; From the easy case (1):  Direct-Foothold
+;;; For the hard caser (2): Lateral-motion
 ;;; 
-;;; Lateral Motion reasoning: get-foothold
-;;;
-;;; The top level of this tries to find a foothold machine and role from which the attacker can get to the victim machine
-;;; with a certain protocol (or connection-type more generally).
-;;; 
-;;; We start out with the attacker already at some foothold machine playing some role there (e.g. it might be running a remote shell
-;;; as a particular use or it might be in control of some process on the foothold machine).
-;;;
-;;;
-;;; There are two attack-methods:
-;;; 1) The easy case: The victim will directly accept the intended connection-type from the foothold-machine
-;;; 2) The hard case: The victim won't directly accept the intended connection-type from the foothold-machine
-;;;    Then you have to find a machine that it will accept such a connection from.  This is the new-foothold-machine
-;;;      and you have to achieve remote-execution of some kind on this new-foothold-machine starting from the original-foothold-machine
-;;;      The way in which you achieve remote execution determines the new-foothold-machine
-;;; Note that strategies to achieve remote-execution on the new-foothold-machine might need to first find an intermediate-foothold from which
-;;; to make make the connection through which it gains remote-execution.  So we get a mutually-recursive strategy.
-;;; To avoid looping back to where we started from we pass along a list of all the previous footholds to check against.
-;;;
-;;; Also note that each of these two has pre-requisite conditions that act as guards, i.e. you only try this strategy if
-;;; the guard holds.  These guards are either positive or negative accepts-connection predications.
-;;;
-;;; Here ?new-foothold-machine and ?new-foothold-role are output values that are bound here
-;;; and ?other-footholds are all the other footholds that the attacker has
-;;; including where he's operating from now
-;;; this is there mainly to avoid looping (i.e. trying from a place you've already tried)
-;;;
-;;; Redesign note: Passing along all these footholds should really be done by maintaining "world-states" i.e. sets of predications that 
-;;; are true at certain points in the attack-plan.  The existence of these can be hidden in the macrology.  But this is for later.
-;;;
-;;;
-;;; This used to go to some trouble to only consider machines with the enterprise of the victim
-;;; I've commented that out; why not use any machine that can reach the victim?
-;;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
-;;; This is the commented out stuff in case I think it's needed again.
-	       ;; [ltms:value-of (?victim-machine site) ?site]
-	       ;; [ltms:value-of (?site enterprise) ?enterprise]
-	       ;; [ltms:value-of (?enterprise sites) ?foothold-site]
-	       ;; [ltms:value-of (?foothold-site subnets) ?foothold-subnet]
-	       ;; [ltms:value-of (?foothold-subnet computers) ?foothold-machine]
-	       ;; [ltms:named-part-of ?foothold-machine os ?foothold-os-instance]
-	       ;; (unify ?attacker-machine (first (first ?other-footholds)))
-	       ;; (unify ?attacker-role (second (first ?other-footholds)))
-
-	     ;; [ltms:object-type-of ?site site]
-	     ;; [ltms:object-type-of ?enterprise enterprise]
-	     ;; [ltms:object-type-of ?new-foothold-site site]
-	     ;; [ltms:object-type-of ?new-foothold-subnet subnet]
-	     ;; [ltms:object-type-of ?new-foothold-computer computer]
-	     ;; [ltms:object-type-of ?new-foothold-os-instance operating-system]
-
-(defattack-method lateral-motion
-    :to-achieve [get-foothold ?victim-machine ?protocol-name ?input-context ?output-context]
-    :guards ([not [place-already-visited? ?input-context ?victim-machine foothold ?protocol-name]]
-	     ;; Use this method only if you can't get a connection to the victim from where you are
-	     [not [accepts-connection ?victim-machine ?protocol-name ?current-foothold-machine]]
-		    [not [foothold-exists ?input-context ?new-foothold-machine]]
-	     )
-    :bindings ([ltms:named-part-of ?victim-machine os ?victim-os]
-	       [current-foothold ?input-context ?current-foothold-machine ?current-foothold-role]
-	       ;; Now find somebody that can make the connection, accepts connection will find one if there is one
-	       [accepts-connection ?victim-machine ?protocol-name ?new-foothold-machine]
-	       ;; and make sure you're not looping back to a foothold you've already visited
-	       ;; note that we've been there so that we don't loop 
-	       [note-place-visited ?input-context ?victim-machine foothold ?protocol-name ?visited-context]
-	       )
-    :typing ([ltms:object-type-of ?victim-os operating-system]
-	     [ltms:object-type-of ?victim-machine computer]
-	     [ltms:object-type-of ?current-foothold-machine computer]
-	     )
-    :prerequisites ()
-    :plan (:sequential
-	   ;; Now see if the attacker can gain remote execution on the new-foothold-machine and in what role 
-	   ;; (?new-foothold-role is a return value)
-	   (:goal [achieve-remote-execution ?new-foothold-machine ?new-foothold-role ?visited-context ?remote-execution-context])
-	   ;;If so then actually make the connection to the victim from the new foothold
-	   ;; (:goal [make-connection ?victim-os-instance ?protocol-name ?remote-execution-context ?output-contet])
-	   )
-    :post-conditions ([has-foothold ?remote-execution-context ?new-foothold-machine ?new-foothold-role ?output-context]))
 
 ;;; Direct Method, applicable when you can get from your current foothold to the target-machine 
 ;;; so the foothold is the where this step is taking place from and the role is the attacker
-(defattack-method get-foothold-by-protocol
-    :to-achieve [get-foothold ?victim-machine ?protocol-name ?input-context ?output-context]
-    :guards ([not [place-already-visited? ?input-context ?victim-machine foothold ?protocol-name]])
+(defattack-method direct-foothold
+    :to-achieve [get-foothold ?victim-machine ?protocol-name]
+    :guards ([not [place-already-visited? ?victim-machine foothold]])
     :bindings ([ltms:named-part-of ?victim-machine os ?victim-os]
-	       [current-foothold ?input-context ?current-foothold-machine ?current-foothold-role]
-	       [unify ?input-context ?output-context]
-	       ;; probably irrelevant because we're just doing an action
-	       [note-place-visited ?input-context ?victim-machine foothold ?protocol-name ?visited-context])
+	       [current-foothold ?current-foothold-machine ?current-foothold-role])
     :typing ([ltms:object-type-of ?victim-os operating-system]
 	     [ltms:object-type-of ?victim-machine computer]
 	     [ltms:object-type-of ?current-foothold-machine computer])
@@ -953,37 +857,35 @@
     :plan (:action [connect-via ?current-foothold-machine ?current-foothold-role ?victim-machine ?protocol-name])
     )
 
-;;; Things to fix:
-;;; Every use of achieve remote execution.  The idea is for each category you have to figure out 
-;;; whether you can cause remote execution on the machine (from any of your footholds really) but for now from your current foothold.
-;;; If not you have to find a new foothold from which you could do that.
-;;; Make sure that every invocation has the current argument list with the three referring to footholds at the end.
-;;;
-;;; There's a negated use of accepts connection above.  Make sure that this works.
+(defattack-method lateral-motion
+    :to-achieve [get-foothold ?victim-machine ?protocol-name]
+    :guards ([not [place-already-visited? ?victim-machine foothold]]
+	     [not [foothold-exists ?victim-machine]]
+	     ;; Use this method only if you can't get a connection to the victim from where you are
+	     [not [accepts-connection ?victim-machine ?protocol-name ?current-foothold-machine]])
+    :bindings ([ltms:named-part-of ?victim-machine os ?victim-os]
+	       ;; Now find somebody that can make the connection, accepts connection will find one if there is one
+	       [current-foothold ?current-foothold-machine ?current-foothold-role]
+	       [accepts-connection ?victim-machine ?protocol-name ?new-foothold-machine]
+	       )
+    :typing ([ltms:object-type-of ?victim-os operating-system]
+	     [ltms:object-type-of ?victim-machine computer]
+	     [ltms:object-type-of ?current-foothold-machine computer]
+	     )
+    :plan (:sequential
+	   ;; Make a note that we've already considered this place as a foothold to
+	   ;; prevent looping back to here while trying to achieve remote execution
+	   (:note [place-visited ?victim-machine foothold])
+	   ;; Now see if the attacker can gain remote execution on the new-foothold-machine and in what role 
+	   ;; (?new-foothold-role is a return value)
+	   (:goal [achieve-remote-execution ?new-foothold-machine ?new-foothold-role])
+	   ;;If so then actually make the connection to the victim from the new foothold
+	   ;; (:goal [make-connection ?victim-os-instance ?protocol-name ?remote-execution-state ?output-contet])
+	   )
+    :post-conditions ([has-foothold ?new-foothold-machine ?new-foothold-role foothold]))
 
 
-(defun reachable-for-remote-execution (victim attacker)
-  (ask* `[reachable-for-remote-execution ,victim ,attacker ?protocol]
-	(return-from reachable-for-remote-execution ?protocol))
-  nil)
 
-;;; These are the ways an attacker could possibly
-;;; make a connection to get remote execution
-(defrule can-be-reached-for-remote-execution-ssh (:backward)
-  then [reachable-for-remote-execution ?victim ?attacker ssh]
-  if [accepts-connection ?victim ssh ?attacker])
-
-(defrule can-be-reached-for-remote-execution-telnet (:backward)
-  then [reachable-for-remote-execution ?victim ?attacker telnet]
-  if [accepts-connection ?victim telnet ?attacker])
-
-(defrule can-be-reached-for-remote-executon-email (:backward)
-  then [reachable-for-remote-execution ?victim ?attacker email]
-  if [accepts-connection ?victim email ?attacker])
-
-(defrule can-be-reached-for-remote-execution-http (:backward)
-  then [reachable-for-remote-execution ?victim ?attacker http]
-  if [accepts-connection ?victim http ?attacker])
 
 ;;; to be filled in:
 ;;; if a remote request for a service arrives
@@ -1010,7 +912,7 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 (defattack-method control-the-network-stack
-    :to-achieve [takes-direct-control-of ?attacker ?stack-property ?network-stack ?input-context ?output-context]
+    :to-achieve [takes-direct-control-of ?attacker ?stack-property ?network-stack]
     :bindings ([ltms:named-part-of ?os-instance network-monitor ?network-stack]
                [ltms:value-of (?os-instance superuser) ?superuser]
 	       [ltms:value-of (?attacker machines) ?attacker-machine])
@@ -1019,23 +921,21 @@
 	     [ltms:object-type-of ?attacker-machine computer]
              [ltms:object-type-of ?superuser user])
     :plan (:sequential 
-           (:goal [achieve-remote-shell ?os-instance ?superuser ?input-context ?has-shell-context])
+           (:goal [achieve-remote-shell ?os-instance ?superuser])
            (:action [control ?attacker ?network-stack ?attacker-machine]))
-    :post-conditions ([unify ?has-shell-context ?output-context])
     )
 
 (defattack-method read-network-traffic
-    :to-achieve [observe-network-traffic ?attacker ?subnet ?input-context ?output-context]
+    :to-achieve [observe-network-traffic ?attacker ?subnet]
     :bindings ([ltms:value-of (?subnet switch) ?switch]
-               [ltms:value-of (?switch os) ?os]
+               [ltms:named-part-of ?switch os ?os]
                [ltms:named-part-of ?os network-monitor ?network-stack])
     :typing ([ltms:object-type-of ?subnet switched-subnet]
              [ltms:object-type-of ?switch switch]
              [ltms:object-type-of ?network-stack network-stack])
     :plan (:sequential 
-	   (:goal [takes-direct-control-of ?attacker network-traffic ?network-stack ?input-context ?has-control-context])
+	   (:goal [takes-direct-control-of ?attacker network-traffic ?network-stack ])
 	   (:action [observe ?attacker network-traffic ?subnet]))
-    :post-conditions ([unify ?has-control-context ?output-context])
     )
 
 
@@ -1108,7 +1008,7 @@ Transformations: compilation jarification loading
 
 
 (defattack-method fake-sensor-data
-    :to-achieve [affect accuracy ?controller-process ?input-context ?output-context]
+    :to-achieve [affect accuracy ?controller-process]
     :bindings ([ltms:value-of (?controller-process machines) ?controller-machine]
 	       ;; does that machine play the part of a controller in some control system
 	       [system-role ?system controller ?controller-machine]
@@ -1142,11 +1042,10 @@ Transformations: compilation jarification loading
 	   ;; You have to specify what the entity here is
 	   ;; it can either be a user or a process
 	   ;; shouldn't really be in the operators that detemine how to do the remote execution
-	   (:goal [achieve-remote-execution ?victim-machine ?entity ?input-context ?remote-execution-context])
+	   (:goal [achieve-remote-execution ?victim-machine ?entity])
 	   ;; issue a false sensor data report to the controller from the attacker machine over the bus
 	   ;; of the sensor type 
 	   (:action [issue-false-sensor-data-report ?controller-machine ?victim-machine ?bus ?signal]))
-    :post-conditions ([unify ?remote-execution-context ?output-context])
     )
 
 ; (defattack-method fake-command-data
@@ -1167,16 +1066,15 @@ Transformations: compilation jarification loading
 ;     )
  
 (defattack-method sensor-injection-attack
-    :to-achieve [affect data-integrity ?signal ?input-context ?output-context]
+    :to-achieve [affect data-integrity ?signal]
     :bindings ([ltms:value-of (?signal machines) ?machine]
-	       [attacker-and-machine ?input-context ?attacker ?attacker-macine])
+	       [attacker-and-machine ?attacker ?attacker-macine])
     :prerequisites ([system-role ?system sensor ?machine]
 		    [is-proximate-to ?attacker ?victim radio])
     :typing ([ltms:object-type-of ?machine computer]
 	     [ltms:object-type-of ?signal sensor-signal]
 	     [ltms:object-type-of ?system system])
     :plan (:action [signal-noise-injection ?attacker ?machine ?signal])
-    :post-conditions ([unify ?input-context ?output-context])
     )
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -1186,17 +1084,15 @@ Transformations: compilation jarification loading
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 (defattack-method recruit-to-mirai-botnet
-    :to-achieve [affect independence ?cycle-pool ?input-context ?output-context]
+    :to-achieve [affect independence ?cycle-pool]
     :bindings ([ltms:value-of (?cycle-pool machines) ?victim-machine]
 	       [ltms:value-of (?cycle-pool os) ?victim-os]
-	       [attacker-and-machine ?input-context ?attacker ?attacker-macine]
+	       [attacker-and-machine ?attacker ?attacker-macine]
 	       )
     :plan (:sequential
 	   (:action [port-scan ?attacker ?victim-machine ?attacker-machine telnet-ports])
 	   (:goal [get-foothold ?victim-machine telnet ?input-context ?foothold-context])
 	   (:action [login ?attacker white-list-member ?victim-os ?foothold-machine])
 	   (:action [download-malware-from-source ?attacker ?foothold-machine ?victim-machine mirai-client]))
-    :post-conditions ([current-foothold ?foothold-context ?foothold-machine ?foothold-role]
-		      [unify ?foothold-context ?output-context])
     )
 		    

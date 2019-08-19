@@ -37,7 +37,6 @@
 		     ;; (let* ((arglist (ji::find-predicate-arglist goal-type)))
 		     (format stream "Goal: ~A" goal-type)
 		     (loop for value in values
-			 unless (typep value 'search-context)
 			 do (format stream "~%~a" value)))))
           ((:action :repeated-action)
 	   (clim:surrounding-output-with-border (stream :shape :rectangle :ink clim:+red+)
