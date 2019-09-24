@@ -65,6 +65,7 @@
 						 (ji:make-logic-variable-maker (intern (string-upcase (gentemp "?intermediate-state-"))))))
 			 (statement the-note)
 			 (rebuilt-statement `(prog1 t (let ((new-state (intern-state (intern (string-upcase (gentemp "intermediate-state-"))) ,input-state)))
+							(setf (intermediate-state? new-state) t)
 							(unify ,intermediate-state new-state)
 							(tell (predication-maker '(in-state ,statement ,intermediate-state)))))))
 		    (list (list rebuilt-statement)
@@ -128,6 +129,7 @@
 (defun process-assertions (assertions input-state)
   (labels ((do-one (assertion)
 	     (cond 
+	      ;; special case for debugging
 	      ((and (listp assertion) (not (predication-maker-p assertion)))
 	       (if (eql (first assertion) 'break)
 		   `(prog1 t ,assertion)
@@ -137,6 +139,7 @@
 		 (loop for assertion in assertions 
 		     collect (do-one assertion) into processed-assertions
 		     finally (return `(predication-maker '(or ,@processed-assertions))))))
+	      ((listp assertion) assertion)
 	      ((compile-without-state assertion) assertion)
 	      (t `(predication-maker '(in-state ,assertion ,input-state))))))
     (loop for thing in assertions collect (do-one thing))))
@@ -144,8 +147,47 @@
 
 (defun process-guards (assertions input-state) (process-assertions assertions input-state))
 
+(defun is-pretty-binding (assertion)
+  (when (and (not (predication-maker-p assertion))
+	     (= (length assertion) 2)
+	     (logic-variable-maker-p (first assertion))
+	     (find #\. (string (if (logic-variable-maker-p (second assertion))
+				   (logic-variable-maker-name (second assertion))
+				 (second assertion)))
+		   :test #'char-equal))
+    t))
+
+(defun explode-string (string delim)
+  ;; so it can handle a symbol
+  (setq string (string string))
+  (loop for last-pos = 0 then (1+ next-pos)
+        for next-pos = (position delim string :start last-pos)
+        collect (subseq string last-pos next-pos)
+      until (null next-pos))
+  )
+
+(defun de-prettify-binding (assertion)
+  (destructuring-bind (logic-variable path) assertion
+    (flet ((process-path (list-of-strings)
+	     (loop for thing in list-of-strings
+		   if (char-equal (aref thing 0) #\?)
+		   collect (ji::make-logic-variable-maker (intern thing))
+		   else collect (intern thing))))
+      (if (logic-variable-maker-p path)
+	  (let* ((name (logic-variable-maker-name path))
+		 (exploded-path (explode-string name #\.))
+		 (real-path (cons (ji::make-logic-variable-maker (intern (first exploded-path)))
+				  (process-path (rest exploded-path)))))
+	  `(predication-maker '(ltms:value-of ,real-path ,logic-variable)))
+      (let ((expanded-path (process-path (explode-string path #\.))))
+	`(predication-maker '(ltms:value-of ,expanded-path ,logic-variable)))))))
+
 (defun process-bindings (assertions input-state)
-  (process-assertions assertions input-state))
+  (let ((expanded-bindings (loop for assertion in assertions
+			       collect (if (is-pretty-binding assertion)
+					   (de-prettify-binding assertion)
+					 assertion))))
+    (process-assertions expanded-bindings input-state)))
 
 (defun process-prerequisites (assertions input-state) (process-assertions assertions input-state))
 
@@ -161,6 +203,12 @@
 	(or (subtypep predicate 'non-stateful-predicate-model)
 	    (subtypep predicate 'ji::named-part-of-mixin)))))
     nil))
+
+(defun process-typing (forms)
+  (loop for form in forms
+      if (and (listp form) (= (length form) 2))
+      collect `(predication-maker '(ltms:object-type-of ,@form))
+      else collect form))
 
 (defmacro defattack-method (method-name &key to-achieve 
 					     (input-state `(logic-variable-maker ,(intern (string-upcase "?input-state"))))
@@ -181,7 +229,7 @@
          if [and 
 	     ,@(process-bindings bindings input-state)
 	     ,@(process-guards guards input-state)
-	     ,@typing
+	     ,@(process-typing typing)
 	     ,@(process-prerequisites prerequisites input-state)
 	     ,@stuff
 	     ,@(process-post-conditions post-conditions output-state)
@@ -224,7 +272,10 @@
   ((action-name :accessor action-name :initarg :action-name)
    (arguments :accessor arguments :initarg :arguments)
    (prior-state :accessor prior-state :initarg :prior-state)
-   (next-state :accessor next-state :initarg :next-state)))
+   (next-state :accessor next-state :initarg :next-state)
+   (is-on-solution-path? :accessor is-on-solution-path? :initform nil))
+  )
+
 
 (defun link-action (name arguments prior-state next-state)
   (let ((action (make-instance 'action

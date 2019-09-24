@@ -14,6 +14,8 @@
 (defclass attack-plan-collector ()
   ((attack-plans :initform nil :accessor attack-plans)
    (merged-attack-plan :initform nil :accessor merged-attack-plan)
+   (final-states :accessor final-states :initform nil :initarg :final-states)
+   (Initial-state :accessor Initial-state :initform nil :initarg :Initial-state)
    )
   )
 
@@ -21,18 +23,21 @@
                    (property 'performance) 
 		   machine 
                    resource)
+  (clear-all-states)
   (let ((answers nil)
-	;; (os (follow-path `(,machine os)))
-	)
+	(final-states nil))
+    ;; (os (follow-path `(,machine os)))
     (ask `[achieve-goal [affect ,property ,resource] initial ?output-context ?plan]
-         #'(lambda (just)
-             (declare (ignore just))
+	 #'(lambda (just)
+	     (declare (ignore just))
+	     (mark-state-useful ?output-context)
+	     (Pushnew ?output-context final-states)
 	     (let ((plan (copy-object-if-necessary ?plan)))
 	       (pushnew (list :goal (list 'affect attacker property resource machine)
 			      :plan plan)
 			answers
 			:test #'equal))))
-    answers))
+  (values answers final-states)))
 
 (defun create-attacker (name &key world-name)
   (with-atomic-action
@@ -64,17 +69,19 @@
 	 (attacker-machine (first (follow-path (list attacker 'machines))))
 	 (machine (follow-path (list machine)))
 	 (resource (follow-path (list machine resource))))
-    (let* ((answers (do-it :attacker attacker
-			   :attacker-machine attacker-machine
-			   :Property property
-			   :machine machine
-			   :resource resource))
-	   (collector (make-instance 'attack-plan-collector))
-	   )
-      (setf (attack-plans collector) answers
-	    (merged-attack-plan collector)  (merge-attack-plans answers))
+    (multiple-value-bind (answers final-states)
+	(do-it :attacker attacker
+	       :attacker-machine attacker-machine
+	       :Property property
+	       :machine machine
+	       :resource resource)
+      (let ((collector (make-instance 'attack-plan-collector)))
+	(setf (attack-plans collector) answers
+	      (merged-attack-plan collector)  (merge-attack-plans answers)
+	      (final-states collector) final-states
+	      (initial-state collector) *initial-state*)
       collector
-      )))
+      ))))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;

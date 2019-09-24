@@ -164,13 +164,15 @@
      (property 'desirable-property :default 'performance)
      (resource `(computer-resource ,computer))
      &key (attacker 'attacker :default (follow-path '(typical-attacker))))
-  (let ((answers (do-it :property property :machine computer :attacker attacker :resource resource)))
+  (multiple-value-bind (answers final-states) (do-it :property property :machine computer :attacker attacker :resource resource)
     (let ((stream (clim:get-frame-pane clim:*application-frame* 'attack-structure )))
       (clim:with-text-face (stream :bold)
 	(clim:with-text-size (stream :large)
 	  (format stream "~%There are ~d plans" (length answers)))))
     (let ((collector (attack-plan-collector clim:*application-frame*)))
       (setf (attack-plans collector) answers
+	    (final-states collector) final-states
+	    (initial-state collector) *initial-state*
 	    (merged-attack-plan collector) (merge-attack-plans answers)))))
 
 (define-aplan-command (com-show-plan :name t :menu t)
@@ -360,4 +362,42 @@
      :merge-duplicates t
      :stream stream)
     (values)))
-     
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;;
+;;; Graphing Action Sequence
+;;;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+(defun graph-states-and-actions (initial-state &key (orientation :horizontal) (stream *standard-output*))
+  (clim:format-graph-from-roots
+   (list initial-state)
+   #'print-action-or-state
+   #'child-of-action-or-state
+   :orientation orientation
+   :stream stream
+   :merge-duplicates t))
+
+
+(defmethod Print-action-or-state ((action action) stream)
+  (clim:surrounding-output-with-border (stream :shape :oval)
+    (format stream "~a ~{~%~a~^~}"
+	    (action-name action)
+	    (arguments action))))
+
+(defmethod Print-action-or-state ((state state) stream)
+  (clim:surrounding-output-with-border (stream :shape :rectangle)
+    (format stream "~a" (state-name state))))
+
+(defmethod child-of-action-or-state ((state state))
+  (let ((next-action (next-action state)))
+    (if next-action
+	(list next-action)
+	(loop for successor in (successors state)
+	    append (child-of-action-or-state successor))))
+  )
+
+(defmethod child-of-action-or-state ((action action))
+  (list (next-state action))  
+  )
+	  

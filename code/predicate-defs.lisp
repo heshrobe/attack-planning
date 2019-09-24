@@ -110,6 +110,11 @@
 
 (define-predicate output-of (component resource) (non-stateful-predicate-model))
 
+(define-predicate named-part-of (superpart-object name subpart-object) 
+  (ji::named-part-of-mixin ltms:ltms-predicate-model))
+
+(define-predicate component (superpart-object subpart-object) (ji::part-of-mixin ltms:ltms-predicate-model))
+
 (define-predicate residence (thing place) (non-stateful-predicate-model))
 
 (define-predicate migrates-from (thing place1 place2 process) (non-stateful-predicate-model))
@@ -121,6 +126,10 @@
 (define-predicate is-vulnerable-to (process attack) (non-stateful-predicate-model))
 
 (define-predicate has-control-of (attacker process) (ltms:ltms-predicate-model))
+
+(define-predicate is-typical-user (user) (ltms:ltms-predicate-model))
+
+(define-predicate is-superuser (user machine) (ltms:ltms-predicate-model))
 
 ;;; These could change over time (I think)
 

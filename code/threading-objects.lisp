@@ -497,6 +497,18 @@
           [ltms:object-type-of ?superuser user]]
   then [runs-with-permissions-of ?server-process ?superuser])
 
+(defrule check-typical-user (:backward)
+  :then [is-typical-user ?user]
+  :if [and [ltms:object-type-of ?user user]
+	   [ltms:value-of (?user typical-p) t]]
+  )
+
+(defrule check-superuser (:backward)
+  :then [is-superuser ?user ?os]
+  :if [and [ltms:object-type-of ?user user]
+	   [ltms:object-type-of ?os operating-system]
+	   [ltms:value-of (?os superuser) ?user]])
+
 
 ;;; this forces the user to "own" every machine at his site
 ;;; by forward reasoning.  
