@@ -31,6 +31,7 @@
 							(output-state `(logic-variable-maker ,(intern (string-upcase "?output-state")))))
   ;; as we traverse the plan-structure tree we accumulate the list structure
   ;; of the plan and push
+  ;; each this returns 3 values.  I'm not sure why the third yet
   (labels ((do-next-level (structure connective input-state output-state)
 	     ;; each level should either be a :sequential/:parallel
 	     ;;  or a :goal/:plan pair
@@ -47,14 +48,14 @@
                       append his-stuff into stuff
 		      when his-plan-structure  ;; a note provides no plan structure
                       collect his-plan-structure into plan-structure
-                      finally (return (list stuff `(list ,key ,@plan-structure ,his-output-state) his-output-state))))
+                      finally (return (list stuff `(list ,key ,@plan-structure) his-output-state))))
 		 (:parallel
                   (loop for thing in stuff
 		      for (his-stuff his-plan-structure) = (do-next-level thing key input-state output-state)
 		      append his-stuff into stuff
 		      when his-plan-structure ;; a note provides no plan structure
-		      collect his-plan-structure into plan-structure
-		      finally (return (list stuff `(list ,key ,@plan-structure)))))
+		      collect his-plan-structure into plan-structure 
+		      finally (return (list stuff `(list ,key ,@plan-structure) nil))))
 		 (:note
 		  (let* ((the-note (first stuff))
 			 (input-state (or (getf structure :input-state)
@@ -139,7 +140,7 @@
 		 (loop for assertion in assertions 
 		     collect (do-one assertion) into processed-assertions
 		     finally (return `(predication-maker '(or ,@processed-assertions))))))
-	      ((listp assertion) assertion)
+	      ((and (listp assertion) (not (predication-maker-p assertion))) assertion)
 	      ((compile-without-state assertion) assertion)
 	      (t `(predication-maker '(in-state ,assertion ,input-state))))))
     (loop for thing in assertions collect (do-one thing))))
@@ -148,13 +149,17 @@
 (defun process-guards (assertions input-state) (process-assertions assertions input-state))
 
 (defun is-pretty-binding (assertion)
-  (when (and (not (predication-maker-p assertion))
-	     (= (length assertion) 2)
-	     (logic-variable-maker-p (first assertion))
-	     (find #\. (string (if (logic-variable-maker-p (second assertion))
-				   (logic-variable-maker-name (second assertion))
-				 (second assertion)))
-		   :test #'char-equal))
+  (when (and (predication-maker-p assertion)
+	     (eql (predication-maker-predicate assertion) 'value-of)
+	     (with-predication-maker-destructured (path value) assertion
+	       (if (and (not (logic-variable-maker-p path))
+			(listp path))
+		   nil
+		 (and (logic-variable-maker-p value)
+		      (find #\. (string (if (logic-variable-maker-p path)
+					    (logic-variable-maker-name path)
+					  path))
+			    :test #'char-equal)))))
     t))
 
 (defun explode-string (string delim)
@@ -167,7 +172,7 @@
   )
 
 (defun de-prettify-binding (assertion)
-  (destructuring-bind (logic-variable path) assertion
+  (with-predication-maker-destructured  (path logic-variable) assertion
     (flet ((process-path (list-of-strings)
 	     (loop for thing in list-of-strings
 		   if (char-equal (aref thing 0) #\?)
@@ -178,9 +183,9 @@
 		 (exploded-path (explode-string name #\.))
 		 (real-path (cons (ji::make-logic-variable-maker (intern (first exploded-path)))
 				  (process-path (rest exploded-path)))))
-	  `(predication-maker '(ltms:value-of ,real-path ,logic-variable)))
+	  `(predication-maker '(value-of ,real-path ,logic-variable)))
       (let ((expanded-path (process-path (explode-string path #\.))))
-	`(predication-maker '(ltms:value-of ,expanded-path ,logic-variable)))))))
+	`(predication-maker '(value-of ,expanded-path ,logic-variable)))))))
 
 (defun process-bindings (assertions input-state)
   (let ((expanded-bindings (loop for assertion in assertions
@@ -223,7 +228,8 @@
   (let* ((plan-variable `(logic-variable-maker ,(gensym "?PLAN")))
          (real-head `(predication-maker '(achieve-goal ,to-achieve ,input-state  ,output-state ,plan-variable)))
 	 (rebuilt-plan-structure (rebuild-plan-structure plan input-state output-state)))
-    (destructuring-bind (stuff plan-structure) (or rebuilt-plan-structure (list nil nil))
+    (destructuring-bind (stuff plan-structure thing) (or rebuilt-plan-structure (list nil nil nil))
+      (declare (ignore thing))
       `(defrule ,method-name (:backward)
          then ,real-head
          if [and 
@@ -233,6 +239,8 @@
 	     ,@(process-prerequisites prerequisites input-state)
 	     ,@stuff
 	     ,@(process-post-conditions post-conditions output-state)
+	     ,@(when (null rebuilt-plan-structure)
+	       `((unify ,input-state ,output-state)))
 	     (unify ,plan-variable ,plan-structure)
 	     ]))))
 

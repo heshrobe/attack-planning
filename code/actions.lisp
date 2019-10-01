@@ -30,17 +30,16 @@
   :post-conditions ([has-control-of ?attacker ?process])
   )
 
-(define-action phishing-attqck (?attacker ?email-machine ?user ?process)
-  :prerequisites ([has-foothold ?email-machine ?role smtp]
-		  [current-foothold ?sending-machine ?process]
+(define-action phishing-attack (?attacker ?email-machine ?user ?process)
+  :prerequisites ([has-foothold ?email-machine ?sending-machine ?sending-role smtp]
 		  [attacker-and-machine ?attacker ?attacker-machine])
-  :post-conditions ([email-sent-to ?user ?attacker ?sending-machine ?process]
+  :post-conditions ([email-sent-to ?user ?attacker ?sending-machine ?sending-role]
 		    [knows-credentials ?attacker ?user])
   )
 
 (define-action login (?victim-user ?victim-os-instance ?current-foothold-machine ?current-foothold-role)
   :bindings ([attacker-and-machine ?attacker ?attacker-machine]
-	     [ltms:value-of (?victim-os-instance machine) ?victim-machine])
+	     [value-of ?victim-os-instance.machine ?victim-machine])
   :prerequisites ([connection-established ?current-foothold-machine ?victim-machine ?protocol-name]
 		  [knows-credentials ?attacker ?victim-user])
   :post-conditions ([is-logged-in ?attacker ?victim-user ?victim-os ?victim-machine])
@@ -56,8 +55,8 @@
   )
 
 (define-action launch-code-injection-attack (?victim-process ?foothold-machine ?foothold-role)
-  :bindings ([ltms:value-of (?victim-process host-os) ?victim-os]
-	     [ltms:value-of (?victim-os machine) ?victim-machine])
+  :bindings ([value-of (?victim-process host-os) ?victim-os]
+	     [value-of (?victim-os machine) ?victim-machine])
   :prerequisites ([vulnerable-to-overflow-attack ?victim-process]
 		  [connection-established ?foothold-machine ?victim-machine ?protocol-name])
   :post-conditions ([controls-process ?attacker ?victim-process code-injection])
@@ -69,8 +68,8 @@
   )
 
 (define-action launch-code-resuse-attack (?victim-process ?foothold-machine ?foothold-role)
-  :bindings ([ltms:value-of (?victim-process host-os) ?victim-os]
-	     [ltms:value-of (?victim-os machine) ?victim-machine])
+  :bindings ([value-of (?victim-process host-os) ?victim-os]
+	     [value-of (?victim-os machine) ?victim-machine])
   :prerequisites ([vulnerable-to-overflow-attack ?victim-process]
 		  [connection-established ?foothold-machine ?victim-machine ?protocol-name])
   :post-conditions ([controls-process ?attacker ?victim-process code-reuse])
@@ -81,10 +80,10 @@
 ;;; are the same.
 (define-action use-own-password (?victim-user ?victim-machine)
   :bindings ([ltms:named-part-of (?victim-machine os) ?victim-os-instance]
-	     [ltms:value-of (?victim-os-instance users) ?victim-user]
-	     [ltms:value-of (?victim-os-instance authorization-pool) ?pool])
-  :prerequisites ([unify ?victim-user ?victim-machine]
-		  [ltms:value-of (?pool users) ?victim-user])
+	     [value-of (?victim-os-instance users) ?victim-user]
+	     [value-of (?victim-os-instance authorization-pool) ?pool])
+  :prerequisites ([unifiable ?victim-user ?victim-machine]
+		  [value-of (?pool users) ?victim-user])
   :post-conditions ([knows-credentials ?attacker ?user])
   )
 
@@ -105,7 +104,7 @@
 (defrule sysadmin-forced-to-login (:forward)
   if [and [in-state [disk-filled ?victim-machine] ?state]
 	  [ltms:named-part-of ?victim-machine os ?victim-os]
-	  [ltms:value-of (?victim-os superuser) ?victim-user]
+	  [value-of (?victim-os superuser) ?victim-user]
 	  [ltms:object-type-of ?victim-machine computer]
 	  [ltms:object-type-of ?victim-os operating-system]
 	  ]

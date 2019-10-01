@@ -39,8 +39,8 @@
 (defattack-method affect-property-by-controlling-impacting-component
     :to-achieve [affect ?desirable-property ?victim]
     ;; find some component of the OS of a machine that the victim runs on
-    :bindings ((?computer ?victim.machines)
-               (?os-instance ?computer.os)
+    :bindings ([value-of ?victim.machines ?computer]
+               [named-component ?computer os ?os-instance]
                [component ?os-instance ?component]
 	       [current-foothold ?foothold-machine ?foothold-role]
 	       [attacker-and-machine ?attacker ?attacker-machine])
@@ -89,9 +89,9 @@
 (defattack-method increase-workload-to-decrease-performance
     :to-achieve [affect performance ?process]
     :prerequisites ([desirable-property-of ?process performance])
-    :bindings ((?os ?process.host-os)
-	       (?computer ?os.machine)
-	       (?workload ?os.workload)
+    :bindings ([value-of ?process.host-os ?os]
+	       [value-of ?os.machine ?computer]
+	       [value-of ?os.workload ?workload]
 	       [protocol-is-relevant-for workload-size ?protocol]
 	       [attacker-and-machine ?attacker  ?attacker-machine])
     :typing ((?process process)
@@ -105,8 +105,8 @@
 (defattack-method send-lots-of-emails
     :to-achieve [affect performance ?process]
     :prerequisites ([desirable-property-of ?process performance])
-    :bindings ((?os-instance ?process.host-os)
-	       (?computer ?os.machine)
+    :bindings ([value-of ?process.host-os ?os-instance]
+	       [value-of ?os.machine ?computer]
 	       [current-foothold ?foothold-machine ?foothold-role]
 	       [attacker-and-machine ?attacker ?attacker-machine])
     :typing ((?process email-server-process)
@@ -128,9 +128,9 @@
 
 (defattack-method increase-workload-by-increasing-job-launch-queue
     :to-achieve [increase-size ?workload]
-    :bindings ((?os ?workload.os)
-	       (?queue ?os.job-launch-queue)
-	       (?user-job-launch-queue ?queue.user-job-launch-request-queue)
+    :bindings ([named-component ?workload os ?os]
+	       [value-of ?os.job-launch-queue ?queue]
+	       [value-of ?queue.user-job-launch-request-queue ?user-job-launch-queue]
 	       [current-foothold ?foothold-machine ?foothold-role]
 	       )
     :typing ((?workload os-workload)
@@ -183,8 +183,8 @@
 
 (defattack-method mung-database
     :to-achieve [affect data-integrity ?database]
-    :bindings ((?database-machine ?database.machines)
-	       (?database-os ?database-machine.os)
+    :bindings ([value-of ?database.machines ?database-machine]
+	       [named-component  ?database-machine os ?database-os]
 	       [current-foothold ?current-foothold-machine ?current-foothold-role]
 	       )
     :typing ((?database database)
@@ -192,7 +192,9 @@
 	     (?database database)
 	     (?database-os operating-system)
 	     )
-    :prerequisites ([has-permission ?current-foothold-role write ?database])
+    ;; This is wrong.  
+    ;; We need to find out who has permission to make a 
+    :prerequisites ()
     :plan (:sequential
 	   ;; Note that get-foothold treats the next-to-last two arguments as things that it binds.
 	   ;; Also note that it might bind these to the same thine as the current foothold
@@ -229,8 +231,8 @@
 ;;; Fix modify
 (defattack-method control-process-through-loadable-files
     :to-achieve [takes-direct-control-of ?attacker ?victim-property ?victim]
-    :bindings ((?program ?victim.program)
-               (?file ?program.load-files))
+    :bindings ([value-of ?victim.program ?program]
+               [value-of ?program.load-files ?file])
     :typing ((?victim process)
              (?program program)
              (?file dynamically-loadable-code-file))
@@ -353,7 +355,7 @@
 ;;; but it will do for now.
 (defattack-method modify-loadable-code
     :to-achieve [modify ?file-property ?object-file] 
-    :bindings ((?source-file ?object-file.source-file))
+    :bindings ([value-of ?object-file.source-file ?source-file])
     :typing ((?object-file dynamically-loadable-code-file))
     :plan (:sequential 
 	   (:goal [modify code ?source-file])
@@ -367,16 +369,14 @@
 ;;; Partially fixed
 (defattack-method modify-through-access-rights
     :to-achieve [modify ?object-property ?object]
-    :bindings ((?computer ?object.machines)
+    :bindings ([value-of ?object.machines ?computer]
 	       [attacker-and-machine ?attacker ?attacker-machine]
 	       [current-foothold ?current-foothold-machine ?current-foothold-role])
     :typing ((?computer computer))
     ;; Use this only if you don't already have the required capability
     ;; (what if more than one capability implies the right?  Shouldn't
     ;; we check that he doesn't have any of them).
-    :plan (:sequential
-	   (:goal [achieve-access-right write ?object ?other-role])
-	   (:action [use-access-right-to-modify ?attacker write ?user ?object])))
+    :plan (:goal [achieve-access-right write ?object ?other-role]))
 
 ;;; To increase the size of the active user set of some OS
 ;;; Find a user in the authorization pool for the OS
@@ -388,9 +388,9 @@
 
 (defattack-method modify-active-user-set
     :to-achieve [increase-size ?active-user-set]
-    :bindings ((?os-instance ?active-user-set.os)
-               (?authorization-pool ?os-instance.authorization-pool)
-               (?user ?authorization-pool.users))
+    :bindings ([named-component ?active-user-set os ?os-instance]
+               [value-of ?os-instance.authorization-pool ?authorization-pool]
+               [value-of ?authorization-pool.users ?user])
     :typing ((?active-user-set user-set)
              (?os-instance operating-system)
              (?authorization-pool authorization-pool)
@@ -431,9 +431,8 @@
 (defattack-method remote-execution-to-remote-shell
     :to-achieve [achieve-remote-execution ?victim-machine ?victim-user]
     :guards ([not [place-already-visited? ?victim-machine remote-execution]])
-    :bindings ((?victim-os ?victim-machine.os)
-	       (?victim-user ?victim-os.users)
-	       )
+    :bindings ([named-component ?victim-machine os ?victim-os]
+	       [value-of ?victim-os.users ?victim-user])
     :typing ((?victim-os operating-system)
              (?victim-user user)
 	     (?victim-machine computer))
@@ -444,16 +443,16 @@
 
 (defattack-method how-to-logon
     :to-achieve [achieve-remote-shell ?victim-os-instance ?victim-user]
-    :bindings ((?victim-machine ?victim-os-instance.machine)
+    :bindings ([value-of ?victim-os-instance.machine ?victim-machine]
 	       [current-foothold ?current-foothold-machine ?current-foothold-role]
 	       [attacker-and-machine ?attacker ?attacker-machine]
 	       [protocol-for remote-execution remote-shell ?protocol])
     :typing ((?victim-os-instance operating-system)
 	     (?victim-machine computer)
 	     (?victim-user user))
-    :plan (:sequential
+    :plan (:sequential	   
 	   (:goal [get-foothold ?victim-machine ?protocol])
-           (:goal [achieve-knowledge-of-password ?attacker ?victim-user ?victim-machine])
+	   (:goal [achieve-knowledge-of-password ?attacker ?victim-user ?victim-machine])
            (:action [login ?victim-user ?victim-os-instance ?current-foothold-machine ?current-foothold-role]))
     :post-conditions ([has-remote-execution ?attacker ?victim-machine ?victim-user])
     )
@@ -464,8 +463,8 @@
 (defattack-method remote-execution-to-code-injection
     :to-achieve [achieve-remote-execution ?victim-machine ?victim-process]
     :guards ([not [place-already-visited? ?victim-machine remote-execution]])
-    :bindings ((?os-instance ?victim-machine.os)
-	       (?victim-process ?os-instance.processes))
+    :bindings ([named-component ?victim-machine os ?os-instance]
+	       [value-of ?os-instance.processes ?victim-process])
     :typing ((?os-instance operating-system)
 	     (?victim-process process))
     :plan (:sequential
@@ -474,7 +473,7 @@
 
 (defattack-method code-injection-against-process
     :to-achieve [achieve-code-injection ?process ?os-instance]
-    :bindings ((?process ?os-instance.processes)
+    :bindings ([value-of ?os-instance.processes ?process]
 	       [current-foothold ?foothold-machine ?foothold-role])
     :typing ((?process web-server-process))
     :prerequisites ([vulnerable-to-overflow-attack ?process])
@@ -484,8 +483,8 @@
 (defattack-method remote-execution-to-code-reuse
     :to-achieve [achieve-remote-execution ?victim-machine ?victim-process]
     :guards ([not [place-already-visited? ?victim-machine remote-execution]])
-    :bindings ((?os-instance ?victim-machine.os)
-	       (?victim-process ?os-instance.processes))
+    :bindings ([named-component ?victim-machine os ?os-instance]
+	       [value-of ?os-instance.processes ?victim-process])
     :typing ((?os-instance operating-system)
 	     (?victim-process process))
     :plan (:sequential
@@ -510,8 +509,8 @@
 ;;; They can affect performance by adding jobs
 (defattack-method add-jobs-after-job-launcher-is-hacked
     :to-achieve [use-control-of-to-affect-resource ?attacker ?controller performance ?target]
-    :bindings ((?controller ?os.job-admitter)
-               (?input ?os-instance.workload))
+    :bindings ([value-of ?os.job-admitter ?controller]
+               [value-of ?os-instance.workload ?input])
     :typing ((?controller os-job-admitter)
              (?os operating-system)
              (?input os-workload)
@@ -521,10 +520,10 @@
 
 (defattack-method modify-job-request-queue
     :to-achieve [increase-size ?user-job-launch-queue]
-    :bindings ((?user-job-launch-queue ?full-job-launch-queue.user-job-launch-request-queue)
-               (?os-instance ?full-job-launch-queue.os)
-	       (?full-job-launch-queue ?os-instance.job-launch-queue)
-	       (?attacker-machine ?attacker.machines)
+    :bindings ([value-of ?full-job-launch-queue.user-job-launch-request-queue ?user-job-launch-queue]
+               [named-component ?full-job-launch-queue os ?os-instance]
+	       [value-of ?os-instance.job-launch-queue ?full-job-launch-queue]
+	       [value-of ?attacker.machines ?attacker-machine]
 	       )
     :typing ((?user-job-launch-queue job-launch-request-queue)
              (?full-job-launch-queue os-job-launch-request-queue)
@@ -554,7 +553,7 @@
 ;;; Eventually we need to treat actions as real things that change the state
 (defattack-method how-to-read-a-file
     :to-achieve [achieve-knowledge-of-contents ?file]
-    :bindings ((?machine ?file.machines)
+    :bindings ([value-of ?file.machines ?machine]
 	       [attacker-and-machine ?attacker ?attacker-machine])
     :prerequisites ()
     :typing ((?file file))
@@ -569,10 +568,10 @@
 ;;; If your foothold role already has the access rights
 ;;; do nothing
 (defattack-method achieve-a-right-you-already-have 
-    :to-achieve [achieve-access-right ?object ?right ?user]
-    :bindings ([current-foothold ?foothold-machine ?foothold-role])
-    :prerequisites ([has-permission ?foothold-role ?right ?object])    
-    :bindings ([unifiable ?user ?foothold-role])
+    :to-achieve [achieve-access-right ?right ?object ?role]
+    :bindings ([current-foothold ?foothold-machine ?foothold-role]
+	       [unifiable ?role ?foothold-role])
+    :guards ([has-permission ?foothold-role ?right ?object])
     :plan ()
     )
 
@@ -600,10 +599,10 @@
     :to-achieve [achieve-access-right ?right ?object ?user]
     ;; all this is asking is there a process in the workload
     ;; and if so with which user's permissions is it running
-    :bindings ((?machine ?object.machines)
-               (?os-instance ?machine.os)
-               (?os-workload ?os-instance.workload)
-               (?the-process ?os-workload.user-workload.processes)
+    :bindings ([value-of ?object.machines ?machine]
+               [named-component ?machine os ?os-instance]
+               [value-of ?os-instance.workload ?os-workload]
+               [value-of ?os-workload.user-workload.processes ?the-process]
                [runs-with-permissions-of ?the-process ?user]
 	       [attacker-and-machine ?attacker ?attacker-machine]
 	       [current-foothold ?foothold-machine ?foothold-role]
@@ -625,10 +624,10 @@
     :to-achieve [achieve-access-right ?right ?object ?user]
     ;; all this is asking is there a process in the workload
     ;; and if so with which user's permissions is it running
-    :bindings ((?machine ?object.machines)
-               (?os-instance ?machine.os)
-               (?os-workload ?os-instance.workload)
-               (?the-process ?os-workload.server-workload.processes)
+    :bindings ([value-of ?object.machines ?machine]
+               [named-component ?machine os ?os-instance]
+               [value-of ?os-instance.workload ?os-workload]
+               [value-of ?os-workload.server-workload.processes ?the-process]
                [runs-with-permissions-of ?the-process ?user]
 	       [attacker-and-machine ?attacker ?attacker-machine]
 	       [current-foothold ?foothold-machine ?foothold-role]
@@ -649,13 +648,13 @@
 ;;; similar comment to above about foothold etc
 (defattack-method how-to-achieve-access-right-by-remote-shell-on-target
     :to-achieve [achieve-access-right ?right ?object ?other-user]
-    :bindings ((?machine ?object.machines)
-               (?os-instance ?machine.os)
+    :bindings ([value-of ?object.machines ?machine]
+               [named-component ?machine os ?os-instance]
                [requires-access-right ?object ?right ?capability]
-	       (?pool ?os-instance.authorization-pool)
+	       [value-of ?os-instance.authorization-pool ?pool]
 	       [current-foothold ?foothold-machine ?foothold-role]
-	       (?foothold-os ?foothold-machine.os)
-	       (?other-user ?pool.users))
+	       [named-component ?foothold-machine os ?foothold-os]
+	       [value-of ?pool.users ?other-user])
     :typing ((?object computer-resource)
              (?machine computer)
              (?os-instance operating-system)
@@ -676,7 +675,7 @@
 
 (defattack-method join-active-user-set
     :to-achieve [make-member-of ?user ?active-user-set]
-    :bindings ((?os-instance ?active-user-set.os))
+    :bindings ([named-component ?active-user-set ?os-instance os])
     :typing ((?active-user-set user-set)
              (?os-instance operating-system))
     :plan (:goal [achieve-remote-shell ?os-instance ?user])
@@ -710,8 +709,8 @@
 
 (defattack-method guess-superuser-passwords
     :to-achieve [guess-password ?attacker ?user ?victim-machine]
-    :bindings ((?machine ?user.machines)
-	       (?user  ?machine.os.superuser))
+    :bindings ([value-of ?user.machines ?machine]
+	       [value-of ?machine.os.superuser  ?user])
     :typing ((?user user)
 	     (?machine computer))
     :plan (:action [password-dictionary-lookup-attack ?attacker ?user ?victim-machine])
@@ -719,8 +718,8 @@
 
 (defattack-method get-sysadmin-password-by-bricking
     :to-achieve [achieve-knowledge-of-password ?attacker ?victim-user ?victim-machine]
-    :bindings ((?victim-machine ?victim-user.machines)
-	       (?victim-user ?victim-machine.os.superuser)
+    :bindings ([value-of ?victim-user.machines ?victim-machine]
+	       [value-of ?victim-machine.os.superuser ?victim-user]
 	       [current-foothold ?foothold-machine ?foothold-role])
     :typing ((?victim-user user)
 	     (?victim-machine computer))
@@ -751,14 +750,15 @@
 
 ;;; Fix This:
 ;;; To pull off a phishing attack:
- ;;;  The attacker must have a foothold for the email server of the victim-user
+;;;  The attacker must have a foothold for the email server of the victim-user
 ;;;  
 (defattack-method how-to-get-password-by-phishing
     :to-achieve [achieve-knowledge-of-password ?attacker ?victim-user ?victim-machine]
     :bindings ([email-client-of ?victim-user ?process]
-	       (?attacker-machine ?attacker.machines)
-	       (?os-instance ?process.host-os)
-	       (?email-server-machine ?os-instance.machine)
+	       [value-of ?attacker.machines ?attacker-machine]
+	       [value-of ?process.host-os ?os-instance]
+	       [value-of ?os-instance.machine ?email-server-machine]
+	       [current-foothold ?foothold-machine ?foothold-role]
 	       )
     :typing ((?victim-user user)
 	     (?process email-server-process)
@@ -766,7 +766,7 @@
              (?email-server-machine computer)
 	     (?attacker-machine computer))
     :plan (:sequential
-           (:goal [get-foothold ?email-server-machine smtp])
+	   (:goal [get-foothold ?email-server-machine smtp])
            (:action [phishing-attack ?attacker ?email-server-machine ?victim-user ?process]))
     :post-conditions ([current-foothold ?current-foothold-machine ?current-foothold-role])
     )
@@ -785,7 +785,7 @@
     :typing ((?user user)
              (?victim-machine computer)
              (?subnet subnet))
-    :bindings ((?subnet ?victim-machine.subnets))
+    :bindings ([value-of ?victim-machine.subnets ?subnet])
     :plan (:parallel 
            (:goal [observe-network-traffic ?attacker ?subnet])
            (:action [sniff-a-password ?attacker ?user ?subnet]))
@@ -833,13 +833,15 @@
 (defattack-method direct-foothold
     :to-achieve [get-foothold ?victim-machine ?protocol-name]
     :guards ([not [place-already-visited? ?victim-machine foothold]])
-    :bindings ((?victim-os ?victim-machine.os)
-	       [current-foothold ?current-foothold-machine ?current-foothold-role])
+    :bindings ([named-component ?victim-machine os ?victim-os]
+	       [current-foothold ?current-foothold-machine ?current-foothold-role]
+	       )
     :typing ((?victim-os operating-system)
 	     (?victim-machine computer)
 	     (?current-foothold-machine computer))
     :prerequisites ([accepts-connection ?victim-machine ?protocol-name ?current-foothold-machine])
     :plan (:action [connect-via ?current-foothold-machine ?current-foothold-role ?victim-machine ?protocol-name])
+    :post-conditions ([has-foothold ?victim-machine ?current-foothold-machine ?current-foothold-role ?protocol-name])
     )
 
 (defattack-method lateral-motion
@@ -848,7 +850,7 @@
 	     [not [foothold-exists ?victim-machine]]
 	     ;; Use this method only if you can't get a connection to the victim from where you are
 	     [not [accepts-connection ?victim-machine ?protocol-name ?current-foothold-machine]])
-    :bindings ((?victim-os ?victim-machine.os)
+    :bindings ([named-component ?victim-machine os ?victim-os]
 	       ;; Now find somebody that can make the connection, accepts connection will find one if there is one
 	       [current-foothold ?current-foothold-machine ?current-foothold-role]
 	       [accepts-connection ?victim-machine ?protocol-name ?new-foothold-machine]
@@ -867,7 +869,7 @@
 	   ;;If so then actually make the connection to the victim from the new foothold
 	   ;; (:goal [make-connection ?victim-os-instance ?protocol-name ?remote-execution-state ?output-contet])
 	   )
-    :post-conditions ([has-foothold ?new-foothold-machine ?new-foothold-role foothold]))
+    :post-conditions ([has-foothold ?victim-machine ?new-foothold-machine ?new-foothold-role foothold]))
 
 
 
@@ -898,9 +900,9 @@
 
 (defattack-method control-the-network-stack
     :to-achieve [takes-direct-control-of ?attacker ?stack-property ?network-stack]
-    :bindings ((?network-stack ?os-instance.network-monitor)
-               (?superuser ?os-instance.superuser)
-	       (?attacker-machine ?attacker.machines))
+    :bindings ([value-of ?os-instance.network-monitor ?network-stack]
+               [value-of ?os-instance.superuser ?superuser]
+	       [value-of ?attacker.machines ?attacker-machine])
     :typing ((?network-stack network-stack)
              (?os-instance operating-system)
 	     (?attacker-machine computer)
@@ -912,9 +914,9 @@
 
 (defattack-method read-network-traffic
     :to-achieve [observe-network-traffic ?attacker ?subnet]
-    :bindings ((?switch ?subnet.switch)
-               (?os ?switch.os)
-               (?network-stack ?os.network-monitor))
+    :bindings ([value-of ?subnet.switch ?switch]
+               [named-component ?switch os ?os]
+               [value-of ?os.network-monitor ?network-stack])
     :typing ((?subnet switched-subnet)
              (?switch switch)
              (?network-stack network-stack))
@@ -969,7 +971,7 @@ predicate promising the thing is known.
 
 (defattack-method fake-sensor-data
     :to-achieve [affect accuracy ?controller-process]
-    :bindings ((?controller-machine ?controller-process.machines)
+    :bindings ([value-of ?controller-process.machines ?controller-machine]
 	       ;; does that machine play the part of a controller in some control system
 	       [system-role ?system controller ?controller-machine]
 	       ;; if so find a sensor in that same system
@@ -980,7 +982,7 @@ predicate promising the thing is known.
 	       ;; now find a another (or the same) machine that's on that bus
 	       [connected-to ?victim-machine ? ?bus ?]
 	       ;; then find a process runnning on that machine
-	       (?victim-os ?victim-machine.os)
+	       [named-component ?victim-machine os ?victim-os]
 	       )
     :prerequisites ([output-of ?sensor-machine ?signal]
 		    ;; the output of the sensor must be an input to 
@@ -1027,7 +1029,7 @@ predicate promising the thing is known.
  
 (defattack-method sensor-injection-attack
     :to-achieve [affect data-integrity ?signal]
-    :bindings ((?machine ?signal.machines)
+    :bindings ([value-of ?signal.machines ?machine]
 	       [attacker-and-machine ?attacker ?attacker-macine])
     :prerequisites ([system-role ?system sensor ?machine]
 		    [is-proximate-to ?attacker ?victim radio])
@@ -1045,8 +1047,8 @@ predicate promising the thing is known.
 
 (defattack-method recruit-to-mirai-botnet
     :to-achieve [affect independence ?cycle-pool]
-    :bindings ((?victim-machine ?cycle-pool.machines)
-	       (?victim-os ?cycle-pool.os)
+    :bindings ([value-of ?cycle-pool.machines ?victim-machine]
+	       [named-component ?cycle-pool os ?victim-os]
 	       [attacker-and-machine ?attacker ?attacker-macine]
 	       )
     :plan (:sequential

@@ -130,7 +130,7 @@
 
 (defmethod dump-node ((node attack-action) &optional (stream *standard-output*))
   (destructuring-bind (action-type &rest values) (action-name node)
-    (let ((predicate-args (gethash action-type *action-table*))
+    (let ((predicate-args (ji::find-predicate-arglist action-type))
 	  (unique-id (json-id node)))
       (terpri stream)
       (json:with-object (stream)

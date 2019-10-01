@@ -163,6 +163,45 @@
 			   do-backward-rules do-questions))
       (call-next-method))))
 
+
+;;; This is a special method (moved from objectmo.lisp where it really doesn't belong)
+;;; which fetches slot-value predicates for the ask-data method below
+;;; We've generalized slot-value things enough that it's now
+;;; possible that the final thing isn't a slot but just an object
+;;; in which case we're going to create a predication for it
+;;; if one doesn't exist
+
+(define-predicate-method (fetch value-of) (continuation)
+  (with-statement-destructured (path value-in-query) self
+    (declare (ignore value-in-query))
+    (flet ((slot-continuation (final-slot)
+	     (typecase final-slot
+	       (ji::basic-slot 
+		(with-slots (ji::all-predications) final-slot
+		  (loop for (nil . predication) in ji::all-predications
+		      do (funcall continuation predication))))
+	       ;; If resolving the path takes you to an actual object
+	       ;; then you just call the continuation.  Notice, this is
+	       ;; different than the case where the final thing is a slot
+	       ;; whose value is an object.  In that case, the path specifies a slot
+	       ;; whose value could change.  In this case, the last step takes
+	       ;; you to a "part" of the previous object.  Parts are fixed parts of the hierarchy
+	       ;; and can't be deduced by backward rules (I think).  Also in this case it's not set valued
+	       ;; so we just call the continuation after unifying the value part of the query to the object
+	       (ji::basic-object
+		(let* ((object final-slot)
+		       (his-role-name (ji::basic-object-role-name object))
+		       (his-parent (ji::basic-object-superpart-object object))
+		       (parent-predication-table (subpart-table his-parent))
+		       (his-predication (gethash his-role-name parent-predication-table)))
+		  (unless his-predication
+		    (setq his-predication `[named-part-of ,his-parent ,his-role-name ,object])
+		    (setf (ji::predication-bits-truth-value (ji::predication-bits his-predication)) +true+)
+		    (setf (gethash his-role-name parent-predication-table) his-predication))
+		  (funcall continuation his-predication))))))
+      (ji::follow-path-to-slot* path #'slot-continuation nil))))
+
+
 (define-predicate-method (ask-data stateful-predicate-mixin) (truth-value continuation)
   (let ((query self))
     (with-statement-destructured (internal-pred state-descriptor) query
@@ -172,7 +211,8 @@
 	  ((succeed (interned-internal-pred database-predication)
 	     ;; state is here for future expansion where it could be a variable
 	     (with-unification 
-	      (if (typep internal-pred 'slot-value-mixin)
+	      (typecase interned-internal-pred
+		(slot-value-mixin
 		  ;; this is necessary because slot-value-mixin interns
 		  ;; a pred with the slot vs the path.  I.e. source pred
 		  ;; won't unify with one another.  Maybe that could be fixed
@@ -183,8 +223,15 @@
 		  (with-statement-destructured (path value) internal-pred
 		    (with-statement-destructured (his-path his-value) interned-internal-pred
 		      (unify (follow-path path nil) his-path)
-		      (unify his-value value)))
-		(unify interned-internal-pred internal-pred))
+		      (unify his-value value))))
+		(named-component
+		 (with-statement-destructured (path value) internal-pred
+		   (declare (ignore path))
+		   (with-statement-destructured (parent name sub-object) interned-internal-pred
+		     (declare (ignore parent name))
+		     (unify value sub-object))))
+		(otherwise
+		 (unify interned-internal-pred internal-pred)))
 	      (stack-let ((backward-support (list query +true+ database-predication '(ask-data statefule-predicate-mixin))))
 		(funcall continuation backward-support))))
 	   (handle-predicate (interned-internal-pred)
@@ -346,6 +393,17 @@
 	(when prior-state
 	  (mark-state-useful prior-state)))
       ))))
+
+(defun clear-useless-states()
+  (labels ((do-one (state)
+	     (let ((successors (successors state))
+		   (useful-successors nil))
+	       (loop for successor in successors
+		   do (do-one successor)
+		 when (is-on-solution-path? successor)
+		   do (push successor useful-successors))
+	       (setf (successors state) useful-successors))))
+    (do-one *initial-state*)))
 
 #|
 

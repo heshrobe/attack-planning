@@ -39,7 +39,7 @@
 
 #+allegro
 (defsystem aplan 
-    (:default-pathname "aplan:home;"
+    (:default-pathname "aplan:code;"
 	:default-module-class separate-destination-module)
   (:serial
    ("package-definition")

@@ -74,9 +74,9 @@
 ;;; so this is always asked
 (define-predicate foothold-exists (foothold-machine) (special-stateful-predicate-model))
 
-;;; Has-Foothold always is in a post-conditions clause which wraps it in an [in-state .... ]
-;;; It's always told.  Why not make this same as current foothold
-(define-predicate has-foothold (foothold-machine foothold-role foothold-type) (special-stateful-predicate-model))
+;;; Has-Foothold will appear in a post-conditions clause which wraps it in an [in-state .... ]
+;;; It can be both asserted and queried.
+(define-predicate has-foothold (victim-machine foothold-machine foothold-role foothold-type) (special-stateful-predicate-model))
 
 ;;; here purpose is either remote-execution or foothold
 ;;; if it's for a foothold we'll also remember the protocol that that foothold needs to be able
@@ -110,10 +110,12 @@
 
 (define-predicate output-of (component resource) (non-stateful-predicate-model))
 
-(define-predicate named-part-of (superpart-object name subpart-object) 
+(define-predicate named-component (superpart-object name subpart-object) 
   (ji::named-part-of-mixin ltms:ltms-predicate-model))
 
 (define-predicate component (superpart-object subpart-object) (ji::part-of-mixin ltms:ltms-predicate-model))
+
+(define-predicate value-of (path vqriable) (ji::slot-value-mixin ltms:ltms-mixin default-protocol-implementation-model))
 
 (define-predicate residence (thing place) (non-stateful-predicate-model))
 
@@ -127,7 +129,7 @@
 
 (define-predicate has-control-of (attacker process) (ltms:ltms-predicate-model))
 
-(define-predicate is-typical-user (user) (ltms:ltms-predicate-model))
+(define-predicate is-typical-user (user) (non-stateful-predicate-model))
 
 (define-predicate is-superuser (user machine) (ltms:ltms-predicate-model))
 

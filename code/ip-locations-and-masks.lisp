@@ -12,6 +12,7 @@
 (define-protocol telnet (23 2323) remote-execution remote-shell)
 (define-protocol ssh 22 remote-execution remote-shell)
 (define-protocol database-protocol  1433 database-access sql)
+(define-protocol smtp  (25 465 2525) email transmission)
 
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;

@@ -27,16 +27,18 @@
   (let ((answers nil)
 	(final-states nil))
     ;; (os (follow-path `(,machine os)))
-    (ask `[achieve-goal [affect ,property ,resource] initial ?output-context ?plan]
-	 #'(lambda (just)
-	     (declare (ignore just))
-	     (mark-state-useful ?output-context)
-	     (Pushnew ?output-context final-states)
-	     (let ((plan (copy-object-if-necessary ?plan)))
-	       (pushnew (list :goal (list 'affect attacker property resource machine)
-			      :plan plan)
-			answers
-			:test #'equal))))
+    (unwind-protect
+	(ask `[achieve-goal [affect ,property ,resource] initial ?output-context ?plan]
+	     #'(lambda (just)
+		 (declare (ignore just))
+		 (mark-state-useful ?output-context)
+		 (Pushnew ?output-context final-states)
+		 (let ((plan (copy-object-if-necessary ?plan)))
+		   (pushnew (list :goal (list 'affect attacker property resource machine)
+				  :plan plan)
+			    answers
+			    :test #'equal))))
+      (clear-useless-states))
   (values answers final-states)))
 
 (defun create-attacker (name &key world-name)
@@ -55,7 +57,9 @@
 	(tell `[ltms:value-of (,his-machine subnets) ,the-world])
 	(tell `[ltms:value-of (,the-world computers) ,his-machine])
 	(tell `[ltms:value-of (,attacker location) ,the-world])
-	(tell `[in-state [has-foothold ,his-machine ,attacker foothold] initial])
+	;; has foothold always has a victim in it.  But in this initial state
+	;; there isn't one.  It's just a starting point.
+	(tell `[in-state [has-foothold nil ,his-machine ,attacker foothold] initial])
 	(tell `[in-state [attacker-and-machine ,attacker ,his-machine] initial])
 	attacker))))
 
