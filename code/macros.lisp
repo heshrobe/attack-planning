@@ -82,30 +82,30 @@
 				 (size 0 size-p)
 				 (address-range nil address-range-p))
   `(with-atomic-action
-       (kill-redefined-object ',name)
-     (let* ((ensemble (make-object 'ensemble :name ',name)))
-       ,@(when enterprise-p `((tell `[ltms:value-of (,ensemble enterprise) , (object-named ',enterprise)])))
-       ,@(when computer-p `((tell `[ltms:value-of (,ensemble typical-computer) , (object-named ',typical-computer)])))
-       ,@(when user-p `((tell `[ltms:value-of (,ensemble typical-user) ,(object-named ',typical-user)])))
-       ,@(when size-p `((tell `[ltms:value-of (,ensemble size) ,',size])))
-       ,@(when address-range-p
-	   `((let* ((address ,(first address-range))
+    (kill-redefined-object ',name)
+    (let* ((ensemble (make-object 'ensemble :name ',name)))
+      ,@(when enterprise-p `((tell `[ltms:value-of (,ensemble enterprise) , (object-named ',enterprise)])))
+      ,@(when computer-p `((tell `[ltms:value-of (,ensemble typical-computer) , (object-named ',typical-computer)])))
+      ,@(when user-p `((tell `[ltms:value-of (,ensemble typical-user) ,(object-named ',typical-user)])))
+      ,@(when size-p `((tell `[ltms:value-of (,ensemble size) ,',size])))
+      ,@(when address-range-p
+	  `((let* ((address ,(first address-range))
 		   (mask ,(second address-range))
 		   (subnet-mask (make-location-mask 'subnet-mask address mask)))
 	      (tell `[ltms:value-of (,ensemble ip-range) ,subnet-mask]))))
-       ensemble))
+      ensemble))
   )
 
 
 (defmacro defexternal-internet (name &rest excluded-subnets)
   `(with-atomic-action
-       (kill-redefined-object ',name)
-       (let* ((site (make-object 'external-internet :name ',name))
-	      (location (make-positive-location-mask "0.0.0.0" "0.0.0.0")))
-	 (tell `[ltms:value-of (,site subnets) ,location])
-	 ,@(loop for (address mask) in excluded-subnets
-	       collect `(push (make-location-mask 'subnet-mask ,address ,mask) (exception-masks location)))
-	 site)))
+    (kill-redefined-object ',name)
+    (let* ((site (make-object 'external-internet :name ',name))
+	   (location (make-positive-location-mask "0.0.0.0" "0.0.0.0")))
+      (tell `[ltms:value-of (,site subnets) ,location])
+      ,@(loop for (address mask) in excluded-subnets
+	    collect `(push (make-location-mask 'subnet-mask ,address ,mask) (exception-masks location)))
+      site)))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;

@@ -91,7 +91,9 @@
 ;;; our point of view
 (defensemble worker-machines
     :enterprise victim
-    :size 40)
+    :size 40
+    :address-range ("192.168.0.0" "255.255.255.0")
+    )
 
 ;;; The typical worker computer is a "windows" computer
 ;;; It is a typical meember of the worker-machines ensemble
@@ -133,7 +135,9 @@
 
 (defensemble admin-machines
     :enterprise victim
-    :size 5)
+    :size 5
+    :address-range ("192.168.10.0" "255.255.255.0")
+    )
 
 (defcomputer typical-admin-computer unix-computer
   :ip-address-string "192.168.10.3"
@@ -168,7 +172,9 @@
 
 (defensemble server-machines
   :enterprise victim
-  :size 2)
+  :size 2
+  :address-range ("192.168.20.0" "255.255.255.0")
+  )
 
 (defcomputer email-server unix-computer
   :ip-address-string "192.168.20.5"

@@ -291,18 +291,20 @@
 	   (merge-pathnames (make-pathname :type type) pathname)))
     (cond
      (pdf?
-      (let* ((ps-pathname (make-pathname-with-type file-name "ps"))
-	     (pdf-pathname (make-pathname-with-type file-name "pdf"))
-	     (command (format nil "pstopdf ~a -o ~a" ps-pathname pdf-pathname)))
+      (let* ((real-name (translate-logical-pathname file-name))
+	     (ps-pathname (make-pathname-with-type real-name "ps"))
+	     (pdf-pathname (make-pathname-with-type real-name "pdf"))
+	     (command (format nil "pstopdf ~a -o ~a " ps-pathname pdf-pathname)))
       (with-open-file (file ps-pathname :direction :output :if-exists :supersede)
 	(clim:with-output-to-postscript-stream (stream file)
 	  (body stream)
 	  ))
       #+Allegro
-      (excl:run-shell-command command :wait t)
+      (excl:run-shell-command command :wait t :show-window :normal)
       #+sbcl
       (uiop:run-program command)
-      (delete-file ps-pathname)))
+      (delete-file ps-pathname)
+      ))
      (t
       (let ((stream (clim:get-frame-pane clim:*application-frame* 'attack-structure)))
 	(multiple-value-bind (x y) (clim:stream-cursor-position stream)

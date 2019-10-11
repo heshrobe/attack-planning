@@ -122,9 +122,9 @@
 	(json:encode-object-member 'goal goal-type stream)
 	(loop for key in predicate-args
 	    for value in values
-	    for value-token = (cond ((or (symbolp value) (numberp value)) value) ((typep value 'search-context) value) (t (role-name value)))
+	    for value-token = (cond ((or (symbolp value) (numberp value)) value) ((typep value 'state) value) (t (role-name value)))
 	    if (eql key 'resource-or-component) do (setq key 'resource)
-	    unless (typep value-token 'search-context)
+	    unless (typep value-token 'state)
 	    do (terpri stream)
 	       (json:encode-object-member key value-token stream))))))
 
@@ -141,9 +141,9 @@
 	(json:encode-object-member 'action action-type stream)
 	(loop for key in predicate-args
 	    for value in values
-	    for value-token = (cond ((or (symbolp value) (numberp value)) value) ((typep value 'search-context) value) (t (role-name value)))
+	    for value-token = (cond ((or (symbolp value) (numberp value)) value) ((typep value 'state) value) (t (role-name value)))
 	    when (eql key 'resource-or-component) do (setq key 'resource)
-	    unless (typep value-token 'search-context)
+	    unless (typep value-token 'state)
 	    do 	(terpri stream)
 		(json:encode-object-member key value-token stream))))))
 
