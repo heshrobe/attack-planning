@@ -115,7 +115,7 @@
 
 (define-predicate component (superpart-object subpart-object) (ji::part-of-mixin ltms:ltms-predicate-model))
 
-(define-predicate value-of (path vqriable) (ji::slot-value-mixin ltms:ltms-mixin default-protocol-implementation-model))
+(define-predicate value-of (path variable) (ji::slot-value-mixin ltms:ltms-mixin default-protocol-implementation-model))
 
 (define-predicate residence (thing place) (non-stateful-predicate-model))
 
