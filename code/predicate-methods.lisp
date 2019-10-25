@@ -247,4 +247,46 @@
   (with-statement-destructured (machine purpose) inner-predication 
     ;; (format *error-output* "~%Noting that ~a was visited for purpose ~a" machine purpose)
     (pushnew (list machine purpose ) (places-visited state) :test #'equal)))
- 
+
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;;
+;;; This is a special method (moved from objectmo.lisp where it really doesn't belong)
+;;; which fetches slot-value predicates for the ask-data method below
+;;; We've generalized slot-value things enough that it's now
+;;; possible that the final thing isn't a slot but just an object
+;;; in which case we're going to create a predication for it
+;;; if one doesn't exist
+;;;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+(define-predicate-method (fetch value-of) (continuation)
+  (with-statement-destructured (path value-in-query) self
+    (declare (ignore value-in-query))
+    (flet ((slot-continuation (final-slot)
+	     (typecase final-slot
+	       (ji::basic-slot 
+		(with-slots (ji::all-predications) final-slot
+		  (loop for (nil . predication) in ji::all-predications
+		      do (funcall continuation predication))))
+	       ;; If resolving the path takes you to an actual object
+	       ;; then you just call the continuation.  Notice, this is
+	       ;; different than the case where the final thing is a slot
+	       ;; whose value is an object.  In that case, the path specifies a slot
+	       ;; whose value could change.  In this case, the last step takes
+	       ;; you to a "part" of the previous object.  Parts are fixed parts of the hierarchy
+	       ;; and can't be deduced by backward rules (I think).  Also in this case it's not set valued
+	       ;; so we just call the continuation after unifying the value part of the query to the object
+	       (ji::basic-object
+		(let* ((object final-slot)
+		       (his-role-name (ji::basic-object-role-name object))
+		       (his-parent (ji::basic-object-superpart-object object))
+		       (parent-predication-table (subpart-table his-parent))
+		       (his-predication (gethash his-role-name parent-predication-table)))
+		  (unless his-predication
+		    (setq his-predication `[named-part-of ,his-parent ,his-role-name ,object])
+		    (setf (ji::predication-bits-truth-value (ji::predication-bits his-predication)) +true+)
+		    (setf (gethash his-role-name parent-predication-table) his-predication))
+		  (funcall continuation his-predication))))))
+      (ji::follow-path-to-slot* path #'slot-continuation nil))))
+
+

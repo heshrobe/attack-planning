@@ -43,8 +43,8 @@
 	:default-module-class separate-destination-module)
   (:serial
    ("package-definition")
-   ("stateful-predicates" (:module-class separate-destination-joshua-module))
    ("predicate-defs" (:module-class separate-destination-joshua-module))
+   ("stateful-predicates" (:module-class separate-destination-joshua-module))
    ("object-defs" (:module-class separate-destination-joshua-module))
    ("macros" (:module-class separate-destination-joshua-module))
    ("def-attack-method" (:module-class separate-destination-joshua-module))
