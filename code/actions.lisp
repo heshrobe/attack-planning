@@ -9,7 +9,7 @@
 
 (in-package :aplan)
 
-(define-action connect-via (?current-foothold-machine ?current-foothold-role ?victim-machine protocol-name)
+(define-action connect-via (?current-foothold-machine ?current-foothold-role ?victim-machine ?protocol-name)
   :prerequisites ([accepts-connection ?victim-machine ?protocol-name ?current-foothold-machine]
 		  [is-protocol ?protocol-name])
   :post-conditions ([connection-established ?current-foothold-machine ?victim-machine ?protocol-name])
