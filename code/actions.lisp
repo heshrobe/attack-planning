@@ -103,7 +103,7 @@
 
 (defrule sysadmin-forced-to-login (:forward)
   if [and [in-state [disk-filled ?victim-machine] ?state]
-	  [ltms:named-part-of ?victim-machine os ?victim-os]
+	  [named-component ?victim-machine os ?victim-os]
 	  [value-of (?victim-os superuser) ?victim-user]
 	  [ltms:object-type-of ?victim-machine computer]
 	  [ltms:object-type-of ?victim-os operating-system]

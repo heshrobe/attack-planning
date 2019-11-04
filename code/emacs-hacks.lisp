@@ -14,5 +14,10 @@
 #+allegro
 (defmethod lep::definition-undefining-form (fspec (type (eql 'define-action)))
   `(undefrule ',fspec))
+
+#+allegro
+(defmethod lep::definition-undefining-form (fspec (type (eql 'define-aplan-object)))
+  `(ji::undefine-object-type ',fspec)
+  )
 				       
 

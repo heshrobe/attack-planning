@@ -187,22 +187,33 @@
 		      (unify (follow-path path nil) his-path)
 		      (unify his-value value))))
 		(named-component
-		 (with-statement-destructured (path value) internal-pred
-		   (declare (ignore path))
-		   (with-statement-destructured (parent name sub-object) interned-internal-pred
-		     (declare (ignore parent name))
-		     (unify value sub-object))))
+		 (typecase internal-pred
+		   (value-of 
+		    (with-statement-destructured (path value) internal-pred
+		      (declare (ignore path))
+		      (with-statement-destructured (parent name sub-object) interned-internal-pred
+			(declare (ignore parent name))
+			(unify value sub-object))))
+		   (named-component
+		    (with-statement-destructured (his-parent his-name value) internal-pred
+		      (declare (ignore his-parent his-name))
+		      (with-statement-destructured (parent name sub-object) interned-internal-pred
+			(declare (ignore parent name))
+			(unify value sub-object))))))
 		(otherwise
 		 (unify interned-internal-pred internal-pred)))
 	      (stack-let ((backward-support (list query +true+ database-predication '(ask-data statefule-predicate-mixin))))
 		(funcall continuation backward-support))))
-	   (handle-predicate (interned-internal-pred)
-	     ;; Succeed here should be called with the canonical version of the query predication
+	   (handle-predicate (backward-support)
+	     ;; Succeed here should be called with a standard justification
+	     ;; since we're using ask-data with a truth-value of nil.
+	     ;; from that we get the the canonical version of the query predication.
 	     ;; But to figure out which that is we need to search the truth-map (since the query might
 	     ;; have a successor state of the one in which it was explicitly asserted
 	     ;; This is why we have to handle at the ask-data level rather than the fetch level
 	     ;; (since fetch doesn't get the truth-value).
-	     (let* ((truth-map (gethash interned-internal-pred *truth-value-ht*))
+	     (let* ((interned-internal-pred (ask-database-predication backward-support))
+		    (truth-map (gethash interned-internal-pred *truth-value-ht*))
 		    (false-states (when truth-map (false-states truth-map)))
 		    (true-states (when truth-map (true-states truth-map)))
 		    (negated (eql truth-value +false+)))
@@ -228,7 +239,11 @@
 		 (loop for this-state = (intern-state state-descriptor) then (predecessor this-state)
 		     until (null this-state)
 		     if (or (and negated (member this-state false-states))
-			    (and (not negated) (member this-state true-states)))
+			    (and (not negated) (member this-state true-states))
+			    ;; But if we get to the initial state we just check truth-values
+			    (and (eql this-state *initial-state*)
+				 (or  (and negated (eql (predication-truth-value interned-internal-pred) +false+))
+				      (and (not negated) (eql (predication-truth-value interned-internal-pred) +true+)))))
 			;; should build a justification
 		     do (succeed interned-internal-pred 
 				 (gethash this-state (gethash interned-internal-pred *state-predicate-interning-ht*)))
@@ -246,7 +261,7 @@
 	  (when (typep internal-pred 'ji::not-model)
 	    (setq internal-pred (second (predication-statement internal-pred))
 		  truth-value (negate-truth-value truth-value)))
-	  (fetch internal-pred #'handle-predicate)))))))
+	  (ask-data internal-pred nil #'handle-predicate)))))))
 
 (define-predicate in-state (predication state) (stateful-predicate-mixin default-predicate-model))
 

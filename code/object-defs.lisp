@@ -19,8 +19,8 @@
     :slots ((typical-p :tms t :initform nil :initarg :typical-p))
     )
 
-(defclass aplan-object ()
-  ((subpart-table :initform (make-hash-table :size 10) :accessor subpart-table))
+(define-object-type aplan-object 
+    :slots ((subpart-table :initform (make-hash-table :size 10) :accessor subpart-table))
   )
 
 (eval-when (:compile-toplevel :load-toplevel :execute)
@@ -30,11 +30,14 @@
       (loop for slot in slots
 	  unless (getf (rest slot) :tms)
 	  do (setf (getf (rest slot) :tms) t))
-      (setf (getf plist :included-object-types) super-types
+      (setf (getf plist :included-object-types) `(,@super-types aplan-object)
 	    (getf plist :tms) t
-	    (getf plist :base-classes) '(aplan-object))
+	    ;;(getf plist :base-classes) '(aplan-object)
+	    )
       (remf plist :super-types))
     `(define-object-type ,name ,@plist)))
+
+(defmethod ji::part-of-predicate-for-object-type ((thing aplan-object)) 'named-component)
 
 (define-aplan-object system-entity
     :super-types (can-be-typical-mixin print-nicely-mixin)
@@ -352,6 +355,7 @@
 
 ;;; Note: For mobile users don't we need to bind authorization
 ;;; pools with site?
+
 
 ;;; USER inherits can-be-typical-mixin from system-entity
 (define-aplan-object user
