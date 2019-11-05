@@ -51,12 +51,12 @@
 	     (his-machine (make-object 'attacker-computer :name machine-name
 				       :typical-p t
 				       )))
-	(tell `[ltms:value-of (,attacker world) ,the-world])
-	(tell `[ltms:value-of (,attacker machines) ,his-machine])
+	(tell `[value-of (,attacker world) ,the-world])
+	(tell `[value-of (,attacker machines) ,his-machine])
 	(tell `[uses-machine ,attacker ,his-machine])
-	(tell `[ltms:value-of (,his-machine subnets) ,the-world])
-	(tell `[ltms:value-of (,the-world computers) ,his-machine])
-	(tell `[ltms:value-of (,attacker location) ,the-world])
+	(tell `[value-of (,his-machine subnets) ,the-world])
+	(tell `[value-of (,the-world computers) ,his-machine])
+	(tell `[value-of (,attacker location) ,the-world])
 	;; has foothold always has a victim in it.  But in this initial state
 	;; there isn't one.  It's just a starting point.
 	(tell `[in-state [has-foothold nil ,his-machine ,attacker foothold] initial])

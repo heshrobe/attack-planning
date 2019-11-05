@@ -37,7 +37,7 @@
 	  [ltms:object-type-of ?attacker-machine computer]
 	  (not (eql ?victim-machine ?attacker-machine))
 	  [reachable-from ?victim-machine ?attacker-machine ?path]
-	  [ltms:value-of (?attacker-machine ip-addresses) ?attacker-ip-address]
+	  [value-of (?attacker-machine ip-addresses) ?attacker-ip-address]
 	  (host-allows-connection-type ?victim-machine ?attacker-ip-address ?connection-type)
           (path-is-acceptable-for-connection-type (copy-object-if-necessary ?path)
                                                   ?attacker-ip-address ?connection-type)
@@ -52,7 +52,7 @@
   if [and [ltms:object-type-of ?victim-machine computer]
 	  [ltms:object-type-of ?attacker attacker]
 	  [reachable-from ?victim-machine ?attacker ?path]
-	  [ltms:value-of (?attacker location) ?location]
+	  [value-of (?attacker location) ?location]
 	  ;; Does the host block it on its own
 	  (host-allows-connection-type ?victim-machine ?location ?connection-type)
 	  ;; Do any of the routers on the path block it
@@ -65,7 +65,7 @@
 (defrule path-allows-connection-from-attacker-machine (:backward)
   then [accepts-connection ?machine ?connection-type ?attacker-machine] 
   if [and [ltms:object-type-of ?attacker-machine attacker-computer]
-	  [ltms:value-of (?attacker-machine users) ?attacker]
+	  [value-of (?attacker-machine users) ?attacker]
           [accepts-connection ?machine ?connection-type ?attacker]
 	  ])
 
@@ -87,7 +87,7 @@
   if [and [ltms:object-type-of ?victim-machine computer]
 	  [ltms:object-type-of ?attacker-machine computer]
 	  [reachable-from ?victim-machine ?attacker-machine ?path]
-	  [ltms:value-of (?attacker-machine ip-addresses) ?attacker-ip-address]
+	  [value-of (?attacker-machine ip-addresses) ?attacker-ip-address]
 	  (or (not (host-allows-connection-type ?victim-machine ?attacker-ip-address  ?connection-type))
 	      (not (path-is-acceptable-for-connection-type (copy-object-if-necessary ?path)
 							   ?attacker-ip-address ?connection-type)))
@@ -101,7 +101,7 @@
   if [and [ltms:object-type-of ?victim-machine computer]
 	  [ltms:object-type-of ?attacker attacker]
 	  [reachable-from ?victim-machine ?attacker ?path]
-	  [ltms:value-of (?attacker location) ?location]
+	  [value-of (?attacker location) ?location]
 	  ;; Does the host block it on its own
 	  (or (not (host-allows-connection-type ?victim-machine ?location ?connection-type))
 	      ;; Do any of the routers on the path block it
@@ -114,7 +114,7 @@
 (defrule path-does-not-allow-connection-from-attacker-machine (:backward)
   then [not [accepts-connection ?machine ?connection-type ?attacker-machine]]
   if [and [ltms:object-type-of ?attacker-machine attacker-computer]
-	  [ltms:value-of (?attacker-machine users) ?attacker]
+	  [value-of (?attacker-machine users) ?attacker]
           [not [accepts-connection ?machine ?connection-type ?attacker]]
 	  ])
 
@@ -320,12 +320,12 @@
          (ip-address (or (follow-path (list name) t nil) (make-object 'ip-address :name name))))
     (loop for octet in '(octet1 octet2 octet3 octet4)
           for value in octets
-          do (tell `[ltms:value-of (,ip-address ,octet) ,value]))
+          do (tell `[value-of (,ip-address ,octet) ,value]))
     ip-address))
 
 (defun add-ip-address-to-computer (ip-address-string computer)
   (let* ((ip-address (create-ip-address ip-address-string)))
-    (tell `[ltms:value-of (,computer ip-addresses) ,ip-address])))
+    (tell `[value-of (,computer ip-addresses) ,ip-address])))
 
 (defun fill-in-subnet-mask (subnet-mask ip-address-string subnet-mask-string)
   (let ((address-octets (parse-ip-address ip-address-string))
@@ -333,8 +333,8 @@
     (loop for octet-name in '(octet1 octet2 octet3 octet4)
           for address-octet in address-octets
           for mask-octet in mask-octets
-          do (tell `[ltms:value-of (,subnet-mask ip-address ,octet-name) ,address-octet])
-             (tell `[ltms:value-of (,subnet-mask mask ,octet-name) ,mask-octet]))))
+          do (tell `[value-of (,subnet-mask ip-address ,octet-name) ,address-octet])
+             (tell `[value-of (,subnet-mask mask ,octet-name) ,mask-octet]))))
 
 (defun ip-address-is-on-subnet (ip-address subnet)
   (let* ((subnet-mask (ip-address-integer (follow-path `(,subnet mask mask))))
@@ -744,9 +744,9 @@
 ;;;(defrule bridges-on-pathway-2 (:backward)
 ;;;  then [reachable-from ?computer ?user (?router . ?path)]
 ;;;  if [and [ltms:object-type-of ?user attacker]
-;;;	  [ltms:value-of (?user location) ?location]
+;;;	  [value-of (?user location) ?location]
 ;;;	  [ltms:object-type-of ?router router]
-;;;	  [ltms:value-of (?router ip-addresses) ?ip-address]
+;;;	  [value-of (?router ip-addresses) ?ip-address]
 ;;;	  (ip-address-is-within-location ?ip-address ?location)
 ;;;	  (break)
 ;;;          [connected ?computer ?router ?path]]
@@ -758,17 +758,17 @@
 ;;;  if [and [ltms:object-type-of ?user attacker]
 ;;;	  ;; is the computer at some site in common with the router
 ;;;	  [ltms:object-type-of ?router router]
-;;;          [ltms:value-of (?router site) ?site]
+;;;          [value-of (?router site) ?site]
 ;;;	  [ltms:object-type-of ?site site]
 ;;;          [ltms:object-type-of ?computer computer]
-;;;          [ltms:value-of (?computer site) ?site]
+;;;          [value-of (?computer site) ?site]
 ;;;	  ;; so now we know that the computer can talk
 ;;;	  ;; to the router.  Next, can the user talk to
 ;;;	  ;; the router.
 ;;;	  ;; Note: The only user's with a location are the attacker
 ;;;	  ;; (at the moment)
-;;;          [ltms:value-of (?user location) ?location]
-;;;	  [ltms:value-of (?router ip-addresses) ?ip-address)
+;;;          [value-of (?user location) ?location]
+;;;	  [value-of (?router ip-addresses) ?ip-address)
 ;;;	  [ltms:object-type-of ?ip-address ip-address]
 ;;;          (not (location-is-in-net-segment ?site ?location))
 ;;;          ;; should really check for being the router to the outside

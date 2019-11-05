@@ -440,26 +440,26 @@
       (let* ((os-name (role-name os-instance))
              (new-name (gentemp (concatenate 'string (string-upcase "workload") "-" (string os-name) "-")))
              (workload (make-object 'os-workload :name new-name)))
-        (tell `[ltms:value-of (,workload os) ,os-instance])
-        (tell `[ltms:value-of (,workload user-workload os) ,os-instance])
-        (tell `[ltms:value-of (,workload server-workload os) ,os-instance])
-        (tell `[ltms:value-of (,os-instance workload) ,workload]))))
+        (tell `[value-of (,workload os) ,os-instance])
+        (tell `[value-of (,workload user-workload os) ,os-instance])
+        (tell `[value-of (,workload server-workload os) ,os-instance])
+        (tell `[value-of (,os-instance workload) ,workload]))))
 
 (defun make-user-set-for-os (os-instance)
   (with-atomic-action
       (let* ((os-name (role-name os-instance))
              (new-name (gentemp (concatenate 'string (string-upcase "user-set") "-" (string os-name) "-")))
              (user-set (make-object 'user-set :name new-name)))
-        (tell `[ltms:value-of (,user-set os) ,os-instance])
-        (tell `[ltms:value-of (,os-instance user-set) ,user-set]))))
+        (tell `[value-of (,user-set os) ,os-instance])
+        (tell `[value-of (,os-instance user-set) ,user-set]))))
 
 (defun make-job-launch-queue-for-os (os-instance)
   (with-atomic-action
       (let* ((os-name (role-name os-instance))
 	     (new-name (gentemp (concatenate 'string (string-upcase "job-launch-queue") "-" (string os-name) "-")))
 	     (job-launch-queue (make-object 'os-job-launch-request-queue :name new-name)))
-	(tell `[ltms:value-of (,job-launch-queue os) ,os-instance])
-	(tell `[ltms:value-of (,os-instance job-launch-queue) ,job-launch-queue]))))
+	(tell `[value-of (,job-launch-queue os) ,os-instance])
+	(tell `[value-of (,os-instance job-launch-queue) ,job-launch-queue]))))
 
 ;;; Note:  This organization is probably wrong
 ;;; We probably want to characterize machines by their make and model number
@@ -496,14 +496,14 @@
   (ask `[part-of ,os ?part]
        #'(lambda (just)
 	   (declare (ignore just))
-	   (tell `[ltms:value-of (?part host-os) ,os])
+	   (tell `[value-of (?part host-os) ,os])
 	   (ask [part-of ?part ?his-part]
 		#'(lambda (just)
 		    (declare (ignore just))
 		    (ask [ltms:object-type-of ?his-part system-process]
 			 #'(lambda (just)
 			     (declare (ignore just))
-			     (tell `[ltms:value-of (?his-part host-os) ,os]))))))))
+			     (tell `[value-of (?his-part host-os) ,os]))))))))
 
 (define-aplan-object unix
   :super-types (operating-system))
@@ -789,8 +789,8 @@
     (let* ((subnet-name (role-name subnet))
            (new-name (gentemp (concatenate 'string (string-upcase "traffic") "-" (string subnet-name) "-")))
            (traffic (make-object 'network-traffic :name new-name)))
-      (tell `[ltms:value-of (,traffic subnet) ,subnet])
-      (tell `[ltms:value-of (,subnet network-traffic) ,traffic]))))
+      (tell `[value-of (,traffic subnet) ,subnet])
+      (tell `[value-of (,subnet network-traffic) ,traffic]))))
 
 (define-aplan-object subnet-mixin
     :slots ((computers :set-valued t )

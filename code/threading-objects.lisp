@@ -9,16 +9,16 @@
   if [and [ltms:object-type-of ?machine computer]
 	  [ltms:named-part-of ?machine cycle-pool ?cycle-pool]
 	  [ltms:object-type-of ?cycle-pool cycle-pool]]
-  then [ltms:value-of (?cycle-pool machines) ?machine]
+  then [value-of (?cycle-pool machines) ?machine]
   )
 
 (defrule cycle-pool-to-os (:forward)
   if [and [ltms:object-type-of ?cycle-pool cycle-pool]
-	  [ltms:value-of (?cycle-pool machines) ?machine]
+	  [value-of (?cycle-pool machines) ?machine]
 	  [ltms:object-type-of ?machine computer]
 	  [ltms:named-part-of ?machine os ?os]
 	  ]
-  then [ltms:value-of (?cycle-pool os) ?os]
+  then [value-of (?cycle-pool os) ?os]
   )
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -32,9 +32,9 @@
 (defrule scheduler-input-workload (:forward)
   ;; assumption is that we know the scheduler
   if [and [ltms:object-type-of ?scheduler scheduler]
-	  [ltms:value-of (?scheduler host-os) ?os-instance]
+	  [value-of (?scheduler host-os) ?os-instance]
           [ltms:object-type-of ?os-instance operating-system]
-          [ltms:value-of (?os-instance workload) ?workload]
+          [value-of (?os-instance workload) ?workload]
           [ltms:object-type-of ?workload os-workload]]
   then [input-of ?scheduler ?workload]
   )
@@ -43,11 +43,11 @@
 (defrule scheduler-input (:forward)
   ;; assumption is that scheduler is known
   if [and [ltms:object-type-of ?scheduler scheduler]
-	  [ltms:value-of (?scheduler host-os) ?os-instance]
+	  [value-of (?scheduler host-os) ?os-instance]
           [ltms:object-type-of ?os-instance operating-system]
 	  [part-of ?computer ?os-instance]
           [ltms:object-type-of ?computer computer]
-          [ltms:value-of (?computer resources) ?scheduler-policy-file]
+          [value-of (?computer resources) ?scheduler-policy-file]
           [ltms:object-type-of ?scheduler-policy-file scheduler-policy-file]]
   then [input-of ?scheduler ?scheduler-policy-file]
   )
@@ -55,12 +55,12 @@
 (defrule access-controller-input-password-file (:forward)
   ;; assumption is that logon-controller is known
   if [and [ltms:object-type-of ?access-controller access-controller]
-	  [ltms:value-of (?access-controller host-os) ?os-instance]
+	  [value-of (?access-controller host-os) ?os-instance]
           [ltms:object-type-of ?os-instance operating-system]
 	  [named-part-of ?os-instance access-controller ?access-controller]
           [named-part-of ?computer os ?os-instance]
           [ltms:object-type-of ?computer computer]
-          [ltms:value-of (?computer resources) ?password-file]
+          [value-of (?computer resources) ?password-file]
           [ltms:object-type-of ?password-file password-file]
           ]
   then [input-of ?access-controller ?password-file]
@@ -69,11 +69,11 @@
 (defrule user-job-admitter-inputs (:forward)
   ;; assumption is that user-job-admitter is knownn
   if [and [ltms:object-type-of ?user-job-admitter job-launcher]
-	  [ltms:value-of (?user-job-admitter host-os) ?os-instance]
+	  [value-of (?user-job-admitter host-os) ?os-instance]
           [ltms:object-type-of ?os-instance operating-system]
 	  ;;check that it's actually the user job admitter
 	  [named-part-of (?os-instance job-admitter) user-job-admitter ?user-job-admitter]
-	  [ltms:value-of (?os-instance job-launch-queue) ?job-launch-queue]
+	  [value-of (?os-instance job-launch-queue) ?job-launch-queue]
           [ltms:object-type-of ?job-launch-queue os-job-launch-request-queue]
 	  [named-part-of ?job-launch-queue user-job-launch-request-queue ?user-job-launch-request-queue]
           [ltms:object-type-of ?user-job-launch-request-queue job-launch-request-queue]
@@ -84,11 +84,11 @@
 (defrule server-job-admitter-inputs (:forward)
   ;; assumption is that server-job-admitter is knownn
   if [and [ltms:object-type-of ?server-job-admitter job-launcher]
-	  [ltms:value-of (?server-job-admitter host-os) ?os-instance]
+	  [value-of (?server-job-admitter host-os) ?os-instance]
           [ltms:object-type-of ?os-instance operating-system]
 	  ;; check that it's actually the server admitter
           [named-part-of (?os-instance job-admitter) server-job-admitter ?server-job-admitter]
-          [ltms:value-of (?os-instance job-launch-queue) ?job-launch-queue]
+          [value-of (?os-instance job-launch-queue) ?job-launch-queue]
 	  [ltms:object-type-of ?job-launch-queue os-job-launch-request-queue]
 	  [named-part-of ?job-launch-queue server-job-launch-request-queue ?server-job-launch-request-queue]
           [ltms:object-type-of ?server-job-launch-request-queue job-launch-request-queue]
@@ -98,12 +98,12 @@
 
 (defrule logon-controller-inputs (:forward)
   if [and [ltms:object-type-of ?logon-controller logon-controller]
-	  [ltms:value-of (?logon-controller host-os) ?os-instance]
+	  [value-of (?logon-controller host-os) ?os-instance]
 	  [ltms:object-type-of ?os-instance operating-system]
           [named-part-of ?os-instance logon-controller ?logon-controller]
           [named-part-of ?computer os ?os-instance]
           [ltms:object-type-of ?computer computer]
-          [ltms:value-of (?computer resources) ?password-file]
+          [value-of (?computer resources) ?password-file]
           [ltms:object-type-of ?password-file password-file]
           ]
   then [input-of ?logon-controller ?password-file]
@@ -129,7 +129,7 @@
   if [and [ltms:object-type-of ?os-instance operating-system]
           [named-part-of ?os-instance scheduler ?scheduler]
           [ltms:object-type-of ?scheduler scheduler]
-	  [ltms:value-of (?os-instance processes) ?process]
+	  [value-of (?os-instance processes) ?process]
 	  [ltms:object-type-of ?process process]
           ]
   then [impacts fairness ?scheduler performance ?process]
@@ -137,7 +137,7 @@
 
 (defrule scheduler-fairness-affects-performance (:forward)
     IF [and [ltms:object-type-of ?victim-process process]
-	    [ltms:value-of (?victim-process host-os) ?victim-os]
+	    [value-of (?victim-process host-os) ?victim-os]
 	    [ltms:object-type-of ?victim-os operating-system]
 	    [named-part-of ?victim-os scheduler ?victim-scheduler]
 	    [ltms:object-type-of ?victim-scheduler scheduler]]
@@ -152,7 +152,7 @@
 	  ;; but also it's not referenced below
 	  ;; [named-part-of ?scheduler workset ?workset]
           [ltms:object-type-of ?scheduler scheduler]
-	  [ltms:value-of (?os-instance processes) ?process]
+	  [value-of (?os-instance processes) ?process]
 	  [ltms:object-type-of ?process process]
           ]
   then [impacts workset-size ?scheduler performance ?process]
@@ -170,7 +170,7 @@
 
 (defrule size-of-part-of-workset-impacts-size-of-full-worset (:forward)
   if [and [ltms:object-type-of ?os-instance operating-system]
-	  [ltms:value-of (?os-instance workload) ?full-workset]
+	  [value-of (?os-instance workload) ?full-workset]
 	  [ltms:object-type-of ?full-workset os-workload]
 	  [part-of ?full-workset ?partial-workset]
 	  [ltms:object-type-of ?partial-workset workload]
@@ -195,7 +195,7 @@
  
 (defrule size-of-part-of-request-queue-impacts-size-of-full-request-queue (:forward)
   if [and [ltms:object-type-of ?os-instance operating-system]
-	  [ltms:value-of (?os-instance job-launch-queue) ?full-request-queue]
+	  [value-of (?os-instance job-launch-queue) ?full-request-queue]
 	  [ltms:object-type-of ?full-request-queue os-job-launch-request-queue]
 	  [part-of ?full-request-queue ?partial-request-queue]
 	  [ltms:object-type-of ?partial-request-queue job-launch-request-queue]
@@ -221,7 +221,7 @@
           [ltms:object-type-of  ?access-controller access-controller]
           [named-part-of ?computer os ?os-instance]
 	  [ltms:object-type-of ?computer computer]
-	  [ltms:value-of (?computer resources) ?file]
+	  [value-of (?computer resources) ?file]
           [ltms:object-type-of ?file file]
           ]
   then [impacts policy ?access-controller data-privacy ?file]
@@ -234,7 +234,7 @@
           [ltms:object-type-of  ?access-controller access-controller]
           [named-part-of ?computer os ?os-instance]
 	  [ltms:object-type-of ?computer computer]
-	  [ltms:value-of (?computer resources) ?file]
+	  [value-of (?computer resources) ?file]
           [ltms:object-type-of ?file file]
           ]
   then [impacts policy ?access-controller data-integrity ?file]
@@ -252,7 +252,7 @@
 ;;; active user set
 (defrule logon-controller-controls-active-user-set (:forward)
   if [and [ltms:object-type-of ?os-instance operating-system]
-	  [ltms:value-of (?os-instance user-set) ?active-user-set]
+	  [value-of (?os-instance user-set) ?active-user-set]
           [ltms:object-type-of ?active-user-set user-set]
           [named-part-of ?os-instance logon-controller ?logon-controller]
           [ltms:object-type-of ?logon-controller logon-controller]
@@ -266,11 +266,11 @@
 ;;; User job launcher controls the workload
 (defrule user-workload-controls (:forward)
   if [and [ltms:object-type-of ?os-instance operating-system]
-          [ltms:value-of (?os-instance workload) ?workload]
+          [value-of (?os-instance workload) ?workload]
           [ltms:object-type-of ?workload os-workload]
           [named-part-of ?workload user-workload ?user-workload]
           [ltms:object-type-of ?user-workload workload]
-          [ltms:value-of (?user-workload os) ?os-instance]
+          [value-of (?user-workload os) ?os-instance]
 	  [named-part-of (?os-instance job-admitter) user-job-admitter ?user-job-admitter]
           [ltms:object-type-of ?user-job-admitter job-launcher]
           ]
@@ -280,11 +280,11 @@
 ;;; Server job launcher controls the workload
 (defrule server-workload-controls (:forward)
   if [and [ltms:object-type-of ?os-instance operating-system]
-          [ltms:value-of (?os-instance workload) ?workload]
+          [value-of (?os-instance workload) ?workload]
           [ltms:object-type-of ?workload os-workload]
           [named-part-of ?workload server-workload ?server-workload]
           [ltms:object-type-of ?server-workload workload]
-          [ltms:value-of (?server-workload os) ?os-instance]
+          [value-of (?server-workload os) ?os-instance]
           [named-part-of (?os-instance job-admitter) server-job-admitter ?server-job-admitter]
           [ltms:object-type-of ?server-job-admitter job-launcher]
           ]
@@ -303,41 +303,41 @@
   if [and [ltms:object-type-of ?site site]
           [ltms:object-type-of ?subnet subnet]
           (subnet-is-at-site ?subnet ?site)]
-  then (tell [ltms:value-of (?site subnets) ?subnet]))
+  then (tell [value-of (?site subnets) ?subnet]))
 
 (defrule put-computer-on-subnets (:forward)
   if [and [ltms:object-type-of ?computer computer]
-          [ltms:value-of (?computer ip-addresses) ?ip-address]
+          [value-of (?computer ip-addresses) ?ip-address]
           [ltms:object-type-of ?subnet subnet]
           (ip-address-is-on-subnet ?ip-address ?subnet)]
-  then [ltms:value-of (?subnet computers) ?computer])
+  then [value-of (?subnet computers) ?computer])
 
 (defrule fill-in-subnet-routers (:forward)
   if [and [ltms:object-type-of ?computer router]
           [ltms:object-type-of ?subnet subnet-mixin]
-          [ltms:value-of (?computer subnets) ?subnet]]
-   then [ltms:value-of (?subnet routers) ?computer])
+          [value-of (?computer subnets) ?subnet]]
+   then [value-of (?subnet routers) ?computer])
 
 (defrule fill-in-subnet-switch (:forward)
   if [and [ltms:object-type-of ?computer switch]
           [ltms:object-type-of ?subnet switched-subnet]
-          [ltms:value-of (?computer subnets) ?subnet]]
-  then [ltms:value-of (?subnet switch) ?computer])
+          [value-of (?computer subnets) ?subnet]]
+  then [value-of (?subnet switch) ?computer])
 
 ;;; Why would the router be the switch of a switched network?
 ; (defrule router-on-switched-network-is-switch (:forward)
 ;   if [and [ltms:object-type-of ?computer router]
 ;           [ltms:object-type-of ?subnet switched-subnet]
-;           [ltms:value-of (?computer subnets) ?subnet]]
-;    then [ltms:value-of (?subnet switch) ?computer])
+;           [value-of (?computer subnets) ?subnet]]
+;    then [value-of (?subnet switch) ?computer])
 
 
 (defrule fill-in-computer-site (:forward)
   if [and [ltms:object-type-of ?subnet subnet]
-          [ltms:value-of (?subnet computers) ?computer]
-          [ltms:value-of (?subnet site) ?site]
+          [value-of (?subnet computers) ?computer]
+          [value-of (?subnet site) ?site]
           [ltms:object-type-of ?site site]]
-  then [ltms:value-of (?computer site) ?site])
+  then [value-of (?computer site) ?site])
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;
@@ -349,25 +349,25 @@
   if [and [ltms:object-type-of ?machine computer]
 	  [ltms:named-part-of ?machine os ?os-instance]
 	  ]
-  then [ltms:value-of (?os-instance machine) ?machine]
+  then [value-of (?os-instance machine) ?machine]
   )
 
 (defrule fill-in-machine-os-users (:forward)
   if [and [ltms:object-type-of ?machine computer]
 	  [ltms:named-part-of ?machine os ?os-instance]
 	  [ltms:object-type-of ?os-instance operating-system]
-	  [ltms:value-of (?machine users) ?user]
+	  [value-of (?machine users) ?user]
 	  [ltms:object-type-of ?user user]
 	  ]
-  then [ltms:value-of (?os-instance users) ?user]
+  then [value-of (?os-instance users) ?user]
   )
 
 
 (defrule fill-in-machines-superuser (:forward)
   if [and [ltms:object-type-of ?machine computer]
-          [ltms:value-of (?machine os superuser) ?user]
+          [value-of (?machine os superuser) ?user]
           [ltms:object-type-of ?user user]]
-  then [ltms:value-of (?user machines) ?machine])
+  then [value-of (?user machines) ?machine])
 
 
 
@@ -413,7 +413,7 @@
 	  [part-of (?machine os) ?os]
 	  [part-of ?os ?part]
 	  [ltms:object-type-of ?part computer-resource]]
-  then [ltms:value-of (?part machines) ?machine])
+  then [value-of (?part machines) ?machine])
 	  
 
 ;;; All this needs to be redone in a decision theoretic framework!
@@ -483,31 +483,31 @@
 
 (defrule servers-run-root-in-windows (:forward)
   if [and [ltms:object-type-of ?server-process server-process]
-          [ltms:value-of (?server-process host-os) ?os-instance]
+          [value-of (?server-process host-os) ?os-instance]
           [ltms:object-type-of ?os-instance windows]
-          [ltms:value-of (?os-instance superuser) ?superuser]
+          [value-of (?os-instance superuser) ?superuser]
           [ltms:object-type-of ?superuser user]]
   then [runs-with-permissions-of ?server-process ?superuser])
 
 (defrule servers-run-root-in-unix (:forward)
   if [and [ltms:object-type-of ?server-process server-process]
-	  [ltms:value-of (?server-process host-os) ?os-instance]
+	  [value-of (?server-process host-os) ?os-instance]
           [ltms:object-type-of ?os-instance unix]
-          [ltms:value-of (?os-instance superuser) ?superuser]
+          [value-of (?os-instance superuser) ?superuser]
           [ltms:object-type-of ?superuser user]]
   then [runs-with-permissions-of ?server-process ?superuser])
 
 (defrule check-typical-user (:backward)
   :then [is-typical-user ?user]
   :if [and [ltms:object-type-of ?user user]
-	   [ltms:value-of (?user typical-p) t]]
+	   [value-of (?user typical-p) t]]
   )
 
 (defrule check-superuser (:backward)
   :then [is-superuser ?user ?os]
   :if [and [ltms:object-type-of ?user user]
 	   [ltms:object-type-of ?os operating-system]
-	   [ltms:value-of (?os superuser) ?user]])
+	   [value-of (?os superuser) ?user]])
 
 
 ;;; this forces the user to "own" every machine at his site
@@ -519,12 +519,12 @@
 
 ;;;(defrule user-can-use-computer (:forward)
 ;;;  if [and [ltms:object-type-of ?user user]
-;;;          [ltms:value-of (?user location) ?location]
+;;;          [value-of (?user location) ?location]
 ;;;	  [ltms:object-type-of ?computer computer]
-;;;	  [ltms:value-of (?computer site) ?site]
+;;;	  [value-of (?computer site) ?site]
 ;;;	  [ltms:object-type-of ?site site]
 ;;;	  (location-is-in-net-segment ?site ?location)]
-;;;  then [ltms:value-of (?user machines) ?computer])
+;;;  then [value-of (?user machines) ?computer])
 
 
 ;;; Note:
@@ -536,7 +536,7 @@
   if [and [uses-machine ?user ?machine]
 	  [ltms:object-type-of ?user user]
 	  [ltms:object-type-of ?machine computer]]
-  then [ltms:value-of (?user machines) ?machine])
+  then [value-of (?user machines) ?machine])
 
 
 ;;; This was to thread up the "location" field of users
@@ -544,13 +544,13 @@
 ;;; So this isn't right.
 ;;;(defrule user-at-location (:forward)
 ;;;  if [and [ltms:object-type-of ?user user]
-;;;	  [ltms:value-of (?user machines) ?machine]
+;;;	  [value-of (?user machines) ?machine]
 ;;;	  [ltms:object-type-of ?machine computer]
-;;;	  [ltms:value-of (?machine ip-addresses) ?ip-address]
+;;;	  [value-of (?machine ip-addresses) ?ip-address]
 ;;;	  [ltms:object-type-of ?ip-address ip-address]
 ;;;	  [ltms:object-type-of ?subnet subnet]
 ;;;	  (ip-address-is-on-subnet ?ip-address ?subnet)]
-;;;  then [ltms:value-of (?user location) ?subnet])
+;;;  then [value-of (?user location) ?subnet])
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;
@@ -569,7 +569,7 @@
 
 (defrule user-has-permission (:forward)
   if [and [ltms:object-type-of ?object computer-resource]
-          [ltms:value-of (?object capability-requirements) ?requirement]
+          [value-of (?object capability-requirements) ?requirement]
           [ltms:object-type-of ?user user]
 	  (unify ?operation (first ?requirement))
 	  (has-capability ?user (second ?requirement))
@@ -579,7 +579,7 @@
 
 (defrule user-doesnt-have-permission (:forward)
   if [and [ltms:object-type-of ?object computer-resource]
-          [ltms:value-of (?object capability-requirements) ?requirement]
+          [value-of (?object capability-requirements) ?requirement]
           [ltms:object-type-of ?user user]
 	  (unify ?operation (first ?requirement))
 	  (not (has-capability ?user (second ?requirement)))
@@ -616,7 +616,7 @@
 
 (defrule requires-access-right-translation (:forward)
   if [and [ltms:object-type-of ?object computer-resource]
-          [ltms:value-of (?object capability-requirements) ?requirement]
+          [value-of (?object capability-requirements) ?requirement]
 	  (unify ?requirement (list ?operation ?capability))
 	  ]
   then [requires-access-right ?object ?operation ?capability]
@@ -624,34 +624,34 @@
 
 (defrule thread-process (:forward)
   if [and [ltms:object-type-of ?process process]
-	  [ltms:value-of (?process host-os) ?os]]
-  then [ltms:value-of (?os processes) ?process]
+	  [value-of (?process host-os) ?os]]
+  then [value-of (?os processes) ?process]
   )
 
 (defrule thread-process-host-os (:forward)
   if [and [ltms:object-type-of ?process process]
-	  [ltms:value-of (?process machines) ?machine]
+	  [value-of (?process machines) ?machine]
 	  [named-part-of ?machine os ?os-instance]]
-  then [ltms:value-of (?process host-os) ?os-instance])
+  then [value-of (?process host-os) ?os-instance])
 
 (defrule thread-superuser (:forward)
   if [and [ltms:object-type-of ?machine computer]
 	  [named-part-of ?machine os ?os-instance]
 	  [ltms:object-type-of ?os-instance operating-system]
-	  [ltms:value-of (?os-instance superuser) ?user]
+	  [value-of (?os-instance superuser) ?user]
 	  [ltms:object-type-of ?user user]]
-  then [ltms:value-of (?user machines) ?machine])
+  then [value-of (?user machines) ?machine])
 
 ;;; Make the typical user of an ensemble
 ;;; use the typical machine of that ensemble
 (defrule thread-user-machines (:forward)
   if [and [ltms:object-type-of ?user user]
-	  [ltms:value-of (?user typical-p) t]
-	  [ltms:value-of (?user ensemble) ?ensemble]
+	  [value-of (?user typical-p) t]
+	  [value-of (?user ensemble) ?ensemble]
 	  [ltms:object-type-of ?ensemble ensemble]
-	  [ltms:value-of (?ensemble typical-computer) ?machine]
+	  [value-of (?ensemble typical-computer) ?machine]
 	  [ltms:object-type-of ?machine computer]]
-  then [ltms:value-of (?user machines) ?machine])
+  then [value-of (?user machines) ?machine])
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;
@@ -663,12 +663,12 @@
   if [and [object-type-of ?device hardware]
 	  [connected-to ?device ? ?bus ?]
 	  [object-type-of ?bus unmastered-medium]]
-  then [ltms:value-of (?bus connected-systems) ?device]
+  then [value-of (?bus connected-systems) ?device]
   )
 
 (defrule anybody-is-master-on-canbus (:forward)
   if [and [object-type-of ?device hardware]
-	  [ltms:value-of (?device hardware-interfaces) ?interface]
+	  [value-of (?device hardware-interfaces) ?interface]
 	  [object-type-of ?bus unmastered-medium]
 	  [connected-to ?computer ?interface ?bus ?slot]]
   then [can-master ?device ?bus]

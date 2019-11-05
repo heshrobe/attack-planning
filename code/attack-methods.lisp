@@ -900,7 +900,8 @@
 
 (defattack-method control-the-network-stack
     :to-achieve [takes-direct-control-of ?attacker ?stack-property ?network-stack]
-    :bindings ([value-of ?os-instance.network-monitor ?network-stack]
+    :bindings ([value-of (?network-stack host-os) ?os-instance]
+	       [value-of ?os-instance.network-monitor ?network-stack]
                [value-of ?os-instance.superuser ?superuser]
 	       [value-of ?attacker.machines ?attacker-machine])
     :typing ((?network-stack network-stack)

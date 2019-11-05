@@ -117,7 +117,7 @@
 
 (defun resources-on-machine (machine)
   (let ((answers nil))
-    (ask `[ltms:value-of (,machine resources) ?resource]
+    (ask `[value-of (,machine resources) ?resource]
          #'(lambda (just)
              (declare (ignore just))
              (pushnew ?resource answers)))
