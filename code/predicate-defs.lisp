@@ -87,7 +87,7 @@
 
 ;;; Place-visited always occurs as a note within the :plan structure and the macro expansion
 ;;; puts the input and output states into the predication.
-(define-predicate place-visited (machine purpose) (ask-error-model special-stateful-predicate-model))
+(define-predicate place-visited (machine purpose) (special-stateful-predicate-model))
 
 
 (define-predicate attacker-and-machine (attacker attacker-machine) (special-stateful-predicate-model ltms:ltms-predicate-model))

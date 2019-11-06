@@ -256,7 +256,8 @@
 	(cond
 	 ((unbound-logic-variable-p internal-pred)
 	  (loop for interned-internal-pred being the hash-keys of *state-predicate-interning-ht*
-	      do (handle-predicate interned-internal-pred)))
+	      do (stack-let ((backward-support (list self +true+ interned-internal-pred '(ask-data stateful-predication))))
+		   (handle-predicate backward-support))))
 	 (t ;; handle negated internal predication
 	  (when (typep internal-pred 'ji::not-model)
 	    (setq internal-pred (second (predication-statement internal-pred))

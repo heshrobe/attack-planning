@@ -20,7 +20,7 @@
     )
 
 (define-object-type aplan-object 
-    :slots ((subpart-table :initform (make-hash-table :size 10) :accessor subpart-table))
+    :slots ()
   )
 
 (eval-when (:compile-toplevel :load-toplevel :execute)
