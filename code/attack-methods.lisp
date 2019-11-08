@@ -450,7 +450,7 @@
     :typing ((?victim-os-instance operating-system)
 	     (?victim-machine computer)
 	     (?victim-user user))
-    :plan (:sequential	   
+    :plan (:sequential	
 	   (:goal [get-foothold ?victim-machine ?protocol])
 	   (:goal [achieve-knowledge-of-password ?attacker ?victim-user ?victim-machine])
            (:action [login ?victim-user ?victim-os-instance ?current-foothold-machine ?current-foothold-role]))
@@ -847,7 +847,7 @@
 (defattack-method lateral-motion
     :to-achieve [get-foothold ?victim-machine ?protocol-name]
     :guards ([not [place-already-visited? ?victim-machine foothold]]
-	     [not [foothold-exists ?victim-machine]]
+	     [foothold-doesnt-exist ?victim-machine]
 	     ;; Use this method only if you can't get a connection to the victim from where you are
 	     [not [accepts-connection ?victim-machine ?protocol-name ?current-foothold-machine]])
     :bindings ([named-component ?victim-machine os ?victim-os]

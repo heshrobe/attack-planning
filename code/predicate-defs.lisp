@@ -72,7 +72,7 @@
 
 ;;; Foothold-exists always occurs within the :guards clause which wraps it inside an [in-state ... ]
 ;;; so this is always asked
-(define-predicate foothold-exists (foothold-machine) (special-stateful-predicate-model))
+(define-predicate foothold-doesnt-exist (victim-machine) (special-stateful-predicate-model))
 
 ;;; Has-Foothold will appear in a post-conditions clause which wraps it in an [in-state .... ]
 ;;; It can be both asserted and queried.

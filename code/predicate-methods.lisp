@@ -100,13 +100,28 @@
 ;;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
+
+(defclass foothold-record ()
+    ((victim-machine :accessor victim-machine :initarg :victim-machine :initform nil)
+     (foothold-machine :accessor foothold-machine :initarg :foothold-machine :initform nil)
+     (foothold-role :accessor foothold-role :initarg :foothold-role :initform nil)
+     (protocol :accessor protocol :initarg :protocol :initform nil)
+     (foothold-predication :accessor foothold-predication :initform nil :initarg :foothold-predication)
+     )
+    )
+
+
 ;;; This follows the protocol of insert: I.e. returns the interned predication
 ;;; and a new-p flag
 (defmethod insert-in-state ((outer-predicaton stateful-predicate-mixin) (predication has-foothold) state)
   (let ((state (intern-state state)))
     (with-statement-destructured (victim-machine foothold-machine foothold-role foothold-protocol) predication
-      (let ((existing-statement (loop for (existing-victim existing-foothold-machine existing-foothold-role existing-foothold-protocol existing-pred) in 
-				      (footholds-held state)
+      (let ((existing-statement (loop for foothold-record in (footholds-held state)
+				    for existing-victim = (victim-machine foothold-record)
+				    for existing-foothold-machine = (foothold-machine foothold-record )
+				    for existing-foothold-role = (foothold-role foothold-record)
+				    for existing-foothold-protocol = (protocol foothold-record)
+				    for existing-pred = (foothold-predication foothold-record)
 				    when (and (eql victim-machine existing-victim)
 					      (eql foothold-machine existing-foothold-machine)
 					      (eql foothold-role existing-foothold-role)
@@ -114,7 +129,13 @@
 				    return existing-pred)))
 	(cond
 	 (existing-statement (values existing-statement nil))
-	 (t (push (list victim-machine foothold-machine foothold-role foothold-protocol predication) (footholds-held state))
+	 (t (push (make-instance 'foothold-record
+		    :victim-machine victim-machine
+		    :foothold-machine foothold-machine
+		    :foothold-role foothold-role
+		    :protocol foothold-protocol
+		    :foothold-predication predication) 
+		  (footholds-held state))
 	    (values predication t)))))))
 
 (defmethod ask-in-state ((query has-foothold) truth-value (state state) continuation)
@@ -123,14 +144,21 @@
 	   :query query
 	   :model (type-of query)))
   (with-statement-destructured (victim-machine foothold-machine foothold-role foothold-protocol) query
-    (loop for (victim machine role protocol nil) in (footholds-held state)
+    (loop for foothold-record in (footholds-held state)
+	for existing-victim = (victim-machine foothold-record)
+	for existing-foothold-machine = (foothold-machine foothold-record )
+	for existing-foothold-role = (foothold-role foothold-record)
+	for existing-foothold-protocol = (protocol foothold-record)
+	for existing-pred = (foothold-predication foothold-record)			 
 	do (with-unification 
-	    (unify victim victim-machine)
-	    (unify machine foothold-machine)
-	    (unify role foothold-role)
-	    (unify protocol foothold-protocol)
-	    (stack-let ((backward-support (list query +true+ '(ask-data current-foothold))))
+	    (unify existing-victim victim-machine)
+	    (unify existing-foothold-machine foothold-machine)
+	    (unify existing-foothold-role foothold-role)
+	    (unify existing-foothold-protocol foothold-protocol)
+	    (stack-let ((backward-support (list query +true+ existing-pred '(ask-data current-foothold))))
 	      (funcall continuation backward-support))))))
+      
+      
       
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -146,11 +174,12 @@
 	   :query query
 	   :model (type-of query)))
   (with-statement-destructured (foothold-machine foothold-role) query
-    (destructuring-bind (victim machine role) (first (footholds-held state))
-      (declare (ignore victim))
+    (let* ((foothold-record (first (footholds-held state)))
+	   (existing-foothold-machine (foothold-machine foothold-record))
+	   (existing-foothold-role (foothold-role foothold-record)))
       (with-unification 
-       (unify machine foothold-machine)
-       (unify role foothold-role)
+       (unify existing-foothold-machine foothold-machine)
+       (unify existing-foothold-role foothold-role)
        (stack-let ((backward-support (list query +true+ '(ask-data current-foothold))))
 	 (funcall continuation backward-support))))))
 
@@ -162,30 +191,15 @@
 ;;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
-(defmethod ask-in-state ((query foothold-exists) truth-value (state state) continuation)
-  (with-statement-destructured (victim foothold-machine) query
+(defmethod ask-in-state ((query foothold-doesnt-exist) truth-value (state state) continuation)
+  (with-statement-destructured (victim-machine) query
     (declare (ignore victim))
     (cond
      ((eql truth-value +true+)
-      (if (unbound-logic-variable-p foothold-machine)
-	  (loop for (nil foothold nil pred) in (footholds-held state)
-	      do (with-unification
-		  (unify foothold foothold-machine)
-		  (stack-let ((backward-support (list query +true+ pred '(ask-data foothold-exists))))
-		    (funcall continuation backward-support))))
-	(let ((entry (assoc foothold-machine (footholds-held state) :kwy #'second)))
-	  (when entry
-	    (stack-let ((backward-support (list query +true+ (third entry) '(ask-data foothold-exists))))
-	      (funcall continuation backward-support))))))
-     ((and (eql truth-value +false+) (not (unbound-logic-variable-p foothold-machine)))
-      (unless (member foothold-machine (footholds-held state) :key #'second)
-	(stack-let ((backward-support (list query +true+ '(ask-data foothold-exists))))
-	  (funcall continuation backward-support))))
-     ;; Wierd case: Are there no footholds?
-     ((eql truth-value +false+)
-      (when (null (footholds-held state))
-	(stack-let ((backward-support (list query +true+ '(ask-data foothold-exists))))
-		   (funcall continuation backward-support))))
+      (let ((entry (find victim-machine (footholds-held state) :key #'victim-machine)))
+	  (unless entry
+	    (stack-let ((backward-support (list query +true+ '(ask-data foothold-exists))))
+	      (funcall continuation backward-support)))))
      (t (error 'ji::model-cant-handle-query
 	       :query query
 	       :model (type-of query))))))
