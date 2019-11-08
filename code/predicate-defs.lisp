@@ -76,7 +76,7 @@
 
 ;;; Has-Foothold will appear in a post-conditions clause which wraps it in an [in-state .... ]
 ;;; It can be both asserted and queried.
-(define-predicate has-foothold (victim-machine foothold-machine foothold-role foothold-type) (special-stateful-predicate-model))
+(define-predicate has-foothold (victim-machine foothold-machine foothold-role protocol-name) (special-stateful-predicate-model))
 
 ;;; here purpose is either remote-execution or foothold
 ;;; if it's for a foothold we'll also remember the protocol that that foothold needs to be able

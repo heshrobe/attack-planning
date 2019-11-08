@@ -869,7 +869,7 @@
 	   ;;If so then actually make the connection to the victim from the new foothold
 	   ;; (:goal [make-connection ?victim-os-instance ?protocol-name ?remote-execution-state ?output-contet])
 	   )
-    :post-conditions ([has-foothold ?victim-machine ?new-foothold-machine ?new-foothold-role foothold]))
+    :post-conditions ([has-foothold ?victim-machine ?new-foothold-machine ?new-foothold-role ?protocol-name]))
 
 
 

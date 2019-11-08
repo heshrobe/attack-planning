@@ -104,15 +104,17 @@
 ;;; and a new-p flag
 (defmethod insert-in-state ((outer-predicaton stateful-predicate-mixin) (predication has-foothold) state)
   (let ((state (intern-state state)))
-    (with-statement-destructured (victim-machine foothold-machine foothold-role) predication
-      (let ((existing-statement (loop for (existing-victim existing-foothold-machine existing-foothold-role existing-pred) in (footholds-held state)
+    (with-statement-destructured (victim-machine foothold-machine foothold-role foothold-protocol) predication
+      (let ((existing-statement (loop for (existing-victim existing-foothold-machine existing-foothold-role existing-foothold-protocol existing-pred) in 
+				      (footholds-held state)
 				    when (and (eql victim-machine existing-victim)
 					      (eql foothold-machine existing-foothold-machine)
-					      (eql foothold-role existing-foothold-role))
+					      (eql foothold-role existing-foothold-role)
+					      (eql existing-foothold-protocol foothold-protocol))
 				    return existing-pred)))
 	(cond
 	 (existing-statement (values existing-statement nil))
-	 (t (push (list victim-machine foothold-machine foothold-role predication) (footholds-held state))
+	 (t (push (list victim-machine foothold-machine foothold-role foothold-protocol predication) (footholds-held state))
 	    (values predication t)))))))
 
 (defmethod ask-in-state ((query has-foothold) truth-value (state state) continuation)
@@ -120,12 +122,13 @@
     (error 'ji:model-can-only-handle-positive-queries
 	   :query query
 	   :model (type-of query)))
-  (with-statement-destructured (victim-machine foothold-machine foothold-role) query
-    (loop for (victim machine role) in (footholds-held state)
+  (with-statement-destructured (victim-machine foothold-machine foothold-role foothold-protocol) query
+    (loop for (victim machine role protocol nil) in (footholds-held state)
 	do (with-unification 
 	    (unify victim victim-machine)
 	    (unify machine foothold-machine)
 	    (unify role foothold-role)
+	    (unify protocol foothold-protocol)
 	    (stack-let ((backward-support (list query +true+ '(ask-data current-foothold))))
 	      (funcall continuation backward-support))))))
       
