@@ -193,7 +193,6 @@
 
 (defmethod ask-in-state ((query foothold-doesnt-exist) truth-value (state state) continuation)
   (with-statement-destructured (victim-machine) query
-    (declare (ignore victim))
     (cond
      ((eql truth-value +true+)
       (let ((entry (find victim-machine (footholds-held state) :key #'victim-machine)))

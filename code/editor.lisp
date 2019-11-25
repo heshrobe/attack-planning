@@ -85,6 +85,7 @@
 
 (defparameter *aplan-window-width* 900)
 (defparameter *aplan-window-height* 700)
+#-mcclim
 (defun run-editor ()
   (#+allegro mp:process-run-function #+sbcl sb-thread:make-thread
       #+allegro "Attack Planner"
@@ -98,6 +99,22 @@
 						      :height *aplan-window-height*)))
 	(clim:run-frame-top-level *editor*))
     #+sbcl :name #+sbcl "Attack Planner"))
+
+#+mcclim
+(defun run-editor ()
+  (let* ((fm (clim:find-frame-manager :port (clim:find-port)))
+	 (frame (clim:make-application-frame 'aplan
+					     :pretty-name "Attack Planner"
+					     :frame-manager fm
+					     :width *aplan-window-width*
+					     :height *aplan-window-height*)))
+    (flet ((run () 
+	     (let ((*package* (find-package :aplan)))
+	       (unwind-protect
+		    (clim-debugger:with-debugger () (clim:run-frame-top-level frame))
+		 (clim:disown-frame fm frame)))))
+      (values (clim-sys:make-process #'run :name "attack-planner")
+	      frame))))
 
 #+clim-env
 (clim-env::define-lisp-listener-command (com-start-aplan :name t)

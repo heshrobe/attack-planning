@@ -70,12 +70,12 @@
   (clear)
   (load environment-pathname)
   (let* ((attacker (follow-path (list attacker)))
-	 (attacker-machine (first (follow-path (list attacker 'machines))))
+	 ;; (attacker-machine (first (follow-path (list attacker 'machines))))
 	 (machine (follow-path (list machine)))
 	 (resource (follow-path (list machine resource))))
     (multiple-value-bind (answers final-states)
 	(do-it :attacker attacker
-	       :attacker-machine attacker-machine
+	       ;; :attacker-machine attacker-machine
 	       :Property property
 	       :machine machine
 	       :resource resource)

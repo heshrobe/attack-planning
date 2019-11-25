@@ -345,12 +345,12 @@
   (destructuring-bind (pred . triggers) (predication-maker-statement if-part)
     (unless (eql pred 'and) (error "Must have and for trigger"))
     (loop for trigger in triggers
-	for state-variable = `(logic-variable-maker ,(intern (gensym "?STATE-")))
+	for state-variable = `(logic-variable-maker ,(gentemp "?STATE-"))
 	for real-trigger = `(predication-maker '(in-state ,trigger ,state-variable))
 	collect real-trigger into real-triggers
 	collect state-variable into state-variables
 	finally ;; (break "~a ~a" real-triggers state-variables)
-	  (let* ((final-state-variable `(logic-variable-maker ,(intern (gensym "?FINAL-STATE-"))))
+	  (let* ((final-state-variable `(logic-variable-maker ,(gentemp "?FINAL-STATE-")))
 		 (consistent-state-trigger `(predication-maker '(consistent-state ,final-state-variable ,@state-variables)))
 		 (real-if-part `(predication-maker '(and ,@(append real-triggers (list consistent-state-trigger)))))
 		 (real-then-part `(predication-maker '(in-state ,then-part ,final-state-variable))))

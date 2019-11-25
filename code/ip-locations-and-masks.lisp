@@ -259,7 +259,7 @@
    ((eql thing1 thing2) (typecase thing1
 			  (switched-subnet (list (list (switch thing1))))
 			  ;; what to do for non-switched network?
-			  (:otherwise (list nil))))			  
+			  (otherwise (list nil))))
    (t (let ((answers nil))
         (labels ((do-one-hop (next-router path-so-far source-subnet)
                    (cond ((member thing2 (subnets next-router))
