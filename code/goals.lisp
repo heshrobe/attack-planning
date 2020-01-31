@@ -60,14 +60,14 @@
 ;;; (the intent is that whatever lateral motion needed has already been done and this
 ;;;  goal shouldn't be satisfied by doing more)
 (define-goal achieve-access-right (operation thing principal))
-(define-goal use-access-right-to-modify (attacker operation principal thing))
+;;; This is an action now
+;;; (define-goal use-access-right-to-modify (attacker operation principal thing))
 
 (define-goal make-member-of (thing set))
 
 ;;; This implies guess some piece of knowedge like a passwork
 (define-goal guess (attacker thing property))
 
-(define-goal guess-password (attacker user victim-machine))
 
 ;;; discover the existence of a physical resource (e.g. a machine)
 (define-goal discover (attacker thing property))

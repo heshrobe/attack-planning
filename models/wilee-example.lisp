@@ -82,10 +82,10 @@
 ;;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
-(defsite worker-enclave "192.168.0.0" "255.255.255.0"
+(defsite worker-enclave ("192.168.0.0" "255.255.255.0")
 	 :enterprise victim)
 
-(defsubnet worker-subnet switched-subnet "192.168.0.0" "255.255.255.0")
+(defsubnet worker-subnet switched-subnet ("192.168.0.0" "255.255.255.0"))
 
 ;;; An esemble is a group of machines that are essentially identical from
 ;;; our point of view
@@ -128,10 +128,10 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 
-(defsite admin-enclave "192.168.10.0" "255.255.255.0"
+(defsite admin-enclave ("192.168.10.0" "255.255.255.0")
 	 :enterprise victim)
 
-(defsubnet admin-subnet switched-subnet"192.168.10.0" "255.255.255.0" )
+(defsubnet admin-subnet switched-subnet ("192.168.10.0" "255.255.255.0"))
 
 (defensemble admin-machines
     :enterprise victim
@@ -165,10 +165,10 @@
 ;;; The data resources are defined further down
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
-(defsite server-enclave "192.168.20.0" "255.255.255.0"
+(defsite server-enclave ("192.168.20.0" "255.255.255.0")
 	 :enterprise victim)
 
-(defsubnet server-subnet switched-subnet "192.168.20.0" "255.255.255.0" )
+(defsubnet server-subnet switched-subnet ("192.168.20.0" "255.255.255.0"))
 
 (defensemble server-machines
   :enterprise victim
@@ -446,7 +446,7 @@
     )
 
 ;;; the switch will not accept http or ssh connections as a computer
-;;; accept from the serveristrative subnet
+;;; accept from the administrative subnet
 (defblacklist (ssh server-net-switch)
     :for-host t
     :block everywhere
@@ -495,8 +495,8 @@
 
 ;;; the router's server-net port
 (defblacklist (database-protocol server-net-switch)
-  :block ("192.168.20.1" "255.255.255.255")
-  )
+    :block ("192.168.20.1" "255.255.255.255")
+    )
 
 ;;; the router's admin-net port
 (defblacklist (database-protocol server-net-switch)
@@ -505,8 +505,8 @@
 
 ;;; the router's worker-net port
 (defblacklist (database-protocol server-net-switch)
-  :block ("192.168.0.1" "255.255.255.255")
-  )
+    :block ("192.168.0.1" "255.255.255.255")
+    )
 
 
 
@@ -535,16 +535,16 @@
 ;;; To write it requires data-high-write capability (which isn't the same a normal write capability)
 ;;; similarly for reading.  Sysadmins have this capability
 (defresource high-database database
-	     :machines (high-data-server)
-	     :capability-requirements ((write data-high-write) (read data-high-read))
-	     )
+  :machines (high-data-server)
+  :capability-requirements ((write data-high-write) (read data-high-read))
+  )
 
 ;;; The low database lives on a separate server and requires a different set of capabilities
 ;;; Normal users have these capabilities (as do sysadmins)
 (defresource low-database database
-	     :machines (low-data-server)
-	     :capability-requirements ((write data-low-write) (read data-low-read))
-	     )
+  :machines (low-data-server)
+  :capability-requirements ((write data-low-write) (read data-low-read))
+  )
 
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;

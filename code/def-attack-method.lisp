@@ -56,6 +56,15 @@
 		      when his-plan-structure ;; a note provides no plan structure
 		      collect his-plan-structure into plan-structure 
 		      finally (return (list stuff `(list ,key ,@plan-structure) nil))))
+		 (:bind
+		  (let* ((the-binding (first stuff))
+			 (input-state (or (getf structure :input-state)
+					  input-state
+					  (ji:make-logic-variable-maker (intern (string-upcase "?input-state")))))
+			 (rebuilt-statement`(predication-maker '(in-state ,the-binding ,input-state))))
+		    (list (list rebuilt-statement)
+			  nil
+			  input-state)))
 		 (:note
 		  (let* ((the-note (first stuff))
 			 (input-state (or (getf structure :input-state)
@@ -100,8 +109,9 @@
 					  (ji::make-logic-variable-maker (intern (string-upcase "?input-state")))))
 			 (output-state (or (getf structure :output-state)
 					   output-state
-					   (ji::make-logic-variable-maker (intern (string-upcase "?output-state")))))
+					   (ji:make-logic-variable-maker (intern (string-upcase (gentemp "?intermediate-state-"))))))
 			 (rebuilt-statement `(predication-maker '(take-action ,statement ,input-state ,output-state))))
+		    ;; (break "Action ~a ~a ~a ~a" statement input-state output-state rebuilt-statement)
 		    (list 
 		     ;; The action requires no further sub-goaling
 		     (list rebuilt-statement)
@@ -317,9 +327,10 @@
 	     then [take-action [,name ,@logic-variables] ,@state-logic-variables]
 	     if [and ,@(process-bindings bindings input-state-variable)
 		     ,@(process-guards prerequisites input-state-variable)
-		     (when (unbound-logic-variable-p ,output-state-variable)
-		       (unify ,output-state-variable 
-			      (intern-state (intern (string-upcase (gensym "state-"))) ,input-state-variable)))
+		     (prog1 t
+		       (when (unbound-logic-variable-p ,output-state-variable)
+			 (unify ,output-state-variable 
+				(intern-state (intern (string-upcase (gensym "state-"))) ,input-state-variable))))
 		     (prog1 t (link-action ',name (list,@logic-variables) ,input-state-variable ,output-state-variable))
 		     ,@(process-post-conditions post-conditions output-state-variable)
 		     ]))))))

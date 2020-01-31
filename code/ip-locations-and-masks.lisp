@@ -13,6 +13,14 @@
 (define-protocol ssh 22 remote-execution remote-shell)
 (define-protocol database-protocol  1433 database-access sql)
 (define-protocol smtp  (25 465 2525) email transmission)
+(define-protocol ftp (20 21) file-download )
+(define-protocol http (80) web)
+
+(defun ports-for-protocol (protocol)
+  (let ((answer nil))
+    (ask* `[port-for-protocol ,protocol ?port]
+	  (pushnew ?port answer))
+    answer))
 
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -53,6 +61,10 @@
 	  [ltms:object-type-of ?attacker attacker]
 	  [reachable-from ?victim-machine ?attacker ?path]
 	  [value-of (?attacker location) ?location]
+	  ;;; location could be a subnet.  This is a temporary fix
+	  ;;; until I add a host-allows-connection-type method
+	  ;;; for subnets
+	  [ltms:object-type-of ?location external-internet]
 	  ;; Does the host block it on its own
 	  (host-allows-connection-type ?victim-machine ?location ?connection-type)
 	  ;; Do any of the routers on the path block it
@@ -626,6 +638,11 @@
   (loop for interval in (intervals location)
       thereis (ip-is-in-interval address interval)))
 
+(defmethod ip-address-is-within-location ((address ip-address) (location site))
+  (let ((mask (subpart-named location 'net-mask)))
+    (loop for interval in (intervals mask)
+	thereis (ip-is-in-interval address interval))))
+
 (defmethod ip-is-in-interval ((ip ip-address) interval)
   (let ((address (ip-address-integer ip)))
     (destructuring-bind (low high) interval
@@ -683,6 +700,13 @@
 		    collect (interval-from-address-and-mask his-ip his-mask))))
     (setf (intervals location) (subtract-holes-from-interval base-interval holes)
 	  (intervals-computed? location) t)))
+
+(defun parse-range (thing)
+  (if (and (stringp thing) (is-cidr thing))
+      (parse-cidr thing)
+    (apply #'values thing)))
+
+(defun is-cidr (string) (find #\/ string :test #'char-equal))
 
 (defun parse-cidr (string)
   (let* ((pos (position #\/ string :test #'char-equal))

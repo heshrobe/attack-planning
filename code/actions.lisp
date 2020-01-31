@@ -30,11 +30,12 @@
   :post-conditions ([has-control-of ?attacker ?process])
   )
 
-(define-action phishing-attack (?attacker ?email-machine ?user ?process)
+(define-action send-phishing-email (?attacker ?attacker-foothold-computer ?email-machine ?victim ?process)
   :prerequisites ([has-foothold ?email-machine ?sending-machine ?sending-role smtp]
 		  [attacker-and-machine ?attacker ?attacker-machine])
   :post-conditions ([email-sent-to ?user ?attacker ?sending-machine ?sending-role]
-		    [knows-credentials ?attacker ?user])
+		    [knows-credentials ?attacker ?victim]
+		    )
   )
 
 (define-action login (?victim-user ?victim-os-instance ?current-foothold-machine ?current-foothold-role)
@@ -87,7 +88,7 @@
   :post-conditions ([knows-credentials ?attacker ?user])
   )
 
-(define-action password-dictionary-lookup-attack (?attacker ?user ?victim-machine)
+(define-action guess-password (?attacker ?user ?victim-machine)
   :bindings ([current-foothold ?foothold-machine ?foothold]
 	     [protocol-for remote-execution remote-shell ?protocol-name])
   :prerequisites ([connection-established ?foothold-machine ?victim-machine ?protocol-name])
@@ -97,7 +98,7 @@
 (define-action fill-disk (?attacker ?foothold-machine kill-disk)
   :bindings ([attacker-and-machine ?attacker ?attacker-machine])
   :prerequisites ([has-remote-execution ?attacker ?victim-machine ?role]
-		  [malware-installed-on-machine ?attacker ?victim-machine kill-disk])
+		  [Malware-installed-on-machine ?attacker ?victim-machine kill-disk])
   :post-conditions ([disk-filled ?victim-machine])
   )
 
@@ -110,12 +111,13 @@
 	  ]
   then [in-state [user-forced-to-login ?victim-user ?victim-machine] ?state])
 
-(define-action use-access-right-to-modify (?attacker write ?whose-right ?victim-object)
-  :define-predicate nil
+(define-action use-access-right-to-modify (?attacker write ?whose-right ?foothold-computer ?victim-object ?victim-machine)
+  :define-predicate t
   :prerequisites ([knows-password ?attacker ?whose-right]
 		  [has-permission ?whose-right write ?victim-object])
   :post-conditions ([modified-by ?attacker ?victim-object])
   )
+
 
 ;;;; (define-action use-access-right-to-modify (?attacker write ?current-foothold-role ?object)
 ;;;;   :define-predicate nil
@@ -123,12 +125,26 @@
 ;;;;   :prerequisites ([has-permission ?current-foothold-role write ?object])
 ;;;;   :post-conditions ([has-been-modified ?object]))
 
-(define-action install-malware (?attacker ?malware-type ?victim-machine)
-  ;; Probably this should be spelled out more so that he has to have
-  ;; a connection to an outside source of the malware.  But that's a future
-  :define-predicate nil
-  :prerequisites ([has-remote-execution ?attaker ?victim-machine ?as-whom])
-  :post-conditions ([malware-installed-on-machine ?attacker ?victim-machine ?malware-type]))
+(define-action download-software (?package ?source-computer ?destination-computer ?role)
+  :bindings ([attacker-and-machine ?attacker ?attacker-computer])
+  :prerequisites ([current-foothold ?destination-computer ?role])
+  :post-conditions ([software-downloaded ?package ?victim-computer]
+		    ))
+
+
+(define-action load-software (?package ?victim-computer)
+  :bindings ([attacker-and-machine ?attacker ?attacker-computer])
+  :prerequisites ([current-foothold ?victim-computer ?role]
+		  [software-downloaded ?package ?victim-computer])
+  :post-conditions ([software-loaded ?package ?victim-machine]))
+
+
+; (define-action install-malware (?attacker ?malware-type ?victim-machine)
+;   ;; Probably this should be spelled out more so that he has to have
+;   ;; a connection to an outside source of the malware.  But that's a future
+;   :define-predicate nil
+;   :prerequisites ([has-remote-execution ?attaker ?victim-machine ?as-whom])
+;   :post-conditions ([malware-installed-on-machine ?attacker ?victim-machine ?malware-type]))
 
 (define-action capture-password-through-keylogger (?attacker ?victim-user ?victim-machine)
   :prerequisites ([has-remote-execution ?attacker ?victim-machine ?role]

@@ -58,20 +58,23 @@
      (let ((enterprise (make-object 'enterprise :name ',name)))
        (declare (ignorable enterprise))
        ,@(loop for site-name in sites
-	     collect `(tell `[value-of (,enterprise site) ,(object-named ',site-name)])))))
+	     collect `(tell `[value-of (,enterprise sites) ,(object-named ',site-name)])))))
 
 ;;; A site is (possibly) part of an enterprise
 ;;; It owns a range of net addresses, which might be broken down into subnets
-(defmacro defsite (name address-string address-mask &key (enterprise nil enterprise-p))
-  `(with-atomic-action
-       (kill-redefined-object ',name)
-     (let* ((site (make-object 'site :name ',name))
-	    (enterprise (when ,enterprise-p (object-named ',enterprise)))
-            (net-mask (follow-path `(,site net-mask))))
-       (declare (ignorable enterprise))
-       ,@(when enterprise-p `((tell `[value-of (,site enterprise) ,enterprise])))
-       (fill-in-subnet-mask net-mask ,address-string ,address-mask)
-       site)))
+;;; The range may be specified either as a CIDR (e.g. "01.010.10.10/24")
+;;; or as a list of an address and mask 
+(defmacro defsite (name range &key (enterprise nil enterprise-p))
+  (multiple-value-bind (address-string address-mask) (parse-range range)
+    `(with-atomic-action
+      (kill-redefined-object ',name)
+      (let* ((site (make-object 'site :name ',name))
+	     (enterprise (when ,enterprise-p (object-named ',enterprise)))
+	     (net-mask (follow-path `(,site net-mask))))
+	(declare (ignorable enterprise))
+	,@(when enterprise-p `((tell `[value-of (,site enterprise) ,enterprise])))
+	(fill-in-subnet-mask net-mask ,address-string ,address-mask)
+	site))))
 
 ;;; An ensemble is a collection of machines that identical from the attackers
 ;;; point of view.  Every ensemble has a typical instance which represents
@@ -89,10 +92,9 @@
       ,@(when user-p `((tell `[value-of (,ensemble typical-user) ,(object-named ',typical-user)])))
       ,@(when size-p `((tell `[value-of (,ensemble size) ,',size])))
       ,@(when address-range-p
-	  `((let* ((address ,(first address-range))
-		   (mask ,(second address-range))
-		   (subnet-mask (make-location-mask 'subnet-mask address mask)))
-	      (tell `[value-of (,ensemble ip-range) ,subnet-mask]))))
+	  (multiple-value-bind (address mask) (parse-range address-range)
+	  `((let ((subnet-mask (make-location-mask 'subnet-mask ,address ,mask)))
+	      (tell `[value-of (,ensemble ip-range) ,subnet-mask])))))
       ensemble))
   )
 
@@ -103,7 +105,8 @@
     (let* ((site (make-object 'external-internet :name ',name))
 	   (location (make-positive-location-mask "0.0.0.0" "0.0.0.0")))
       (tell `[value-of (,site subnets) ,location])
-      ,@(loop for (address mask) in excluded-subnets
+      ,@(loop for range in excluded-subnets
+	    for (address mask) = (multiple-value-list (parse-range range))
 	    collect `(push (make-location-mask 'subnet-mask ,address ,mask) (exception-masks location)))
       site)))
 
@@ -301,13 +304,14 @@
           `(tell `[value-of (,router os authorization-pool) ,(follow-path '(,authorization-pool))]))
        router)))
 
-(defmacro defsubnet (name segment-type ip-address-string subnet-mask-string)
-  `(with-atomic-action
-       (kill-redefined-object ',name)
-     (let* ((subnet (make-object ',segment-type :name ',name))
-            (mask (follow-path '(,name mask))))
-       (fill-in-subnet-mask mask ,ip-address-string ,subnet-mask-string)
-       subnet)))
+(defmacro defsubnet (name segment-type range)
+  (multiple-value-bind (ip-address-string subnet-mask-string) (parse-range range)
+    `(with-atomic-action
+      (kill-redefined-object ',name)
+      (let* ((subnet (make-object ',segment-type :name ',name))
+	     (mask (follow-path '(,name mask))))
+	(fill-in-subnet-mask mask ,ip-address-string ,subnet-mask-string)
+	subnet))))
 
 (defmacro define-protocol (name port &optional major-purpose sub-purpose)
   `(with-atomic-action
@@ -356,18 +360,22 @@
 			&key pass exceptions for-host) 
   (when (and (symbolp pass) (eql pass 'everywhere))
     (setq pass (list "0.0.0.0" "0.0.0.0")))
-  (if for-host
-      `(tell-positive-policy-for-host ,bridge-or-computer ,protocol ,pass ,@exceptions)
-    `(tell-positive-routing-policy ,bridge-or-computer ,protocol ,pass ,@exceptions)
-  ))
+  (let ((processed-exceptions (loop for exception in exceptions
+				  collect (multiple-value-list (parse-range exception)))))
+    (if for-host
+	`(tell-positive-policy-for-host ,bridge-or-computer ,protocol ,pass ,@processed-exceptions)
+      `(tell-positive-routing-policy ,bridge-or-computer ,protocol ,pass ,@processed-exceptions)
+      )))
 
 (defmacro defblacklist ((protocol  bridge-or-computer)
 			&key block exceptions for-host)
   (when (and (symbolp block) (eql block 'everywhere))
     (setq block (list "0.0.0.0" "0.0.0.0")))
-  (if for-host
-      `(tell-negative-policy-for-host ,bridge-or-computer ,protocol ,block ,@exceptions)
-  `(tell-negative-routing-policy ,bridge-or-computer ,protocol ,block ,@exceptions)))
+  (let ((processed-exceptions (loop for exception in exceptions
+				  collect (multiple-value-list (parse-range exception)))))
+    (if for-host
+	`(tell-negative-policy-for-host ,bridge-or-computer ,protocol ,block ,@processed-exceptions)
+      `(tell-negative-routing-policy ,bridge-or-computer ,protocol ,block ,@processed-exceptions))))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;

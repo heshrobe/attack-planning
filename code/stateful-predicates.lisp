@@ -383,6 +383,34 @@
 	       (setf (successors state) useful-successors))))
     (do-one *initial-state*)))
 
+(defun state-trace (final-state)
+  (nreverse 
+    (loop for state = final-state then next-state
+	for next-state = (predecessor state)
+	collect state
+	until (null next-state)
+	      )))
+
+(defun action-sequence (final-state)
+  (nreverse
+   (loop for state = final-state then prior-state
+       for action = (prior-action state)
+       for prior-state = (cond
+			  ((intermediate-state? state)
+			   (predecessor state))
+			  (action (prior-state action))
+			  (t nil))
+      when action
+      collect action
+      until (null prior-state))))
+
+(defun display-action-sequence (action-sequence &optional (stream *standard-output*))
+  (loop for action in action-sequence
+      for name = (action-name action)
+      for args = (arguments action)
+      do (format stream "~%~a ~{~a~^, ~}" name args)))
+
+
 #|
 
 (define-fwrd-stateful-rule mumble

@@ -92,6 +92,8 @@
 
 (define-predicate attacker-and-machine (attacker attacker-machine) (special-stateful-predicate-model ltms:ltms-predicate-model))
 
+(define-predicate attacker-download-server (attacker attacker-server-machine) (non-stateful-predicate-model))
+
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;
 ;;; Factual Predicates -- Describing features of the world
@@ -184,6 +186,10 @@
 ;;; This changes over time
 (define-predicate email-submitted (victim-machine kind-of-mail source-machine) (ltms:ltms-predicate-model))
 (define-predicate knows-password (attacker victim-user) (ltms:ltms-predicate-model))
+
+;;; These change over time
+(define-predicate software-downloaded (package computer) (ltms:ltms-predicate-model))
+(define-predicate software-loaded (package computer) (ltms:ltms-predicate-model))
 
 ;;; These are static descriptions of the environment
 ;;; Typically, the DNS translation of a domain name to an IP address

@@ -52,6 +52,11 @@
   ;; while Allegro's CLIM allows a bare symbol
   (:command-table (aplan)))
 
+(defmethod final-states ((frame aplan))
+  (let ((collector (attack-plan-collector frame)))
+    (final-states collector)))
+
+
 (defvar *editor* nil)
 (defvar *process* nil)
 
@@ -101,20 +106,32 @@
     #+sbcl :name #+sbcl "Attack Planner"))
 
 #+mcclim
-(defun run-editor ()
-  (let* ((fm (clim:find-frame-manager :port (clim:find-port)))
+(defun run-editor (&key
+		     (new-process t)
+		     (debugger t)
+		     (width 790)
+		     (height 550)
+		     port
+		     frame-manager
+		     (process-name "Attack-Planner")
+		     (package :aplan))
+  (let* ((fm (or frame-manager (clim:find-frame-manager :port (or port (clim:find-port)))))
 	 (frame (clim:make-application-frame 'aplan
 					     :pretty-name "Attack Planner"
 					     :frame-manager fm
-					     :width *aplan-window-width*
-					     :height *aplan-window-height*)))
-    (flet ((run () 
-	     (let ((*package* (find-package :aplan)))
+					     :width width
+					     :height height)))
+    (setq *editor* frame)
+    (flet ((run ()
+	     (let ((*package* (find-package package)))
 	       (unwind-protect
-		    (clim-debugger:with-debugger () (clim:run-frame-top-level frame))
-		 (clim:disown-frame fm frame)))))
-      (values (clim-sys:make-process #'run :name "attack-planner")
-	      frame))))
+		    (if debugger
+			(clim-debugger:with-debugger () (clim:run-frame-top-level frame))
+			(clim:disown-frame fm frame))))))
+      (if new-process
+	  (values (clim-sys:make-process #'run :name process-name)
+		  frame)
+	  (run)))))
 
 #+clim-env
 (clim-env::define-lisp-listener-command (com-start-aplan :name t)

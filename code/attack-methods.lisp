@@ -196,12 +196,9 @@
     ;; We need to find out who has permission to make a 
     :prerequisites ()
     :plan (:sequential
-	   ;; Note that get-foothold treats the next-to-last two arguments as things that it binds.
-	   ;; Also note that it might bind these to the same thine as the current foothold
 	   ;; Also note that it returns in a state where you have remote-execution on the new-foothold-machine
 	   ;; And you've opened a connecion to the victim machine
 	   (:goal [get-foothold ?database-machine database-protocol])
-	   (:goal [make-connection ?database-machine database-protocol])
 	   (:goal [modify data-integrity ?database])
 	   )
     )
@@ -370,13 +367,17 @@
 (defattack-method modify-through-access-rights
     :to-achieve [modify ?object-property ?object]
     :bindings ([value-of ?object.machines ?computer]
-	       [attacker-and-machine ?attacker ?attacker-machine]
-	       [current-foothold ?current-foothold-machine ?current-foothold-role])
+	       [attacker-and-machine ?attacker ?attacker-computer]
+	       [current-foothold ?current-foothold-computer ?current-foothold-role])
     :typing ((?computer computer))
     ;; Use this only if you don't already have the required capability
     ;; (what if more than one capability implies the right?  Shouldn't
     ;; we check that he doesn't have any of them).
-    :plan (:goal [achieve-access-right write ?object ?other-role]))
+    :plan (:sequential
+	   (:goal [achieve-access-right write ?object ?other-role])
+	   (:goal [make-connection ?computer database-protocol])
+	   (:action [use-access-right-to-modify ?attacker write ?other-role ?current-foothold-computer ?object ?computer]))
+    )
 
 ;;; To increase the size of the active user set of some OS
 ;;; Find a user in the authorization pool for the OS
@@ -440,6 +441,16 @@
 	   (:note [place-visited ?victim-machine remote-execution])
 	   (:goal [achieve-remote-shell ?victim-os ?victim-user]))
     )
+
+;;; Note: This is odd if the way you get knowledge of the password 
+;;; is by phishing or something else that takes time
+;;; In such cases, the first get-foothold here establishes a connection
+;;; But then the achieve-knowledge-of-password does a bunch of other actions
+;;; before the connection is used.
+;;; Better would be for the get-foothold not to be here
+;;; but within two different versions of login, one for when you 
+;;; already have the foothold (as you would in achieving-knowledge by password
+;;; guessing and one for when you don't.  The second case would do the get-foothold.
 
 (defattack-method how-to-logon
     :to-achieve [achieve-remote-shell ?victim-os-instance ?victim-user]
@@ -695,25 +706,19 @@
             
 (defattack-method how-to-get-password-by-guessing
     :to-achieve [achieve-knowledge-of-password ?attacker ?user ?victim-machine]
-    :guards ([not [unifiable ?attacker ?user]])
-    :plan (:goal [guess-password ?attacker ?user ?victim-machine])
-    )
-
-(defattack-method guess-typical-user
-    :to-achieve [guess-password ?attacker ?user ?victim-machine]
-    :guards ([is-typical-user ?user])
-    :typing ((?user user)
-	     (?attacker attacker))
-    :plan (:action [password-dictionary-lookup-attack ?attacker ?user ?victim-machine])
+    :guards ([is-typical-user ?user]
+	     [not [unifiable ?attacker ?user]])
+    :plan (:action [guess-password ?attacker ?user ?victim-machine])
     )
 
 (defattack-method guess-superuser-passwords
-    :to-achieve [guess-password ?attacker ?user ?victim-machine]
+    :to-achieve [achieve-knowledge-of-password ?attacker ?user ?victim-machine]
     :bindings ([value-of ?user.machines ?machine]
 	       [value-of ?machine.os.superuser  ?user])
+    :guards ([not [unifiable ?attacker ?user]])
     :typing ((?user user)
 	     (?machine computer))
-    :plan (:action [password-dictionary-lookup-attack ?attacker ?user ?victim-machine])
+    :plan (:action [guess-password ?attacker ?user ?victim-machine])
     )
 
 (defattack-method get-sysadmin-password-by-bricking
@@ -739,11 +744,23 @@
 	   (:action [fill-disk ?attacker ?victim-machine kill-disk])
 	   ))
 
+(defattack-method download-and-load-malware
+    :to-achieve [install-malware ?attacker ?victim-machine ?malware-package]
+    :bindings ([attacker-download-server ?attacker ?download-server])
+    :typing ()
+    :prerequisites ([has-remote-execution ?attacker ?victim-machine ?foothold-role])
+    :plan (:sequential
+	   (:action [connect-via ?victim-machine ?foothold-role ?download-server ftp])
+	   (:action [download-software ?malware-package ?download-server ?victim-machine ?foothold-role])
+	   (:action [load-software ?malware-package ?victim-machine]))
+    :Post-conditions ([malware-installed-on-machine ?attacker ?victim-machine ?malware-package])
+    )
+
 ;;; This is a stub
-(defattack-method how-to-install-malware
-    :to-achieve [install-malware ?attacker ?victim-machine ?malware-type]
-    :prerequisites ()
-    :plan (:action [install-malware ?attacker ?malware-type ?victim-machine]))
+; (defattack-method how-to-install-malware
+;     :to-achieve [install-malware ?attacker ?victim-machine ?malware-type]
+;     :prerequisites ()
+;     :plan (:action [install-malware ?attacker ?malware-type ?victim-machine]))
 
 
 ;note: need plan for install malware
@@ -758,7 +775,7 @@
 	       [value-of ?attacker.machines ?attacker-machine]
 	       [value-of ?process.host-os ?os-instance]
 	       [value-of ?os-instance.machine ?email-server-machine]
-	       [current-foothold ?foothold-machine ?foothold-role]
+	       [attacker-download-server ?attacker ?attacker-server]
 	       )
     :typing ((?victim-user user)
 	     (?process email-server-process)
@@ -767,18 +784,15 @@
 	     (?attacker-machine computer))
     :plan (:sequential
 	   (:goal [get-foothold ?email-server-machine smtp])
-           (:action [phishing-attack ?attacker ?email-server-machine ?victim-user ?process]))
-    :post-conditions ([current-foothold ?current-foothold-machine ?current-foothold-role])
+	   (:bind [current-foothold ?foothold-machine ?foothold-role])
+	   (:action [send-phishing-email ?attacker ?foothold-machine ?email-server-machine ?victim-user ?process])
+	   (:action [connect-via ?victim-machine ?victim-user ?attacker-server http])
+	   )
+    :post-conditions ([current-foothold ?current-foothold-machine ?current-foothold-role]
+		      [knows-credentials ?attacker ?victim-user]
+		      )
     )
 
-
-; This stuff was in the thing above, but I'm not sure what it was trying to say
-
-; ((:goal (know (password ?user)) 
-; 	:plan ((:goal (sniff (password ?user))
-; 		      :plan ((:goal (achieve-email-connection-to ?os-instance) 
-; 				    :plan ?plan)
-; 			     )))))
 
 (defattack-method how-to-get-password-by-sniffing
     :to-achieve [achieve-knowledge-of-password ?attacker ?user ?victim-machine]
@@ -829,7 +843,7 @@
 
 
 ;;; Direct Method, applicable when you can get from your current foothold to the target-machine 
-;;; so the foothold is the where this step is taking place from and the role is the attacker
+;;; so the foothold is where this step is taking place from and the role is the attacker
 (defattack-method direct-foothold
     :to-achieve [get-foothold ?victim-machine ?protocol-name]
     :guards ([not [place-already-visited? ?victim-machine foothold]])

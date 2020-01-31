@@ -163,7 +163,7 @@
     ((computer 'computer)
      (property 'desirable-property :default 'performance)
      (resource `(computer-resource ,computer))
-     &key (attacker 'attacker :default (follow-path '(typical-attacker))))
+     &key (attacker 'attacker))
   (multiple-value-bind (answers final-states) (do-it :property property :machine computer :attacker attacker :resource resource)
     (let ((stream (clim:get-frame-pane clim:*application-frame* 'attack-structure )))
       (clim:with-text-face (stream :bold)
@@ -191,18 +191,19 @@
                  (clim:with-text-size (stream text-size)
                    (format stream "~%Attack Plan ~d~%" which)
                    (graph-an-attack-plan plan stream orientation text-size actions-only))))
-	     (make-file-name-of-type (file-name type)
+	     (make-pathname-with-type (file-name type)
 	       (merge-pathnames (make-pathname :type type) file-name)))
         (cond
 	 (pdf?
-	  (let* ((ps-pathname (make-file-name-of-type file-name "ps"))
-		 (pdf-pathname (make-file-name-of-type file-name "pdf"))
-		 (command (format nil "pstopdf ~a -o ~a" ps-pathname pdf-pathname)))
-	    (with-open-file (file ps-pathname :direction :output :if-exists :supersede)
+	  (let* ((real-name (translate-logical-pathname file-name))
+		 (ps-pathname (make-pathname-with-type real-name "ps"))
+		 (pdf-pathname (make-pathname-with-type real-name "pdf"))
+		 (command (format nil "pstopdf ~a -o ~a " ps-pathname pdf-pathname)))
+	    (with-open-file (file ps-pathname :direction :output :if-exists :supersede :If-does-not-exist :create)
 	      (clim:with-output-to-postscript-stream (stream file)
 		(body stream)))
 	    #+Allegro
-	    (excl:run-shell-command command :wait t)
+	    (excl:run-shell-command command :wait t :show-window :normal) 
 	    #+sbcl
 	    (uiop:run-program command)
 	    (delete-file ps-pathname)))
@@ -300,7 +301,7 @@
 	  (body stream)
 	  ))
       #+Allegro
-      (excl:run-shell-command command :wait t :show-window :normal)
+      (excl:run-shell-command command :wait t :show-window :normal) 
       #+sbcl
       (uiop:run-program command)
       (delete-file ps-pathname)

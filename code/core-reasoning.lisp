@@ -24,44 +24,63 @@
 		   machine 
                    resource)
   (clear-all-states)
-  (let ((answers nil)
+  (let ((plans nil)
 	(final-states nil))
     ;; (os (follow-path `(,machine os)))
     (unwind-protect
-	(ask `[achieve-goal [affect ,property ,resource] initial ?output-context ?plan]
+	(ask `[achieve-goal [affect ,property ,resource] ,(intern-state 'initial) ?output-context ?plan]
 	     #'(lambda (just)
 		 (declare (ignore just))
-		 (mark-state-useful ?output-context)
-		 (Pushnew ?output-context final-states)
-		 (let ((plan (copy-object-if-necessary ?plan)))
-		   (pushnew (list :goal (list 'affect attacker property resource machine)
-				  :plan plan)
-			    answers
-			    :test #'equal))))
+		 (let* ((plan (copy-object-if-necessary ?plan))
+			(final-structure (list :goal (list 'affect attacker property resource machine)
+					       :plan plan)))
+		   (unless (member final-structure plans :test #'equal)
+		     (mark-state-useful ?output-context)
+		     (Pushnew ?output-context final-states)
+		     (push final-structure plans)))))      
       (clear-useless-states))
-  (values answers final-states)))
+    (values plans final-states)))
 
-(defun create-attacker (name &key world-name)
+(defmacro define-attacker (name &key location (computer nil computer-p) 
+				     (other-computers nil other-computers-p)
+				     (download-servers nil download-servers-p)
+				     )
+  `(create-attacker ',name
+		    :location (follow-path (list ',location))
+		    :other-computers ,(when other-computers-p 
+					`(list ,@(loop for name in other-computers
+						     collect `(follow-path (list ',name)))))
+		    :download-servers ,(when download-servers-p 
+					 `(list ,@(loop for name in download-servers
+							collect `(follow-path (list ',name)))))
+		    :computer ,(when computer-p `(follow-path (list ',computer)))))
+
+(defun create-attacker (name &key location computer other-computers download-servers)
   (with-atomic-action
-      (kill-redefined-object name)
-    (let ((machine-name (intern (string-upcase (format nil "~a-machine" name)))))
-      (kill-redefined-object machine-name)
-      (let* ((attacker (make-object 'attacker :name name))
-	     (the-world (follow-path (list world-name)))
-	     (his-machine (make-object 'attacker-computer :name machine-name
-				       :typical-p t
-				       )))
-	(tell `[value-of (,attacker world) ,the-world])
-	(tell `[value-of (,attacker machines) ,his-machine])
-	(tell `[uses-machine ,attacker ,his-machine])
-	(tell `[value-of (,his-machine subnets) ,the-world])
-	(tell `[value-of (,the-world computers) ,his-machine])
-	(tell `[value-of (,attacker location) ,the-world])
-	;; has foothold always has a victim in it.  But in this initial state
-	;; there isn't one.  It's just a starting point.
-	(tell `[in-state [has-foothold nil ,his-machine ,attacker foothold] initial])
-	(tell `[in-state [attacker-and-machine ,attacker ,his-machine] initial])
-	attacker))))
+   (let ((created-computer-name (intern (string-upcase (format nil "~a-computer" name)))))
+     (kill-redefined-object name)
+     (when (null computer) (kill-redefined-object created-computer-name))
+     (let* ((attacker (make-object 'attacker :name name))
+	    (his-computer (or computer 
+			      (make-object 'attacker-computer 
+					   :name created-computer-name
+					   :typical-p t
+					   ))))
+       (tell `[value-of (,attacker location) ,location])
+       (tell `[value-of (,attacker machines) ,his-computer])
+       (loop for computer in other-computers
+	   do (tell `[uses-machine ,attacker ,computer]))
+       (loop for computer in download-servers
+	   do (tell `[attacker-download-server ,attacker ,computer]))
+       (tell `[uses-machine ,attacker ,his-computer])
+       (tell `[value-of (,his-computer subnets) ,location])
+       (tell `[value-of (,location computers) ,computer])
+       (tell `[value-of (,attacker location) ,location])
+       ;; has foothold always has a victim in it.  But in this initial state
+       ;; there isn't one.  It's just a starting point.
+       (tell `[in-state [has-foothold nil ,his-computer ,attacker foothold] initial])
+       (tell `[in-state [attacker-and-machine ,attacker ,his-computer] initial])
+       attacker))))
 
 (defun do-a-case (environment-pathname  &key attacker 
 					     property 
