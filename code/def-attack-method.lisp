@@ -110,7 +110,9 @@
 			 (output-state (or (getf structure :output-state)
 					   output-state
 					   (ji:make-logic-variable-maker (intern (string-upcase (gentemp "?intermediate-state-"))))))
-			 (rebuilt-statement `(predication-maker '(take-action ,statement ,input-state ,output-state))))
+			 (action-variable (ji:make-logic-variable-maker (intern (string-upcase (gentemp "?action-")))))
+			 (rebuilt-statement `(predication-maker '(take-action ,statement ,input-state ,output-state ,action-variable)))
+			 )
 		    ;; (break "Action ~a ~a ~a ~a" statement input-state output-state rebuilt-statement)
 		    (list 
 		     ;; The action requires no further sub-goaling
@@ -118,8 +120,8 @@
 		   ;;; rebuilt action statement
 		     (if (null connective)
 			 `(list :singleton
-				(list ,key ,(fixup-syntax (predication-maker-statement (first stuff)))))
-		       `(list ,key ,(fixup-syntax (predication-maker-statement (first stuff)))))
+				(list ,key ,(fixup-syntax (predication-maker-statement (first stuff))) ,action-variable))
+		       `(list ,key ,(fixup-syntax (predication-maker-statement (first stuff))) ,action-variable))
 		     output-state))))))
            (fixup-syntax (predication-maker-statement)
              `(list
@@ -257,7 +259,7 @@
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;
-;;; Define-goal
+;;; Define-goal macro & achieve goal predicate
 ;;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
@@ -265,11 +267,41 @@
 
 (define-predicate achieve-goal (goal-to-achieve input-state output-state plan) (ltms:ltms-predicate-model))
 
-(define-predicate take-action (action-predicate input-state output-state) (ltms:ltms-predicate-model))
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;;
+;;; Classes for building a structured-backpointered plan object
+;;;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+
+(defclass has-parent-mixin ()
+  ((parent :accessor parent :initform nil :initarg :parent)))
+
+(defclass has-plan-mixin ()
+  ((plan :accessor plan :initform nil :initarg nil)))
+
+(defclass has-arguments-mixin ()
+  ((arguments :accessor arguments :initarg :arguments)))
+
+(defclass action (has-parent-mixin has-arguments-mixin)
+  ((action-name :accessor action-name :initarg :action-name)
+   (prior-state :accessor prior-state :initarg :prior-state)
+   (next-state :accessor next-state :initarg :next-state)
+   (is-on-solution-path? :accessor is-on-solution-path? :initform nil)
+   ))
+
+(defclass goal (has-parent-mixin has-plan-mixin has-arguments-mixin)
+  ((goal-name :accessor goal-name :initform nil :initarg :goal-name))
+  )
+
+(defclass plan (has-parent-mixin)
+  ((connective :accessor connective :Initform nil :initarg :connective)
+   (steps :accessor steps :initform nil :initarg :steps)))
+
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;
-;;; Define-action
+;;; Define-action macro and take-action predicate & link-action function
 ;;;
 ;;; Similar to but simpler than def-attack-method
 ;;; and it uses some of the sub-routines from def-attack-method
@@ -286,15 +318,8 @@
 ;;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
-(defclass action ()
-  ((action-name :accessor action-name :initarg :action-name)
-   (arguments :accessor arguments :initarg :arguments)
-   (prior-state :accessor prior-state :initarg :prior-state)
-   (next-state :accessor next-state :initarg :next-state)
-   (is-on-solution-path? :accessor is-on-solution-path? :initform nil))
-  )
-
-
+(define-predicate take-action (action-predicate input-state output-state action) (ltms:ltms-predicate-model))
+   
 (defun link-action (name arguments prior-state next-state)
   (let ((action (make-instance 'action
 		  :action-name name
@@ -319,44 +344,59 @@
     (let* ((logic-variables (make-logic-variables variables))
 	   (names (make-symbols-from-lvs logic-variables))
 	   (rule-name (intern (string-upcase (format nil "do-~a" name))))
-	   (state-logic-variables (make-logic-variables '(input-state output-state))))
+	   (state-logic-variables (make-logic-variables '(input-state output-state)))
+	   (action-variable (first (make-logic-variables '(action)))))
       (destructuring-bind (input-state-variable output-state-variable) state-logic-variables
 	`(eval-when (:compile-toplevel :load-toplevel :execute)
 	   ,@(when define-predicate `((define-predicate ,name ,names (ltms:ltms-predicate-model))))
 	   (defrule ,rule-name (:backward)
-	     then [take-action [,name ,@logic-variables] ,@state-logic-variables]
+	     then [take-action [,name ,@logic-variables] ,@state-logic-variables ,action-variable]
 	     if [and ,@(process-bindings bindings input-state-variable)
 		     ,@(process-guards prerequisites input-state-variable)
 		     (prog1 t
 		       (when (unbound-logic-variable-p ,output-state-variable)
 			 (unify ,output-state-variable 
 				(intern-state (intern (string-upcase (gensym "state-"))) ,input-state-variable))))
-		     (prog1 t (link-action ',name (list,@logic-variables) ,input-state-variable ,output-state-variable))
+		     (prog1 t (unify ,action-variable (link-action ',name (list,@logic-variables) ,input-state-variable ,output-state-variable)))
 		     ,@(process-post-conditions post-conditions output-state-variable)
 		     ]))))))
 
-#|
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;;
+;;; Converting the list structured attack plan into a fully backpointered
+;;; plan linking in the actions and states
+;;;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
-Test case
-
-(define-action foo (a b)
-  :pre-conditions ([bar ?a ?b]
-		   [baz ?b ?c])
-  :post-conditions ([bam ?a ?b ?c]))
-
-This expands to:
-
-(EVAL-WHEN (:COMPILE-TOPLEVEL :LOAD-TOPLEVEL :EXECUTE)
-  (DEFINE-PREDICATE FOO (A B) (LTMS:LTMS-PREDICATE-MODEL))
-  (DEFRULE DO-FOO (:BACKWARD) 
-    THEN [TAKE-ACTION [FOO ?A ?B] ?INPUT-STATE ?OUTPUT-STATE] 
-    IF [AND [IN-STATE [BAR ?A ?B] ?INPUT-STATE]
-	    [IN-STATE [BAZ ?B ?C] ?INPUT-STATE]
-	    (WITH-UNIFICATION
-		(WHEN (UNBOUND-LOGIC-VARIABLE-P ?OUTPUT-STATE)
-		      (UNIFY (INTERN-STATE (INTERN (STRING-UPCASE (GENSYM 'STATE-))) ?INPUT-STATE)
-			     ?OUTPUT-STATE))
-	      (PROG1 T (TELL [IN-STATE [BAM ?A ?B ?C] ?OUTPUT-STATE])))]))
-
-|#
-
+(defun structure-attack-plan (top-level)
+  (labels ((make-goal (goal-element &optional parent)
+	     (let ((goal-statement (getf goal-element :goal))
+		   (sub-plan (getf goal-element :plan)))
+	       ;; (format t "~%Working on goal ~a" goal-statement)
+	       (destructuring-bind (goal-name . arguments) goal-statement
+		 (let* ((goal-object (make-instance 'goal :goal-name goal-name :arguments arguments :parent parent))
+			(plan-object (make-plan sub-plan goal-object)))
+		   (setf (plan goal-object) plan-object)
+		   goal-object))))
+	   (make-plan (plan-element parent)
+	     (destructuring-bind (connective . steps) plan-element
+	       ;; (format t "~%For goal ~a with connective ~a there are ~a steps" parent connective (length steps))
+	       (let* ((plan-object (make-instance 'plan
+				  :connective connective
+				  :parent parent))
+		      (the-steps (loop for step in steps
+				     for type = (first step)
+				     for step-object = (case type
+							 (:goal (make-goal step plan-object))
+							 (:action (make-action step plan-object)))
+				     ;; do (format t "~%For type ~a step ~a" type step-object)
+				     collect step-object)))
+		 ;; (format t "~%Steps for plan ~a ~{~a~^, ~}" plan-object the-steps)
+		 (setf (steps plan-object) the-steps)
+		 plan-object)))
+	   (make-action (step parent)
+	     (destructuring-bind (head list-version actual-action) step
+	       (declare (ignore head list-version))
+	       (setf (parent actual-action) parent)
+	       actual-action)))
+    (make-goal top-level)))

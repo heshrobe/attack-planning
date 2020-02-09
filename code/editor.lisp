@@ -56,6 +56,8 @@
   (let ((collector (attack-plan-collector frame)))
     (final-states collector)))
 
+(defmethod all-action-sequences ((frame aplan))
+  (all-action-sequences (attack-plan-collector frame)))
 
 (defvar *editor* nil)
 (defvar *process* nil)

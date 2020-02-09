@@ -19,6 +19,10 @@
    )
   )
 
+(defmethod all-action-sequences ((collector attack-plan-collector))
+  (loop for s in (final-states collector)
+      collect (action-sequence s)))
+
 (defun do-it (&key (attacker (follow-path '(typical-attacker)))
                    (property 'performance) 
 		   machine 
@@ -34,12 +38,56 @@
 		 (let* ((plan (copy-object-if-necessary ?plan))
 			(final-structure (list :goal (list 'affect attacker property resource machine)
 					       :plan plan)))
-		   (unless (member final-structure plans :test #'equal)
+		   (unless (member final-structure plans :test #'plan-equal)
 		     (mark-state-useful ?output-context)
 		     (Pushnew ?output-context final-states)
 		     (push final-structure plans)))))      
       (clear-useless-states))
+    ;; This links the objects to a tree-structured set
+    ;; of objects representing the plan with the 
+    ;; actions at the leaves
+    (loop for plan in plans do (structure-attack-plan plan))
     (values plans final-states)))
+
+(defun plan-equal (thing1 thing2)
+  (plan-step-equal (first thing1) (first thing2) (rest thing1) (rest thing2)))
+
+(defgeneric plan-step-equal (head1 head2 step1 step2))
+
+;;; Default method fails
+(defmethod plan-step-equal ((head1 t) (head2 t) (plan1 t) (plan2 t)) nil)
+
+;;; (:goal <goal> :plan (<steps>))
+(defmethod plan-step-equal ((head1 (eql :goal)) (head2 (eql :goal)) step1 step2)
+  (destructuring-bind (goal1 . plist1) step1
+    (destructuring-bind (goal2 . plist2) step2
+      ;; (format t "~%Checking goal ~a ~a" goal1 goal2)
+      (and (equal goal1 goal2)
+	   (plan-equal plist1 plist2)))))
+
+;;; (:plan (<connective> (<goals-or-actions>)))
+(defmethod plan-step-equal ((head1 (eql :plan)) (head2 (eql :plan)) step1 step2)
+  ;; Here the step is a list of the connective followed by substeps
+  ;; Check that it's actually a cons before popping
+  ;; probably not necessary because it's already decided that 
+  ;; its a plan structure
+  (destructuring-bind ((keyword1 . rest1)) step1
+    (destructuring-bind ((keyword2 . rest2)) step2
+      ;; (format t "~%Checking plan ~a ~a" keyword1 keyword2)
+      (and (equal keyword1 keyword2)
+	   (loop for thing1 in rest1
+	       for thing2 in rest2
+	       always (plan-equal thing1 thing2))))))
+
+;;; (:action action-predicate action-object)
+(defmethod plan-step-equal ((head1 (eql :action)) (head2 (eql :action)) step1 step2)
+  ;; (format t "~%Checking action ~a ~a" (first step1) (first step2))
+  (equal (first step1) (first step2)))
+		       
+
+
+
+
 
 (defmacro define-attacker (name &key location (computer nil computer-p) 
 				     (other-computers nil other-computers-p)

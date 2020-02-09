@@ -402,7 +402,8 @@
 			  (t nil))
       when action
       collect action
-      until (null prior-state))))
+       until (null prior-state))))
+
 
 (defun display-action-sequence (action-sequence &optional (stream *standard-output*))
   (loop for action in action-sequence
