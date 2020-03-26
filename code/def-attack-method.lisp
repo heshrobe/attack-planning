@@ -48,7 +48,9 @@
                       append his-stuff into stuff
 		      when his-plan-structure  ;; a note provides no plan structure
                       collect his-plan-structure into plan-structure
-                      finally (return (list stuff `(list ,key ,@plan-structure) his-output-state))))
+                      finally (let* ((is-singleton? (null (rest plan-structure)))
+				     (final-key (if is-singleton? :singleton key)))
+				(return (list stuff `(list ,final-key ,@plan-structure) his-output-state)))))
 		 (:parallel
                   (loop for thing in stuff
 		      for (his-stuff his-plan-structure) = (do-next-level thing key input-state output-state)
@@ -197,6 +199,7 @@
 				  (process-path (rest exploded-path)))))
 	  `(predication-maker '(value-of ,real-path ,logic-variable)))
       (let ((expanded-path (process-path (explode-string path #\.))))
+
 	`(predication-maker '(value-of ,expanded-path ,logic-variable)))))))
 
 (defun process-bindings (assertions input-state)

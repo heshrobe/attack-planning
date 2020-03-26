@@ -80,7 +80,7 @@
 ;;; This is essentially a no-op if the victim user and the attacker
 ;;; are the same.
 (define-action use-own-password (?victim-user ?victim-machine)
-  :bindings ([ltms:named-part-of (?victim-machine os) ?victim-os-instance]
+  :bindings ([value-of (?victim-machine os) ?victim-os-instance]
 	     [value-of (?victim-os-instance users) ?victim-user]
 	     [value-of (?victim-os-instance authorization-pool) ?pool])
   :prerequisites ([unifiable ?victim-user ?victim-machine]

@@ -10,12 +10,13 @@
      plan
      #'(lambda (step stream) (print-plan-object step stream text-size))
      (if action-only #'plan-inferior-action-only #'plan-inferior)
+     :graph-type :my-graph
      :stream stream
      :merge-duplicates t
      :orientation orientation
      :arc-drawer #'(lambda (stream from-object to-object x1 y1 x2 y2 &rest drawing-options)
                      (declare (ignore from-object to-object))
-                     (apply #'clim:draw-arrow* stream x1 y1 x2 y2 :from-head t :to-head nil 
+                     (apply #'clim:draw-arrow* stream x1 y1 x2 y2 :from-head t :to-head nil
                             :ink clim:+blue+ drawing-options))))))
 
 (defun print-plan-object (step stream &optional (text-size :very-small))
@@ -66,7 +67,7 @@
 	       (:goal (let ((plan (getf step :plan)))
 			(when plan
 			  (case (first plan)
-			    (:singleton 
+			    (:singleton
 			     (if (member (first (second plan)) '(:action :repeated-action))
 				 (rest plan)
 			       (collect-actions-below (second plan))))
@@ -102,7 +103,7 @@
   (write-string (string object) stream))
 
 (clim:define-presentation-method clim:accept ((type desirable-property) stream (view clim:textual-view) &key)
-  (let ((answers nil)) 
+  (let ((answers nil))
     (ask [desirable-property-of ? ?property]
          #'(lambda (just)
              (declare (ignore just))
@@ -156,7 +157,7 @@
   ;; clear makes the current version of *everywhere* invalid
   ;; by removing its parts.
   (setq *everywhere* (make-everywhere))
-  (ji:with-joshua-readtable 
+  (ji:with-joshua-readtable
       (load pathname)))
 
 (define-aplan-command (com-find-plans :name t :menu t)
@@ -168,7 +169,10 @@
     (let ((stream (clim:get-frame-pane clim:*application-frame* 'attack-structure )))
       (clim:with-text-face (stream :bold)
 	(clim:with-text-size (stream :large)
-	  (format stream "~%There are ~d plans" (length answers)))))
+	  (format stream "~%There are ~d plans" (length answers))
+          ;; McClim seems to need this
+          (force-output stream)
+          )))
     (let ((collector (attack-plan-collector clim:*application-frame*)))
       (setf (attack-plans collector) answers
 	    (final-states collector) final-states
@@ -176,7 +180,7 @@
 	    (merged-attack-plan collector) (merge-attack-plans answers)))))
 
 (define-aplan-command (com-show-plan :name t :menu t)
-    ((which 'integer) 
+    ((which 'integer)
      &key (orientation '(clim:member-alist (("horizontal" . :horizontal) ("vertical" . :vertical))) :default :vertical)
      (pdf? 'clim:boolean :default nil :prompt "Generate to a pdf file")
      (file-name 'clim:pathname)
@@ -203,7 +207,7 @@
 	      (clim:with-output-to-postscript-stream (stream file)
 		(body stream)))
 	    #+Allegro
-	    (excl:run-shell-command command :wait t :show-window :normal) 
+	    (excl:run-shell-command command :wait t :show-window :normal)
 	    #+sbcl
 	    (uiop:run-program command)
 	    (delete-file ps-pathname)))
@@ -214,7 +218,7 @@
               (setf (clim:window-viewport-position stream) (values x (+ y 10))))
             (body stream))))
         (terpri)))))
-                       
+
 (defun graph-merged-plans (top-level-goals &optional stream (direction :vertical) (text-size :very-small))
   (let ((*print-object-nicely* t))
     (clim:with-text-size (stream text-size)
@@ -222,6 +226,7 @@
        top-level-goals
        #'print-merged-plan-object
        #'merged-plan-inferior
+       :graph-type :my-graph
        :merge-duplicates t
        :maximize-generations nil
        :center-nodes t
@@ -231,7 +236,7 @@
        :orientation direction
        :arc-drawer #'(lambda (stream from-object to-object x1 y1 x2 y2 &rest drawing-options)
 		       (declare (ignore from-object to-object))
-		       (apply #'clim:draw-arrow* stream x1 y1 x2 y2 :from-head t :to-head nil 
+		       (apply #'clim:draw-arrow* stream x1 y1 x2 y2 :from-head t :to-head nil
 			      :ink clim:+blue+ drawing-options))))))
 
 (defmethod print-merged-plan-object ((goal attack-goal) stream)
@@ -245,7 +250,7 @@
       (clim:surrounding-output-with-border (stream :shape :rectangle :ink clim:+red+)
         (clim:with-text-face (stream :bold)
           (destructuring-bind (action-type &rest rest) (action-name action)
-            (format stream "~&~:[Do:~;Repeatedly~] ~A~%~{~a~^~%~}" 
+            (format stream "~&~:[Do:~;Repeatedly~] ~A~%~{~a~^~%~}"
 		    (typep action 'repeated-attack-action)
 		    action-type rest))))))
 
@@ -301,7 +306,7 @@
 	  (body stream)
 	  ))
       #+Allegro
-      (excl:run-shell-command command :wait t :show-window :normal) 
+      (excl:run-shell-command command :wait t :show-window :normal)
       #+sbcl
       (uiop:run-program command)
       (delete-file ps-pathname)
@@ -320,8 +325,8 @@
 
 ;; A goal all of whose supporting plans support only this goal
 ;; which must be true by definition
-;; and for each supporting plan they have a unique subgoal which only supports the plan 
-;; then the goal and all the subgoals of the subplans may be merged 
+;; and for each supporting plan they have a unique subgoal which only supports the plan
+;; then the goal and all the subgoals of the subplans may be merged
 
 (define-aplan-command (com-simplify-merged-plan :name t :menu t)
                     ()
@@ -354,11 +359,11 @@
     (loop for capability in capabilities
 	when (null (more-general capability))
 	collect capability)))
-    
+
 
 (defun graph-capabilities (authorization-pool-name &optional (stream *standard-output*))
   (let ((roots (get-root-capabilities authorization-pool-name)))
-    (clim:format-graph-from-roots 
+    (clim:format-graph-from-roots
      roots
      #'(lambda (object stream) (format stream "~a" (role-name object)))
      #'more-specific
@@ -401,6 +406,5 @@
   )
 
 (defmethod child-of-action-or-state ((action action))
-  (list (next-state action))  
+  (list (next-state action))
   )
-	  

@@ -85,8 +85,9 @@
     :depends-on ("aplan/core")
     :components (
 		 (:joshua-file "editor")
-		 (:joshua-file "attack-graphics" :depends-on ("editor")))
-    )
+		 (:joshua-file "attack-graphics" :depends-on ("editor"))
+                 (:Joshua-file "plan-recognizer" :depends-on ("attack-graphics"))
+                 ))
 
 (asdf:defsystem aplan
     :name "aplan"

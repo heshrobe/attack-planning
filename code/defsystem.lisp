@@ -58,6 +58,7 @@
    ("json-dumper" (:module-class separate-destination-joshua-module))
    ("editor" (:module-class separate-destination-joshua-module))
    ("attack-graphics" (:module-class separate-destination-joshua-module))
+   ("plan-recognizer" (:module-class separate-destination-joshua-module))
    ("emacs-hacks" (:module-class separate-destination-joshua-module))
    ("aplan:models;ai-lab-description" (:module-class data-module))
    ("aplan:models;jbi-example" (:module-class data-module))   
