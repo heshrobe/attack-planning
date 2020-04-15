@@ -54,7 +54,8 @@
              :test #'string-equal))
   )
 
-(load "~/josh-dist/joshua/code/asdf-support.lisp")
+;;; The joshua asd file includes this
+;; (load "~/josh-dist/joshua/code/asdf-support.lisp")
 
 (asdf:defsystem aplan/core
   :name "aplan-core"
@@ -64,7 +65,7 @@
   :components ((:file "package-definition")
 	       (:joshua-file "predicate-defs" :depends-on ("package-definition"))
 	       (:joshua-file "stateful-predicates" :depends-on ("predicate-defs"))
-	       (:joshua-file "object-defs" :depends-on ("predicate-defs"))
+	       (:joshua-file "object-defs" :depends-on ("stateful-predicates"))
 	       (:joshua-file "macros" :depends-on ("object-defs"))
 	       (:joshua-file "def-attack-method" :depends-on ("macros"))
 	       (:joshua-file "predicate-methods" :depends-on ("def-attack-method"))

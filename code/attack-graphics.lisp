@@ -10,7 +10,7 @@
      plan
      #'(lambda (step stream) (print-plan-object step stream text-size))
      (if action-only #'plan-inferior-action-only #'plan-inferior)
-     :graph-type :my-graph
+     :graph-type #+acl :my-graph #+mcclim :digraph
      :stream stream
      :merge-duplicates t
      :orientation orientation
@@ -164,7 +164,7 @@
     ((computer 'computer)
      (property 'desirable-property :default 'performance)
      (resource `(computer-resource ,computer))
-     &key (attacker 'attacker))
+     &key (attacker 'attacker :default (follow-path '(attacker))))
   (multiple-value-bind (answers final-states) (do-it :property property :machine computer :attacker attacker :resource resource)
     (let ((stream (clim:get-frame-pane clim:*application-frame* 'attack-structure )))
       (clim:with-text-face (stream :bold)
@@ -226,7 +226,7 @@
        top-level-goals
        #'print-merged-plan-object
        #'merged-plan-inferior
-       :graph-type :my-graph
+       :graph-type #+acl :my-graph #+mcclim :diagraph
        :merge-duplicates t
        :maximize-generations nil
        :center-nodes t
