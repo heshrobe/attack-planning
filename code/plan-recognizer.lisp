@@ -690,21 +690,6 @@
 (defgeneric tell-actions-story (action-name action vector &optional stream))
 (defgeneric tell-goals-story (goal-name goal &optional stream))
 
-(defmacro with-output-to-pdf-stream ((pathname stream-var) &body body)
-  `(let* ((real-name (translate-logical-pathname ,pathname))
-	  (ps-pathname (make-pathname-with-type real-name "ps"))
-	  (pdf-pathname (make-pathname-with-type real-name "pdf"))
-	  (command (format nil "pstopdf ~a -o ~a " ps-pathname pdf-pathname)))
-     (with-open-file (file ps-pathname :direction :output :if-exists :supersede :If-does-not-exist :create)
-       (clim:with-output-to-postscript-stream (,stream-var file)
-	 ,@body))
-     #+Allegro
-     (excl:run-shell-command command :wait t :show-window :normal)
-     #+sbcl
-     (uiop:run-program command)
-     (delete-file ps-pathname)))
-
-
 (defun tell-the-story (hypothesis &key pathname (stream *standard-output*))
   (flet ((do-it (stream)
 	 (loop for (action vector) in (matches hypothesis)

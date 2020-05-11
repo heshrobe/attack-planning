@@ -180,37 +180,36 @@
 	    (merged-attack-plan collector) (merge-attack-plans answers)))))
 
 (define-aplan-command (com-show-plan :name t :menu t)
-    ((which 'integer)
-     &key (orientation '(clim:member-alist (("horizontal" . :horizontal) ("vertical" . :vertical))) :default :vertical)
+    ((plan-number 'integer)
+     &key
+     (orientation '(clim:member-alist (("horizontal" . :horizontal) ("vertical" . :vertical))) :default :vertical)
      (pdf? 'clim:boolean :default nil :prompt "Generate to a pdf file")
      (file-name 'clim:pathname)
      (text-size '(clim:member :very-small :small :normal :large :very-large))
-     (actions-only 'clim:boolean :default nil :prompt "Only show actions?")
-     )
-  (let ((plan (nth which (attack-plans (attack-plan-collector clim:*application-frame*)))))
+     (actions-only 'clim:boolean :default nil :prompt "Only show actions?"))
+  (show-plan (attack-plan-collector clim:*application-frame*) plan-number
+             :orientation orientation
+             :pdf? pdf?
+             :file-name file-name
+             :text-size text-size
+             :actions-only actions-only))
+
+(defun show-plan (collector plan-number &key pdf? orientation file-name text-size actions-only)
+  (let ((plan (nth plan-number (attack-plans collector))))
     (terpri)
     (when plan
       (flet ((body (stream)
                (clim:with-text-face (stream :bold)
                  (clim:with-text-size (stream text-size)
-                   (format stream "~%Attack Plan ~d~%" which)
+                   (format stream "~%Attack Plan ~d~%" plan-number)
                    (graph-an-attack-plan plan stream orientation text-size actions-only))))
 	     (make-pathname-with-type (file-name type)
 	       (merge-pathnames (make-pathname :type type) file-name)))
         (cond
 	 (pdf?
-	  (let* ((real-name (translate-logical-pathname file-name))
-		 (ps-pathname (make-pathname-with-type real-name "ps"))
-		 (pdf-pathname (make-pathname-with-type real-name "pdf"))
-		 (command (format nil "pstopdf ~a -o ~a " ps-pathname pdf-pathname)))
-	    (with-open-file (file ps-pathname :direction :output :if-exists :supersede :If-does-not-exist :create)
-	      (clim:with-output-to-postscript-stream (stream file)
-		(body stream)))
-	    #+Allegro
-	    (excl:run-shell-command command :wait t :show-window :normal)
-	    #+sbcl
-	    (uiop:run-program command)
-	    (delete-file ps-pathname)))
+	  (let* ((real-name (translate-logical-pathname file-name)))
+            (with-output-to-pdf-stream (real-name stream)
+              (body stream))))
 	 (t
           (let ((stream (clim:get-frame-pane clim:*application-frame* 'attack-structure)))
             (multiple-value-bind (x y) (clim:stream-cursor-position stream)
@@ -226,7 +225,7 @@
        top-level-goals
        #'print-merged-plan-object
        #'merged-plan-inferior
-       :graph-type #+acl :my-graph #+mcclim :digraph
+       :graph-type #+acl :my-graph #+mcclim :di<graph
        :merge-duplicates t
        :maximize-generations nil
        :center-nodes t

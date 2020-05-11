@@ -13,7 +13,7 @@
 
 (defun kill-redefined-object (name)
   (let ((object (follow-path (list name) t  nil)))
-    (when object 
+    (when object
       (kill object))))
 
 ;;; This defines the rules that set up a set of forward-backward pointers from one object to another
@@ -48,7 +48,7 @@
 ;;; Defining the structure of an enterprise
 ;;;  its sites and enclaves of machines
 ;;; And the external internet
-;;;  
+;;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 ;;; An enterprise is a organization with multiple sites within it
@@ -63,7 +63,7 @@
 ;;; A site is (possibly) part of an enterprise
 ;;; It owns a range of net addresses, which might be broken down into subnets
 ;;; The range may be specified either as a CIDR (e.g. "01.010.10.10/24")
-;;; or as a list of an address and mask 
+;;; or as a list of an address and mask
 (defmacro defsite (name range &key (enterprise nil enterprise-p))
   (multiple-value-bind (address-string address-mask) (parse-range range)
     `(with-atomic-action
@@ -130,7 +130,7 @@
        ,@(loop for g in greater
                collect `(tell `[value-of (,capability more-general) ,(follow-path '(,g))]))
        ,@(loop for l in lesser
-               collect `(tell `[value-of (,capability more-specific) ,(follow-path '(,l))])) 
+               collect `(tell `[value-of (,capability more-specific) ,(follow-path '(,l))]))
        )))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -141,8 +141,8 @@
 ;;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
-(defmacro defcomputer (name computer-type 
-		       &key ip-address-string 
+(defmacro defcomputer (name computer-type
+		       &key ip-address-string
 			    superuser authorization-pool interfaces
 			    (typical nil typical-p)
 			    (ensemble nil ensemble-p))
@@ -211,14 +211,14 @@
       (otherwise (tell `[value-of (,workload user-workload processes) ,process])))
     process))
 
-(defmacro defuser (name &key email-address machines (user-type 'user) 
+(defmacro defuser (name &key email-address machines (user-type 'user)
 			     authorization-pools capabilities
 			     positive-address positive-mask
 			     negative-address negative-mask
 			     (ensemble nil ensemble-p)
 			     (typical nil typical-p)
 			     superuser-for
-			     ) 
+			     )
   `(with-atomic-action
        (kill-redefined-object ',name)
      (let ((user (make-object ',user-type :name ',name)))
@@ -236,9 +236,9 @@
        ,@(when typical-p `((tell `[value-of (,user typical-p) ,,typical])))
        ,@(when superuser-for (loop for machine in superuser-for
 				collect `(tell `[value-of (,user superuser-for) ,(follow-path (list ',machine 'os))])))
-       user))) 
+       user)))
 
-(defun apply-positive-and-negative-masks (user 
+(defun apply-positive-and-negative-masks (user
 					  positive-mask-address positive-mask-mask
 					  negative-mask-address negative-mask-mask)
     (when (and positive-mask-address positive-mask-mask)
@@ -263,7 +263,7 @@
 ;;;
 ;;; Network related stuff like protocols "firewall" rules
 ;;; switches, routers, subnets
-;;; 
+;;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 ;;; PORTS ADDED FOR AUTO PILOT EXAMPLE
@@ -290,14 +290,14 @@
 ;;; The external networks keyword argument is a list of NAMES of external networks, e.g. The-wild
 
 (defmacro defrouter (name ip-address-strings &key authorization-pool superuser external-networks)
-  `(with-atomic-action 
+  `(with-atomic-action
        (kill-redefined-object ',name)
      (let ((router (make-object 'router :name ',name)))
        (loop for ip-address-string in ',ip-address-strings
 	   do (add-ip-address-to-computer ip-address-string router))
        ,@(when external-networks
 	  (loop for external-network-name in external-networks
-	      collect `(tell `[value-of (,router subnets) ,(follow-path '(, external-network-name))])))			    
+	      collect `(tell `[value-of (,router subnets) ,(follow-path '(, external-network-name))])))
        ,(when superuser
           `(tell `[value-of (,router os superuser) ,(follow-path '(,superuser))]))
        ,(when authorization-pool
@@ -357,7 +357,7 @@
      (tell `[policy-for-host ,(follow-path '(,computer)) ,',connection-type ,location])))
 
 (defmacro defwhitelist ((protocol  bridge-or-computer)
-			&key pass exceptions for-host) 
+			&key pass exceptions for-host)
   (when (and (symbolp pass) (eql pass 'everywhere))
     (setq pass (list "0.0.0.0" "0.0.0.0")))
   (let ((processed-exceptions (loop for exception in exceptions
@@ -417,5 +417,25 @@
   `(let ((the-server (Follow-path (list ',email-server))))
      (loop for client-name in ',clients
 	 for client = (Follow-path (list client-name))
-	 do (tell `[email-client-of ,client ,the-server]))))
+           do (tell `[email-client-of ,client ,the-server]))))
 
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;;
+;;; With-output-to-pdf-stream
+;;;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+(defmacro with-output-to-pdf-stream ((pathname stream-var) &body body)
+  `(let* ((real-name (translate-logical-pathname ,pathname))
+	  (ps-pathname (make-pathname-with-type real-name "ps"))
+	  (pdf-pathname (make-pathname-with-type real-name "pdf"))
+	  (command (format nil "pstopdf ~a -o ~a " ps-pathname pdf-pathname)))
+     (with-open-file (file ps-pathname :direction :output :if-exists :supersede :If-does-not-exist :create)
+       (clim:with-output-to-postscript-stream (,stream-var file)
+	 ,@body))
+     #+Allegro
+     (excl:run-shell-command command :wait t :show-window :normal)
+     #+sbcl
+     (uiop:run-program command)
+     (delete-file ps-pathname)))
