@@ -226,7 +226,7 @@
        top-level-goals
        #'print-merged-plan-object
        #'merged-plan-inferior
-       :graph-type #+acl :my-graph #+mcclim :diagraph
+       :graph-type #+acl :my-graph #+mcclim :digraph
        :merge-duplicates t
        :maximize-generations nil
        :center-nodes t
@@ -285,9 +285,16 @@
 	  (text-size '(member :small :very-small :normal :large) :default :very-small)
 	  (pdf? 'clim:boolean :default nil :prompt "Generate to a pdf file")
 	  (file-name 'clim:pathname))
+  (show-merged-plan (attack-plan-collector clim:*application-frame*)
+		    :direction direction
+		    :text-size text-size
+		    :pdf? pdf?
+		    :file-name file-name))
+
+(defun show-merged-plan (attack-plan-collector &key direction text-size pdf? file-name)
   (flet ((body (stream)
 	   (terpri)
-	   (let ((goals (merged-attack-plan (attack-plan-collector clim:*application-frame*))))
+	   (let ((goals (merged-attack-plan attack-plan-collector)))
 	     (clim:with-text-size (stream :large)
 	       (format stream "~%Merged Plans ~%"))
 	     (clim:with-text-size (stream :small)
@@ -297,20 +304,11 @@
 	   (merge-pathnames (make-pathname :type type) pathname)))
     (cond
      (pdf?
-      (let* ((real-name (translate-logical-pathname file-name))
-	     (ps-pathname (make-pathname-with-type real-name "ps"))
-	     (pdf-pathname (make-pathname-with-type real-name "pdf"))
-	     (command (format nil "pstopdf ~a -o ~a " ps-pathname pdf-pathname)))
-      (with-open-file (file ps-pathname :direction :output :if-exists :supersede)
-	(clim:with-output-to-postscript-stream (stream file)
+      (let* ((real-name (translate-logical-pathname file-name)))
+	(with-output-to-pdf-stream (real-name stream)
 	  (body stream)
 	  ))
-      #+Allegro
-      (excl:run-shell-command command :wait t :show-window :normal)
-      #+sbcl
-      (uiop:run-program command)
-      (delete-file ps-pathname)
-      ))
+      )
      (t
       (let ((stream (clim:get-frame-pane clim:*application-frame* 'attack-structure)))
 	(multiple-value-bind (x y) (clim:stream-cursor-position stream)
