@@ -420,22 +420,35 @@
            do (tell `[email-client-of ,client ,the-server]))))
 
 
+
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;
 ;;; With-output-to-pdf-stream
 ;;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
+#+allegro
 (defmacro with-output-to-pdf-stream ((pathname stream-var) &body body)
   `(let* ((real-name (translate-logical-pathname ,pathname))
-	  (ps-pathname (make-pathname-with-type real-name "ps"))
+	  (ps-pathname (make-pathname-with-type real-name "eps"))
 	  (pdf-pathname (make-pathname-with-type real-name "pdf"))
-	  (command (format nil "pstopdf ~a -o ~a " ps-pathname pdf-pathname)))
+	  ;; the magic option preserves the bounding vox
+	  (command (format nil "ps2pdf -dEPSCrop ~a ~a" ps-pathname pdf-pathname)))
      (with-open-file (file ps-pathname :direction :output :if-exists :supersede :If-does-not-exist :create)
-       (clim:with-output-to-postscript-stream (,stream-var file)
+       (clim:with-output-to-postscript-stream (,stream-var file #+mcclim :device-type #+mcclim :eps)
 	 ,@body))
-     #+Allegro
      (excl:run-shell-command command :wait t :show-window :normal)
-     #+sbcl
-     (uiop:run-program command)
-     (delete-file ps-pathname)))
+     (delete-file ps-pathname)
+     ))
+
+#+mcclim
+(defmacro with-output-to-pdf-stream ((pathname stream-var) &body body)
+  `(let* ((real-name (translate-logical-pathname ,pathname))
+	  (pdf-pathname (make-pathname-with-type real-name "pdf")))
+     (clim-pdf:with-output-to-pdf-stream (,stream-var pdf-pathname
+                                                          :device-type :11x17
+                                                          :orientation :landscape
+                                                          :trim-page-to-output-size nil
+                                                          :scale-to-fit t
+                                                          )
+       ,@body)))

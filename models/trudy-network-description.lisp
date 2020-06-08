@@ -30,14 +30,19 @@
 (in-package :aplan)
 
 
-(defsite trudy "192.0.0.0" "255.0.0.0")
+(defsite trudy "192.0.0.0/16")
 
-(defsubnet it-network switched-subnet "192.10.0.0" "255.255.0.0")
-(defsubnet voyage-network switched-subnet "192.20.0.0" "255.255.0.0")
+(defsubnet it-network switched-subnet "192.10.0.0/16")
+(defsubnet voyage-network switched-subnet "192.20.0.0/16")
 
 (defexternal-internet outside ("192.0.0.0" "255.0.0.0"))
 ;;; how to handle the engineering network?
 ;;; also should we have a subnet, the cctv example has one but never uses it...
+
+(define-attacker typical-attacker 
+    :location 'outside)
+
+
 
 ;;;;;;;;
 ;; Communication pool
@@ -112,7 +117,10 @@
     :exceptions ()
     )
 
-;; (tell-negative-policy cradlepoint-router telnet ("192.0.0.0"  "255.0.0.0"))
+(defwhitelist (ssh cradlepoint-router)
+    :pass everywhere
+    :exceptions (("192.0.0.0"  "255.0.0.0"))
+    )
 
 ;; first argument is allowed range, the second argument is the blacklisted range
 ;; can take more arugments? 
@@ -123,13 +131,9 @@
     :exceptions (("192.0.0.0"  "255.0.0.0"))
     )
 
-;; (tell-positive-policy cradlepoint-router ssh ("0.0.0.0"  "0.0.0.0") ("192.0.0.0"  "255.0.0.0"))
-
 (defwhitelist (email cradlepoint-router)
     :pass everywhere
     :exceptions (("192.0.0.0"  "255.0.0.0")))
-
-;; (tell-positive-policy cradlepoint-router email ("0.0.0.0"  "0.0.0.0") ("192.0.0.0"  "255.0.0.0"))
 
 ;; Define switch access policies
 ;;; The switch will forward TELNET packets only from within its subnet
@@ -138,31 +142,21 @@
     :exceptions ()
     )
 
-;; (tell-negative-policy furuno-switch telnet ("192.10.0.0" "255.255.0.0"))
-
-;; why do we have this? it doesn't seem to be defining any range...
-;;; Location masks have two paths:
-;;; 1) An 4 place IP address
-;;; 2) A mask where a 1 in that bit position means you have to match
-;;;    and a zero in the mask says "don't care"
-;;; So the mask below matches everything.
-;;; In fact anything with a mask of "0.0.0.0" will match anything
-
 ;;; The switch will pass SSH packets originating anywhere
 (defwhitelist (ssh furuno-switch)
     :pass everywhere
     )
 
-;; (tell-positive-policy furuno-switch ssh  ("0.0.0.0"  "0.0.0.0"))
-
 ;;; anybody anywhere can send email packets through this switch
 (defwhitelist (email furuno-switch)
     :pass everywhere
     )
-    
-;; (tell-positive-policy furuno-switch email  ("0.0.0.0"  "0.0.0.0"))
 
-;;;;;;;;;;;;;;;;;;;;;;;
+
+
+
+;;;;
+;;;;;;;;;;;;;;;;;;;
 ;; "IT Network" pooltell
 ;; Just what they define in the specs
 ;; includes email server, 
@@ -196,12 +190,6 @@
     :capabilities (server-user-write)
     :authorization-pools (server-pool))
 
-;; Ok, what are the different types of "computers"
-;; that we input to this function, are they defined somewhere
-;; or are just strings that we define, where are they stored??
-;; Note -- I think that these are in object-defs.lisp
-;; how would we handle 10.*.*.* ip addresses, should we
-;; make our valid ip range really wide or what?
 (defcomputer host-laptop linux-computer 
   :ip-address-string "192.1.1.2"
   :authorization-pool server-pool
@@ -211,13 +199,6 @@
   :ip-address-string "192.10.0.3"
   :authorization-pool server-pool
   :superuser server-administrator)
-
-(defwhitelist (ssh cradlepoint-router)
-    :pass everywhere
-    :exceptions (("192.0.0.0"  "255.0.0.0"))
-    )
-
-;; (tell-positive-policy cradlepoint-router ssh ("0.0.0.0"  "0.0.0.0") ("192.0.0.0"  "255.0.0.0"))
 
 (defcomputer navnet windows-7-computer 
   :ip-address-string "192.10.0.4"
@@ -238,19 +219,16 @@
 (defwhitelist (email windows-email-vm)
     :pass everywhere)
 
-;; (tell-positive-policy windows-email-vm email ("0.0.0.0" "0.0.0.0"))
-
 (defwhitelist (ssh windows-email-vm)
     :pass everywhere
     )
-
-;; (tell-positive-policy windows-email-vm ssh ("0.0.0.0" "0.0.0.0"))
 
 ;; Define resources in server pool
 (defresource emails file
     :capability-requirements ((write server-super-user) (read server-user-read))
     :machines (windows-email-vm))
 
+
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;
@@ -354,9 +332,6 @@
 (define-impact data-integrity waypoint-sequence accuracy auto-pilot-process)
 (define-impact data-integrity typical-chart data-integrity waypoint-sequence)
 (define-impact data-integrity gps-position accuracy auto-pilot-process)
-
-;; Instantiate attacker
-(create-attacker 'typical-attacker :world-name 'outside)
 
 ;;; Need to say that the super-user is an email client of the email-server process
 (def-email-clients email-server server-administrator)
