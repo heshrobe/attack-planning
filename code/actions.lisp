@@ -159,4 +159,20 @@
 
 
   
- 
+
+
+;;; Actions related to control systems
+
+(define-action control (actor network-stack))
+
+(define-action make-observation (actor network-traffic subnet))
+
+(define-action open-ftp-connection (actor target))
+
+(define-action open-http-connection (actor target))
+
+(define-action trasmit-data (actor data target))
+
+(define-action issue-false-sensor-data-report-to (controller source bus sensor-type))
+
+(define-action uses-control-to-achieve-access-right (attacker right component))
