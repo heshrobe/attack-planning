@@ -127,9 +127,13 @@
 
 (define-predicate transforms (process format1 format2) (non-stateful-predicate-model))
 
+;;; Fix: Why do I have all three of these?
 (define-predicate is-vulnerable-to (process attack) (non-stateful-predicate-model))
 
-(define-predicate has-control-of (attacker process) (ltms:ltms-predicate-model))
+(define-predicate vulnerable-to (thing attack) (non-stateful-predicate-model))
+
+(define-predicate vulnerable-to-overflow-attack (process protocol) (ltms:ltms-predicate-model))
+
 
 (define-predicate is-typical-user (user) (non-stateful-predicate-model))
 
@@ -143,7 +147,7 @@
 
 (define-predicate requires-access-right (object operation capability) (ltms:ltms-predicate-model))
 
-(define-predicate vulnerable-to (thing attack) (non-stateful-predicate-model))
+
 
 (define-predicate protected-from (thing attack) (ltms:ltms-predicate-model))
 
@@ -152,6 +156,8 @@
 (define-predicate is-logged-in (attacker victim-user victim-os victim-machine) (ltms:ltms-predicate-model))
 
 (define-predicate has-remote-shell (attacker victime-machine role) (ltms:ltms-predicate-model))
+
+(define-predicate has-control-of (attacker process) (ltms:ltms-predicate-model))
 
 (define-predicate controls-process (attacker victim-process how) (ltms:ltms-predicate-model))
 

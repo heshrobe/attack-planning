@@ -104,7 +104,7 @@
 
 (define-goal achieve-remote-shell (victim-os-instance user))
 
-(define-predicate vulnerable-to-overflow-attack (process) (ltms:ltms-predicate-model))
+
 
 ;;; This is related to attacks in which for example the user is misdirected
 ;;; to a fake site or to a fake DNS resolver

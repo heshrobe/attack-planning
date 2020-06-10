@@ -216,6 +216,9 @@
 ;;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
+;;; This block of stuff is currently a mess and needs fixing
+
+#|
 (defattack-method take-control-of-directly
     ;; Takes control of a component to ultimately affect some property of the target
     :to-achieve [takes-control-of ?attacker ?component-property ?component]
@@ -241,9 +244,9 @@
     )
 
 
-;;; Fixed:
-;;; This mentions the host-os but it doesn't actually seem to carry through
-;;; to the plan.  Just rationality check, I guess.
+;;; Fix
+;;; This should reduce to one of the methods used for code-injection or code-reuse
+
 (defattack-method buffer-overflow-can-control-server-processes
     :to-achieve [takes-direct-control-of ?attacker ?process-property ?process]
     ;; :bindings ((?os-instance ?process.host-os])
@@ -253,6 +256,8 @@
     :prerequisites ((is-vulnerable-to ?process 'buffer-overflow-attack))
     :plan (:action [take-control-with-buffer-overflow ?attacker ?process])
     )
+|#
+
 
 (defrule check-vulnerabiity (:backward)
   then [is-vulnerable-to ?process ?attack]
@@ -455,7 +460,11 @@
 (defattack-method how-to-logon
     :to-achieve [achieve-remote-shell ?victim-os-instance ?victim-user]
     :bindings ([value-of ?victim-os-instance.machine ?victim-machine]
-	       [current-foothold ?current-foothold-machine ?current-foothold-role]
+	       ;; I think this isn't right.  We're posting a get-foothold goal
+	       ;; below, which means that the foothold from which the login
+	       ;; will happen is that foothold not the current one (they might be
+	       ;; the same in some cases);
+	       ;; [current-foothold ?current-foothold-machine ?current-foothold-role]
 	       [attacker-and-machine ?attacker ?attacker-machine]
 	       [protocol-for remote-execution remote-shell ?protocol])
     :typing ((?victim-os-instance operating-system)
@@ -485,10 +494,13 @@
 (defattack-method code-injection-against-process
     :to-achieve [achieve-code-injection ?process ?os-instance]
     :bindings ([value-of ?os-instance.processes ?process]
-	       [current-foothold ?foothold-machine ?foothold-role])
+	       [value-of ?process.machines ?victim-machine]
+	       [attacker-and-machine ?attacker ?attacker-machine])
     :typing ((?process web-server-process))
-    :prerequisites ([vulnerable-to-overflow-attack ?process])
-    :plan (:action [launch-code-injection-attack ?process ?foothold-machine ?foothold-role])
+    :prerequisites ([vulnerable-to-overflow-attack ?process ?protocol])
+    :plan ((:goal [get-foothold ?os-instance ?protocol])
+	   (:action [launch-code-injection-attack ?attacker ?process ?protocol ?foothold-machine ?foothold-role]))
+    :post-conditions ([has-remote-execution ?attacker ?victim-machine ?process])
     )
 
 (defattack-method remote-execution-to-code-reuse
@@ -504,11 +516,11 @@
 
 (defattack-method code-reuse-against-web-server
     :to-achieve [achieve-code-reuse ?process ?os-instance]
-    :bindings ([current-foothold ?foothold-machine ?foothold-role])
+    :bindings ([attacker-and-machine ?attacker ?attacker-machine])
     :typing ((?process web-server-process))
-    :prerequisites ([vulnerable-to-overflow-attack ?process])
-    :plan (:action [launch-code-reuse-attack ?process ?foothold-machine ?foothold-role])
-    )
+    :prerequisites ([vulnerable-to-overflow-attack ?process ?protocol])
+    :plan ((:goal [get-foothold ?os-instance ?protocol])
+	   (:action [launch-code-reuse-attack ?attacker ?process  ?protocol ?foothold-machine ?foothold-role])))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;
@@ -627,8 +639,7 @@
     ;; This is the key pre-req: The process has the desired right to the object
     :prerequisites ([has-permission ?the-process ?right ?object])
     :plan (:sequential
-	   (:goal [takes-direct-control-of ?attacker execution ?the-process])
-	   (:action [uses-control-to-achieve-access-right ?attacker ?right ?object ?foothold-machine]))
+	   (:goal [takes-direct-control-of ?attacker execution ?the-process]))
     )
 
 (defattack-method achieve-access-right-by-server-process-subversion
@@ -652,8 +663,7 @@
     ;; This is the key pre-req: The process has the desired right to the object
     :prerequisites ([has-permission ?the-process ?right ?object])
     :plan (:sequential
-	   (:goal [takes-direct-control-of ?attacker execution ?the-process])
-	   (:action [uses-control-to-achieve-access-right ?attacker ?right ?object ?foothold-machine]))
+	   (:goal [takes-direct-control-of ?attacker execution ?the-process]))
     )
 
 ;;; similar comment to above about foothold etc
@@ -998,6 +1008,7 @@ predicate promising the thing is known.
 	       [connected-to ?victim-machine ? ?bus ?]
 	       ;; then find a process runnning on that machine
 	       [named-component ?victim-machine os ?victim-os]
+
 	       )
     :prerequisites ([output-of ?sensor-machine ?signal]
 		    ;; the output of the sensor must be an input to 
@@ -1072,3 +1083,4 @@ predicate promising the thing is known.
 	   (:action [login ?attacker white-list-member ?victim-os ?foothold-machine])
 	   (:action [download-malware-from-source ?attacker ?foothold-machine ?victim-machine mirai-client]))
     )
+

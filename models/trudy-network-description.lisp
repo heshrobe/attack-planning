@@ -33,14 +33,14 @@
 (defsite trudy "192.0.0.0/16")
 
 (defsubnet it-network switched-subnet "192.10.0.0/16")
-(defsubnet voyage-network switched-subnet "192.20.0.0/16")
+(defsubnet voyager-network switched-subnet "192.20.0.0/16")
 
 (defexternal-internet outside ("192.0.0.0" "255.0.0.0"))
 ;;; how to handle the engineering network?
 ;;; also should we have a subnet, the cctv example has one but never uses it...
 
 (define-attacker typical-attacker 
-    :location 'outside)
+    :location outside)
 
 
 
@@ -84,6 +84,10 @@
 
 ;; the specs don't list an ip for the furuno hub so i dont know what to put here
 (defswitch furuno-switch switch "192.10.0.2" 
+	   :authorization-pool communication-pool 
+	   :superuser switch-administrator)
+
+(defswitch voyager-switch switch "192.20.0.2" 
 	   :authorization-pool communication-pool 
 	   :superuser switch-administrator)
 
@@ -335,3 +339,19 @@
 
 ;;; Need to say that the super-user is an email client of the email-server process
 (def-email-clients email-server server-administrator)
+
+
+#|
+
+(defun test-trudy ()
+  (do-it :attacker (follow-path '(typical-attacker))
+	 :property 'accuracy
+	 :machine (follow-path '(auto-pilot))
+	 :resource (follow-path '(auto-pilot-process))))
+
+
+
+
+
+
+|#

@@ -40,6 +40,7 @@
 
 (define-action login (?victim-user ?victim-os-instance ?current-foothold-machine ?current-foothold-role)
   :bindings ([attacker-and-machine ?attacker ?attacker-machine]
+	     [current-foothold ?current-foothold-machine ?current-foothold-role]
 	     [value-of ?victim-os-instance.machine ?victim-machine])
   :prerequisites ([connection-established ?current-foothold-machine ?victim-machine ?protocol-name]
 		  [knows-credentials ?attacker ?victim-user])
@@ -55,26 +56,29 @@
   then [in-state [has-remote-execution ?attacker ?victim-machine ?victim-user] ?state]
   )
 
-(define-action launch-code-injection-attack (?victim-process ?foothold-machine ?foothold-role)
-  :bindings ([value-of (?victim-process host-os) ?victim-os]
-	     [value-of (?victim-os machine) ?victim-machine])
-  :prerequisites ([vulnerable-to-overflow-attack ?victim-process]
-		  [connection-established ?foothold-machine ?victim-machine ?protocol-name])
-  :post-conditions ([controls-process ?attacker ?victim-process code-injection])
-  )
-
 (defrule process-control-is-remote-execution (:forward)
   if [in-state [controls-process ?attacker ?victim-process ?any-means] ?state]
   then [in-state [has-remote-execution ?attacker ?victim-machine ?victim-process] ?state]
   )
 
-(define-action launch-code-resuse-attack (?victim-process ?foothold-machine ?foothold-role)
-  :bindings ([value-of (?victim-process host-os) ?victim-os]
-	     [value-of (?victim-os machine) ?victim-machine])
-  :prerequisites ([vulnerable-to-overflow-attack ?victim-process]
+(define-action launch-code-reuse-attack (?attacker ?victim-process ?protocol ?foothold-machine ?foothold-role)
+  :bindings ([current-foothold ?foothold-machine ?foothold-role] 
+	     [value-of ?victim-process.host-os ?victim-os]
+	     [value-of ?victim-os.machine ?victim-machine])
+  :prerequisites ([has-foothold ?victim-process.machine ?foothold-machine ?foothold-role] 
+		  [vulnerable-to-overflow-attack ?victim-process]
 		  [connection-established ?foothold-machine ?victim-machine ?protocol-name])
   :post-conditions ([controls-process ?attacker ?victim-process code-reuse])
   )
+
+(define-action launch-code-injection-attack (?attacker ?victim-process ?protocol ?foothold-machine ?foothold-role)
+  :bindings ([current-foothold ?foothold-machine ?foothold-role]
+	     [value-of ?victim-process.host-os ?victim-os]
+	     [value-of ?vicim-os.machine ?victim-machine])
+  :prerequisites ([has-foothold ?victim-process.machine ?foothold-machine ?foothold-role]
+		  [connection-established ?foothold-machine ?victim-machine ?protocol-name]
+		  [vulnerable-to-overflow-attack ?victim-process ?protocol])
+  :post-conditions ([has-control-of ?attacker ?victim-process]))
 
 
 ;;; This is essentially a no-op if the victim user and the attacker
@@ -154,106 +158,5 @@
   )
 
 
-
-#|
-
-All of the actions in system-dependencies:
-
-[issue-false-sensor-data-report ?controller-machine ?victim-machine ?bus ?signal]
-[issue-incorrect-setpoint ?attacker ?machine ?other-machine ?bus]
-[signal-noise-injection ?attacker ?machine ?signal]
-
-
-
-Initially just make these work in the new framework
-Then go back and align with ATT&CK
-and break down some of these into more atomic elements
-add more predicates so that the post-conditions can be more informative
-
-(define-action load-file (actor file destination)
-  :prerequisites ()
-  :post-conditions ([file-loaded ?file ?destination])
-  )
-
-[add-user-jobs ?attacker ?input]
-[modify-in-core-data-structures ?process ?data-set ?foothold-machine ?foothold-role]
-[read-with-rights-of ?attacker ?privileged-user ?file]
-[open-ftp-connection ?attacker ?attacker-machine]
-[trasmit-data ?attacker ?file ?attacker-machine]
-[uses-control-to-achieve-access-right ?attacker ?right ?object ?foothold-machine]
-
-
-[sniff-a-password ?attacker ?user ?subnet]
-(sniff-a-passward ?user ?subnet)
-
-[control ?attacker ?network-stack ?attacker-machine]
-[observe ?attacker network-traffic ?subnet]
-(read-using-process-capability ,?capability ,?vehicle ,?object)
-
-[port-scan ?attacker ?victim-machine ?attacker-machine telnet-ports]
-
-[download-malware-from-source ?attacker ?foothold-machine ?victim-machine mirai-client]
-[submit-user-jobs ?entity ?user-job-launch-queue]
-
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;;;
-;;;  Actions -- These are the actual planning operators that you'd see in STRIPS
-;;;             style formulations
-;;;
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-
-(define-predicate file-loaded (file destination) (ltms:ltms-predicate-model))
-
-(define-action take-control-with-buffer-overflow (actor process))
-
-(define-action add-user-jobs (actor workload))
-
-(define-action modify-in-core-data-structures (actor data-structure))
-                                                     
-;;; The actor reads the file using the capabilities of the user
-(define-action read-with-rights-of (actor user file))
-                                                     
-;;; The actor logs onto the particular OS as user using this protocol
-
-(define-action login (actor user os-instance foothold-machine protocol))
-
-(define-action use-own-password (user))
-
-(define-action password-dictionary-lookup-attack (actor user))
-
-(define-action social-engineering-attack (actor victim))
-
-(define-action sniff-a-password (actor victim subnet))
-
-
-;;; This seems like a dubious way of saying what we mean
-;;; probably the rule is dubious as well
-(define-action control (actor network-stack))
-
-(define-action make-observation (actor network-traffic subnet))
-
-(define-action open-ftp-connection (actor target))
-
-(define-action open-http-connection (actor target))
-
-(define-action trasmit-data (actor data target))
-
-(define-action issue-false-sensor-data-report-to (controller source bus sensor-type))
-
-(define-action uses-control-to-achieve-access-right (attacker right component))
-
-
-
-(define-action launch-code-injection-attack (attacker victim-process))
-
-(define-action launch-code-reuse-attack (attacker victim-process foothold-machine foothold-role))
-
-(define-action port-scan (attacker victim-machine attacker-machine ports-or-port-ranges))
-
-(define-action attempt-login-from-whitelist (attacker machine whitelist))
-
-(define-action download-malware-from-source (attacker foothold-machine victim-machine malware-type))
-
-
-
-|#
+  
+ 
