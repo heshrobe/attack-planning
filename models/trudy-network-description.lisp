@@ -39,7 +39,7 @@
 ;;; how to handle the engineering network?
 ;;; also should we have a subnet, the cctv example has one but never uses it...
 
-(define-attacker typical-attacker 
+(define-attacker attacker 
     :location outside)
 
 
@@ -344,7 +344,7 @@
 #|
 
 (defun test-trudy ()
-  (do-it :attacker (follow-path '(typical-attacker))
+  (do-it :attacker (follow-path '(attacker))
 	 :property 'accuracy
 	 :machine (follow-path '(auto-pilot))
 	 :resource (follow-path '(auto-pilot-process))))

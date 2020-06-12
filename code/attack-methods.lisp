@@ -498,7 +498,8 @@
 	       [attacker-and-machine ?attacker ?attacker-machine])
     :typing ((?process web-server-process))
     :prerequisites ([vulnerable-to-overflow-attack ?process ?protocol])
-    :plan ((:goal [get-foothold ?os-instance ?protocol])
+    :plan (:sequential 
+	   (:goal [get-foothold ?victim-machine ?protocol])
 	   (:action [launch-code-injection-attack ?attacker ?process ?protocol ?foothold-machine ?foothold-role]))
     :post-conditions ([has-remote-execution ?attacker ?victim-machine ?process])
     )
@@ -516,11 +517,14 @@
 
 (defattack-method code-reuse-against-web-server
     :to-achieve [achieve-code-reuse ?process ?os-instance]
-    :bindings ([attacker-and-machine ?attacker ?attacker-machine])
+    :bindings ([value-of ?os-instance.processes ?process] 
+	       [value-of ?process.machines ?victim-machine]
+	       [attacker-and-machine ?attacker ?attacker-machine])
     :typing ((?process web-server-process))
     :prerequisites ([vulnerable-to-overflow-attack ?process ?protocol])
-    :plan ((:goal [get-foothold ?os-instance ?protocol])
-	   (:action [launch-code-reuse-attack ?attacker ?process  ?protocol ?foothold-machine ?foothold-role])))
+    :plan (:sequential
+	   (:goal [get-foothold ?victim-machine ?protocol])
+	   (:action [launch-code-reuse-attack ?attacker ?process  ?protocol ?foothold-machine ?foothold-role])))acti
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;
@@ -1008,7 +1012,6 @@ predicate promising the thing is known.
 	       [connected-to ?victim-machine ? ?bus ?]
 	       ;; then find a process runnning on that machine
 	       [named-component ?victim-machine os ?victim-os]
-
 	       )
     :prerequisites ([output-of ?sensor-machine ?signal]
 		    ;; the output of the sensor must be an input to 

@@ -65,8 +65,8 @@
   :bindings ([current-foothold ?foothold-machine ?foothold-role] 
 	     [value-of ?victim-process.host-os ?victim-os]
 	     [value-of ?victim-os.machine ?victim-machine])
-  :prerequisites ([has-foothold ?victim-process.machine ?foothold-machine ?foothold-role] 
-		  [vulnerable-to-overflow-attack ?victim-process]
+  :prerequisites ([has-foothold ?victim-machine ?foothold-machine ?foothold-role ?protocol] 
+		  [vulnerable-to-overflow-attack ?victim-process ?protocol]
 		  [connection-established ?foothold-machine ?victim-machine ?protocol-name])
   :post-conditions ([controls-process ?attacker ?victim-process code-reuse])
   )
@@ -74,9 +74,9 @@
 (define-action launch-code-injection-attack (?attacker ?victim-process ?protocol ?foothold-machine ?foothold-role)
   :bindings ([current-foothold ?foothold-machine ?foothold-role]
 	     [value-of ?victim-process.host-os ?victim-os]
-	     [value-of ?vicim-os.machine ?victim-machine])
-  :prerequisites ([has-foothold ?victim-process.machine ?foothold-machine ?foothold-role]
-		  [connection-established ?foothold-machine ?victim-machine ?protocol-name]
+	     [value-of ?victim-os.machine ?victim-machine])
+  :prerequisites ([has-foothold ?victim-machine ?foothold-machine ?foothold-role ?protocol]
+		  [connection-established ?foothold-machine ?victim-machine ?protocol]
 		  [vulnerable-to-overflow-attack ?victim-process ?protocol])
   :post-conditions ([has-control-of ?attacker ?victim-process]))
 
@@ -163,16 +163,23 @@
 
 ;;; Actions related to control systems
 
-(define-action control (actor network-stack))
+;;; (define-action control (actor network-stack))
 
-(define-action make-observation (actor network-traffic subnet))
+;;; (define-action make-observation (actor network-traffic subnet))
 
-(define-action open-ftp-connection (actor target))
+;;; (define-action open-ftp-connection (actor target))
 
-(define-action open-http-connection (actor target))
+;;; (define-action open-http-connection (actor target))
 
-(define-action trasmit-data (actor data target))
+;;; (define-action trasmit-data (actor data target))
 
-(define-action issue-false-sensor-data-report-to (controller source bus sensor-type))
+(define-action issue-false-sensor-data-report (?controller-machine ?victim-machine ?bus ?sensor-type)
+  :prerequisites ()
+  :post-conditions ()
+  )
 
-(define-action uses-control-to-achieve-access-right (attacker right component))
+
+
+
+
+;;; (define-action uses-control-to-achieve-access-right (attacker right component))

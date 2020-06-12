@@ -10,7 +10,7 @@
      plan
      #'(lambda (step stream) (print-plan-object step stream text-size))
      (if action-only #'plan-inferior-action-only #'plan-inferior)
-     :graph-type #+acl :my-graph #+mcclim :digraph
+     :graph-type #+allegro :my-graph #+mcclim :digraph
      :stream stream
      :merge-duplicates t
      :orientation orientation
@@ -152,7 +152,8 @@
   (write-string (string (role-name item)) stream))
 
 (define-aplan-command (com-load-model :name t :menu t)
-    ((pathname 'clim:pathname))
+    ((pathname '((clim:pathname) :merge-default t :default-type :lisp) :
+	       default #p"aplan:models;*.*"))
   (clear)
   ;; clear makes the current version of *everywhere* invalid
   ;; by removing its parts.
@@ -164,7 +165,7 @@
     ((computer 'computer)
      (property 'desirable-property :default 'performance)
      (resource `(computer-resource ,computer))
-     &key (attacker 'attacker :default (follow-path '(attacker))))
+     &key (attacker 'attacker))
   (multiple-value-bind (answers final-states) (do-it :property property :machine computer :attacker attacker :resource resource)
     (let ((stream (clim:get-frame-pane clim:*application-frame* 'attack-structure )))
       (clim:with-text-face (stream :bold)
