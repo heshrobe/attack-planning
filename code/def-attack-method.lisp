@@ -286,7 +286,7 @@
 (defclass has-arguments-mixin ()
   ((arguments :accessor arguments :initarg :arguments)))
 
-(defclass action (has-parent-mixin has-arguments-mixin)
+(defclass action (has-parent-mixin has-arguments-mixin print-nicely-mixin)
   ((action-name :accessor action-name :initarg :action-name)
    (prior-state :accessor prior-state :initarg :prior-state)
    (next-state :accessor next-state :initarg :next-state)

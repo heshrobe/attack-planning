@@ -96,7 +96,8 @@
   :bindings ([current-foothold ?foothold-machine ?foothold]
 	     [protocol-for remote-execution remote-shell ?protocol-name])
   :prerequisites ([connection-established ?foothold-machine ?victim-machine ?protocol-name])
-  :post-conditions ([knows-credentials ?attacker ?user])
+  :post-conditions ([knows-credentials ?attacker ?user]
+		    [knows-password ?attacker ?user])
   )
 
 (define-action fill-disk (?attacker ?foothold-machine kill-disk)
@@ -116,9 +117,7 @@
   then [in-state [user-forced-to-login ?victim-user ?victim-machine] ?state])
 
 (define-action use-access-right-to-modify (?attacker write ?whose-right ?foothold-computer ?victim-object ?victim-machine)
-  :define-predicate t
-  :prerequisites ([knows-password ?attacker ?whose-right]
-		  [has-permission ?whose-right write ?victim-object])
+  :prerequisites ([has-permission ?whose-right write ?victim-object])
   :post-conditions ([modified-by ?attacker ?victim-object])
   )
 

@@ -15,7 +15,8 @@
 (defexternal-internet outside ("192.168.0.0" "255.255.0.0"))
 
 ;;; Our attacker lives somewhere out there
-(create-attacker 'typical-attacker :world-name 'outside)
+(define-attacker attacker 
+    :location outside)
 
 ;;; This is the name of our enterprise
 (define-enterprise victim)
@@ -546,6 +547,14 @@
   :capability-requirements ((write data-low-write) (read data-low-read))
   )
 
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;;
+;;; Typical query is high-datavase-server data-integrity high-database
+;;;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+
+
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;
@@ -558,8 +567,8 @@
 		    low-database high-database sysadmin high-server high-server-os))
   (setq worker-machine (object-named 'typical-worker-computer)
 	worker-bee (object-named 'typical-worker-bee)
-	attacker (object-named 'typical-attacker)
-	attacker-machine (object-named 'typical-attacker-machine)
+	attacker (object-named 'attacker)
+	attacker-machine (object-named 'attacker-computer)
 	victim-router (object-named 'victim-router)
 	low-server (object-named 'low-data-server)
 	low-server-os (follow-path `(,low-server os))
@@ -571,5 +580,11 @@
 	outside (object-named 'outside)
 	sysadmin (object-named 'typical-sysadmin)
 	))
+
+(defun test-wilee ()
+  (do-it :attacker attacker
+	 :property 'data-integrity
+	 :machine high-server
+	 :resource high-database))
 
 
