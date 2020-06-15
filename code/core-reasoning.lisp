@@ -104,12 +104,18 @@
 				     (computer nil computer-p) 
 				     (other-computers nil other-computers-p)
 				     (download-servers nil download-servers-p)
+				     (adware-servers nil adware-servers-p)
 				     )
   `(create-attacker ',name
 		    :location (follow-path (list ',location))
 		    :other-computers ,(when other-computers-p 
 					`(list ,@(loop for name in other-computers
 						     collect `(follow-path (list ',name)))))
+		    :adware-servers ,(when adware-servers-p
+				      (if (symbolp adware-servers)
+					  `', adware-servers
+					`(list ,@(loop for name in adware-servers
+						     collect `(follow-path (list ',name))))))
 		    :download-servers ,(when download-servers-p
 					 (if (symbolp download-servers)
 					   `', download-servers
@@ -117,7 +123,7 @@
 						      collect `(follow-path (list ',name))))))
 		    :computer ,(when computer-p `(follow-path (list ',computer)))))
 
-(defun create-attacker (attacker-name &key location computer other-computers download-servers)
+(defun create-attacker (attacker-name &key location computer other-computers download-servers adware-servers)
   (with-atomic-action
    (let ((created-computer-name (intern (string-upcase (format nil "~a-computer" attacker-name)))))
      (kill-redefined-object attacker-name)
@@ -133,6 +139,11 @@
 	     (tell `[attacker-download-server ,attacker ,attacker-computer]))
 	 (loop for computer in download-servers
 	     do (tell `[attacker-download-server ,attacker ,computer])))
+       (if (symbolp adware-servers)
+	   (let ((attacker-computer (make-attacker-computer adware-servers attacker :location location)))
+	     (tell `[attacker-adware-server ,attacker ,attacker-computer]))
+	 (loop for computer in adware-servers
+	     do (tell `[attacker-adware-server ,attacker ,computer])))
        ;; has foothold always has a victim in it.  But in this initial state
        ;; there isn't one.  It's just a starting point.
        (tell `[in-state [has-foothold nil ,his-computer ,attacker foothold] initial])

@@ -93,6 +93,7 @@
 (define-predicate attacker-and-machine (attacker attacker-machine) (special-stateful-predicate-model ltms:ltms-predicate-model))
 
 (define-predicate attacker-download-server (attacker attacker-server-machine) (non-stateful-predicate-model))
+(define-predicate attacker-adware-server (attacker attacker-server-machine) (non-stateful-predicate-model))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;
