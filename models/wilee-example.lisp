@@ -17,7 +17,8 @@
 ;;; Our attacker lives somewhere out there
 (define-attacker attacker 
     :location outside
-    :download-servers attacker-download-server)
+    :download-servers attacker-download-server
+    :adware-servers attacker-adware-server)
 
 ;;; This is the name of our enterprise
 (define-enterprise victim)
