@@ -16,7 +16,8 @@
 
 ;;; Our attacker lives somewhere out there
 (define-attacker attacker 
-    :location outside)
+    :location outside
+    :download-servers attacker-download-server)
 
 ;;; This is the name of our enterprise
 (define-enterprise victim)
@@ -563,8 +564,11 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 (defun get-variables ()
-  (declare (special worker-machine worker-bee attacker low-server low-server-os admin-machine victim-router attacker-machine outside
-		    low-database high-database sysadmin high-server high-server-os))
+  (declare (special worker-machine worker-bee attacker 
+		    low-server low-server-os 
+		    admin-machine victim-router attacker-machine outside
+		    low-database high-database sysadmin high-server high-server-os
+		    download-server))
   (setq worker-machine (object-named 'typical-worker-computer)
 	worker-bee (object-named 'typical-worker-bee)
 	attacker (object-named 'attacker)
@@ -579,12 +583,13 @@
 	admin-machine (object-named 'typical-admin-computer)
 	outside (object-named 'outside)
 	sysadmin (object-named 'typical-sysadmin)
+	download-server (follow-path '(attacker-download-server))
 	))
 
 (defun test-wilee ()
-  (do-it :attacker attacker
+  (do-it :attacker (follow-path '(attacker))
 	 :property 'data-integrity
-	 :machine high-server
-	 :resource high-database))
+	 :machine (follow-path '(high-server))
+	 :resource (follow-path '(high-database))))
 
 

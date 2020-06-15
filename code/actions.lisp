@@ -27,7 +27,7 @@
 
 (define-action take-control-with-buffer-overflow (?attacker ?process)
   :prerequisites ([is-vulnerable-to ?process buffer-overflow-attack])
-  :post-conditions ([has-control-of ?attacker ?process])
+  :post-conditions ([has-control-of ?attacker execution ?process])
   )
 
 (define-action send-phishing-email (?attacker ?attacker-foothold-computer ?email-machine ?victim ?process)
@@ -78,7 +78,7 @@
   :prerequisites ([has-foothold ?victim-machine ?foothold-machine ?foothold-role ?protocol]
 		  [connection-established ?foothold-machine ?victim-machine ?protocol]
 		  [vulnerable-to-overflow-attack ?victim-process ?protocol])
-  :post-conditions ([has-control-of ?attacker ?victim-process]))
+  :post-conditions ([has-control-of ?attacker execution ?victim-process]))
 
 
 ;;; This is essentially a no-op if the victim user and the attacker
@@ -177,8 +177,8 @@
   :post-conditions ()
   )
 
-
-
-
-
-;;; (define-action uses-control-to-achieve-access-right (attacker right component))
+(define-action modify-data-structures (?process ?data-set ?foothold-machine ?foothold-role)
+  :bindings ([attacker-and-machine ?attacker ?])
+  :prerequisites ([has-control-of ?attacker execution ?process])
+  :post-conditions ([modified-by ?attacker ?data-set])
+  )

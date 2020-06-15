@@ -55,7 +55,7 @@
            ;; Notice that the first step is oblivous to its purpose
            ;; This certainly makes things simpler but might lead to getting control in a way
            ;; that doesn't actually work
-           (:goal [takes-control-of ?attacker ?component-property ?component])
+           (:goal [take-control-of ?attacker ?component-property ?component])
            (:goal [use-control-of-to-affect-resource ?attacker ?component ?desirable-property ?victim]))
     )
 
@@ -81,7 +81,7 @@
 ;;; need to do more of that.
 
 
-;;; Note: This could be done more indirectly by saying that 
+;;; Note: This could be done more indirectly by saying that
 ;;; performance is inversely proportional to workload size
 ;;; and then having a rule that says that to decrease something that
 ;;; is inversely proportional to something else increaese the something else
@@ -119,9 +119,9 @@
     )
 
 ;;; now what we want to say is:
-;;; Either 
+;;; Either
 ;;; 1) find a process in the current workload that is capable of launching new jobs
-;;; get control of that process and cause it launch jobs.  For example, a server that takes 
+;;; get control of that process and cause it launch jobs.  For example, a server that takes
 ;;; requests through some protocol and launches jobs in response (e.g. web server ftp server)
 ;;; repeatedly connect to it and cause it to launch a job
 ;;; 2) Increase the size of the job launch queue
@@ -174,10 +174,10 @@
 (defattack-method mung-process-output
     :to-achieve [affect data-integrity ?data-set]
     :bindings ([output-of ?process ?data-set]
-	       [attacker-and-machine ?attacker ?attacker-machine])    
+	       [attacker-and-machine ?attacker ?attacker-machine])
     :typing ((?process process))
     :plan (:sequential
-           (:goal [takes-control-of ?attacker data-integrity ?process])
+           (:goal [take-control-of ?attacker data-integrity ?process])
            (:goal [use-control-of-to-affect-resource ?attacker ?process data-integrity ?data-set]))
     )
 
@@ -192,8 +192,8 @@
 	     (?database database)
 	     (?database-os operating-system)
 	     )
-    ;; This is wrong.  
-    ;; We need to find out who has permission to make a 
+    ;; This is wrong.
+    ;; We need to find out who has permission to make a
     :prerequisites ()
     :plan (:sequential
 	   ;; Also note that it returns in a state where you have remote-execution on the new-foothold-machine
@@ -221,8 +221,9 @@
 #|
 (defattack-method take-control-of-directly
     ;; Takes control of a component to ultimately affect some property of the target
-    :to-achieve [takes-control-of ?attacker ?component-property ?component]
-    :plan (:goal [takes-direct-control-of ?attacker ?component-property ?component]))
+    :to-achieve [take-control-of ?attacker ?component-property ?component]
+    :plan (:goal [takes-direct-control-of ?attacker ?component-property ?component])
+    :post-conditiond ([has-control-of ?attacker ?component-property ?component])
 
 ;;; one way to take direct control of a process is to
 ;;; first find some way to modify the loadable file so as to affect the property of the target
@@ -236,7 +237,7 @@
     :typing ((?victim process)
              (?program program)
              (?file dynamically-loadable-code-file))
-    :plan (:sequential 
+    :plan (:sequential
            (:goal [modify contents ?file ?input-context])
 	   ;; Note: this is a hack right now.  Really it should be a goal which would involve
 	   ;; a series of actions to cause the file to get loaded (logging in?, robooting?)
@@ -296,8 +297,9 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 (defattack-method take-control-of-indirectly
-    :to-achieve [takes-control-of ?attacker ?victim-property ?victim]
-    :plan (:goal [takes-indirect-control-of ?attacker ?victim-property ?victim]))
+    :to-achieve [take-control-of ?attacker ?victim-property ?victim]
+    :plan (:goal [takes-indirect-control-of ?attacker ?victim-property ?victim])
+    :post-conditions ([has-control-of ?attacker ?victim-property ?victim]))
 
 ;;; Find an input of the victim and modify its contents
 ;;; probably should say that the behavior is affected by the content
@@ -307,6 +309,7 @@
     ;; assumption is that we know thing
     :bindings ([input-of ?thing ?input])
     :plan (:goal [modify contents ?input])
+    :post-conditions ([has-control-of ?attacker ?victim-property ?victim])
     )
 
 
@@ -325,7 +328,7 @@
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;
-;;;  Modification 
+;;;  Modification
 ;;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
@@ -348,18 +351,18 @@
     :typing ((?controller process)
              (?victim data-set))
     :prerequisites ([process-controls-data-set ?controller ?victim])
-    :plan (:sequential 
-           (:goal [takes-control-of (controlled-data-set ?victim) ?controller])
-           (:goal [use-control-of-to-affect-resource ?attacker ?controller ?victim-property ?victim])) 
+    :plan (:sequential
+           (:goal [take-control-of (controlled-data-set ?victim) ?controller])
+           (:goal [use-control-of-to-affect-resource ?attacker ?controller ?victim-property ?victim]))
     )
 
 ;;; NOTE: This should be expressed in a more general way about transforming formats
 ;;; but it will do for now.
 (defattack-method modify-loadable-code
-    :to-achieve [modify ?file-property ?object-file] 
+    :to-achieve [modify ?file-property ?object-file]
     :bindings ([value-of ?object-file.source-file ?source-file])
     :typing ((?object-file dynamically-loadable-code-file))
-    :plan (:sequential 
+    :plan (:sequential
 	   (:goal [modify code ?source-file])
 	   (:goal [force-compilation ?attacker ?source-file ?object-file]))
     )
@@ -405,7 +408,7 @@
     )
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;;; 
+;;;
 ;;; Remote Execution
 ;;;
 ;;; Achieve-Remote-Execution is intimately bound up with get-foothold (i.e. lateral-motion)
@@ -419,7 +422,7 @@
 ;;; foothold i.e. if you're trying to get a remote shell then you'll need a foothold that can
 ;;; reach the target through either ssh or telnet.  If you're trying to take over a web server process
 ;;; then you'll need to find a machine that can speak http or https
-;;; If there's some type of specific server with its own protocol then you'll need a foothold that 
+;;; If there's some type of specific server with its own protocol then you'll need a foothold that
 ;;; can reach the machine via that specific protocol.
 ;;;
 ;;; Foothold-role here is an output value that achieve-remote-execution is supposed to bind
@@ -447,13 +450,13 @@
 	   (:goal [achieve-remote-shell ?victim-os ?victim-user]))
     )
 
-;;; Note: This is odd if the way you get knowledge of the password 
+;;; Note: This is odd if the way you get knowledge of the password
 ;;; is by phishing or something else that takes time
 ;;; In such cases, the first get-foothold here establishes a connection
 ;;; But then the achieve-knowledge-of-password does a bunch of other actions
 ;;; before the connection is used.
 ;;; Better would be for the get-foothold not to be here
-;;; but within two different versions of login, one for when you 
+;;; but within two different versions of login, one for when you
 ;;; already have the foothold (as you would in achieving-knowledge by password
 ;;; guessing and one for when you don't.  The second case would do the get-foothold.
 
@@ -470,7 +473,7 @@
     :typing ((?victim-os-instance operating-system)
 	     (?victim-machine computer)
 	     (?victim-user user))
-    :plan (:sequential	
+    :plan (:sequential
 	   (:goal [get-foothold ?victim-machine ?protocol])
 	   (:goal [achieve-knowledge-of-password ?attacker ?victim-user ?victim-machine])
            (:action [login ?victim-user ?victim-os-instance ?current-foothold-machine ?current-foothold-role]))
@@ -498,7 +501,7 @@
 	       [attacker-and-machine ?attacker ?attacker-machine])
     :typing ((?process web-server-process))
     :prerequisites ([vulnerable-to-overflow-attack ?process ?protocol])
-    :plan (:sequential 
+    :plan (:sequential
 	   (:goal [get-foothold ?victim-machine ?protocol])
 	   (:action [launch-code-injection-attack ?attacker ?process ?protocol ?foothold-machine ?foothold-role]))
     :post-conditions ([has-remote-execution ?attacker ?victim-machine ?process])
@@ -512,19 +515,19 @@
     :typing ((?os-instance operating-system)
 	     (?victim-process process))
     :plan (:sequential
-	   (:note [place-visited ?victim-machine remote-execution]) 
+	   (:note [place-visited ?victim-machine remote-execution])
 	   (:goal [achieve-code-reuse ?victim-process ?os-instance])))
 
 (defattack-method code-reuse-against-web-server
     :to-achieve [achieve-code-reuse ?process ?os-instance]
-    :bindings ([value-of ?os-instance.processes ?process] 
+    :bindings ([value-of ?os-instance.processes ?process]
 	       [value-of ?process.machines ?victim-machine]
 	       [attacker-and-machine ?attacker ?attacker-machine])
     :typing ((?process web-server-process))
     :prerequisites ([vulnerable-to-overflow-attack ?process ?protocol])
     :plan (:sequential
 	   (:goal [get-foothold ?victim-machine ?protocol])
-	   (:action [launch-code-reuse-attack ?attacker ?process  ?protocol ?foothold-machine ?foothold-role])))acti
+	   (:action [launch-code-reuse-attack ?attacker ?process  ?protocol ?foothold-machine ?foothold-role])))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;
@@ -559,7 +562,7 @@
     :plan (:sequential
            (:goal [achieve-remote-execution ?os-instance ?entity])
            (:repeated-action [submit-user-jobs ?entity ?user-job-launch-queue])))
-    
+
 ;;; If you control a process that produces an output
 ;;; you can use that control to mung the data-structure in core
 (defattack-method mung-in-core-data-structures
@@ -567,7 +570,8 @@
     :bindings ([output-of ?process ?data-set]
 	       [current-foothold ?foothold-machine ?foothold-role])
     :typing ((?process process))
-    :plan (:action [modify-in-core-data-structures ?process ?data-set ?foothold-machine ?foothold-role])
+    :Prerequisites ([has-control-of ?attacker ?property ?process])
+    :plan (:action [modify-data-structures ?process ?data-set ?foothold-machine ?foothold-role])
     )
 
 
@@ -594,7 +598,7 @@
 
 ;;; If your foothold role already has the access rights
 ;;; do nothing
-(defattack-method achieve-a-right-you-already-have 
+(defattack-method achieve-a-right-you-already-have
     :to-achieve [achieve-access-right ?right ?object ?role]
     :bindings ([current-foothold ?foothold-machine ?foothold-role]
 	       [unifiable ?role ?foothold-role])
@@ -615,7 +619,7 @@
 ;;; but is that really necessary, why isn't the process enough
 
 ;;; Note that this approach would normally be used from a remote foothold
-;;; That can reach whatever process you want, and such that this process can 
+;;; That can reach whatever process you want, and such that this process can
 ;;; then make a contact to the victim object.
 ;;; So the strategy would be to identify a process that runs on a machine that can reach the target
 ;;; and that has the accesss rights you need.
@@ -638,7 +642,7 @@
              (?machine computer)
              (?os-instance operating-system)
              (?os-workload os-workload)
-             (?the-process process)           
+             (?the-process process)
              )
     ;; This is the key pre-req: The process has the desired right to the object
     :prerequisites ([has-permission ?the-process ?right ?object])
@@ -662,7 +666,7 @@
              (?machine computer)
              (?os-instance operating-system)
              (?os-workload os-workload)
-             (?the-process process)           
+             (?the-process process)
              )
     ;; This is the key pre-req: The process has the desired right to the object
     :prerequisites ([has-permission ?the-process ?right ?object])
@@ -694,7 +698,7 @@
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;
-;;; Active User Set and Logging in 
+;;; Active User Set and Logging in
 ;;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
@@ -717,7 +721,7 @@
     :guards ([unifiable ?attacker ?user])
     :plan (:action [use-own-password ?user ?victim-machine])
     )
-            
+
 (defattack-method how-to-get-password-by-guessing
     :to-achieve [achieve-knowledge-of-password ?attacker ?user ?victim-machine]
     :guards ([is-typical-user ?user]
@@ -782,7 +786,7 @@
 ;;; Fix This:
 ;;; To pull off a phishing attack:
 ;;;  The attacker must have a foothold for the email server of the victim-user
-;;;  
+;;;
 (defattack-method how-to-get-password-by-phishing
     :to-achieve [achieve-knowledge-of-password ?attacker ?victim-user ?victim-machine]
     :bindings ([email-client-of ?victim-user ?process]
@@ -814,7 +818,7 @@
              (?victim-machine computer)
              (?subnet subnet))
     :bindings ([value-of ?victim-machine.subnets ?subnet])
-    :plan (:parallel 
+    :plan (:parallel
            (:goal [observe-network-traffic ?attacker ?subnet])
            (:action [sniff-a-password ?attacker ?user ?subnet]))
     )
@@ -832,7 +836,7 @@
 ;;; 1) The attacker can reach A from its current position
 ;;; 2) The attacker can't reach A using that protocol from its current position.
 ;;;    In this case the attacker follows this strategy
-;;;    a) Find a machine B that can make the intended connection 
+;;;    a) Find a machine B that can make the intended connection
 ;;;    b) Get some form of remote execution on B
 ;;;    c) Have B make the connection to A
 ;;;    Achieving remote execution on B, however, may not be directly achievable
@@ -840,7 +844,7 @@
 ;;;    whatever protocol is relevant for the exploit that allow remote execution
 ;;;    So the operator that achieves remote execution on B may need to get a foothold
 ;;;    on some machine C that can reach B, and so on recursively.
-;;;    
+;;;
 ;;;    One thing that complicates this reasoning is that when B isn't directly reachable and the attacker tries
 ;;;    to find a foothold to B (which was the foothold to get to A), we might discover that A could serve as the foothold
 ;;;    to B.  But then we'd be in an infinite goal descent.
@@ -849,14 +853,14 @@
 ;;; 2) We add a "note" in the plan saying that we should note that we've visited this place
 ;;;
 ;;; Corresponding to the two cases there are two methods
-;;; There are two attack-methods: 
+;;; There are two attack-methods:
 ;;; From the easy case (1):  Direct-Foothold
 ;;; For the hard caser (2): Lateral-motion
-;;; 
+;;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 
-;;; Direct Method, applicable when you can get from your current foothold to the target-machine 
+;;; Direct Method, applicable when you can get from your current foothold to the target-machine
 ;;; so the foothold is where this step is taking place from and the role is the attacker
 (defattack-method direct-foothold
     :to-achieve [get-foothold ?victim-machine ?protocol-name]
@@ -891,7 +895,7 @@
 	   ;; Make a note that we've already considered this place as a foothold to
 	   ;; prevent looping back to here while trying to achieve remote execution
 	   (:note [place-visited ?victim-machine foothold])
-	   ;; Now see if the attacker can gain remote execution on the new-foothold-machine and in what role 
+	   ;; Now see if the attacker can gain remote execution on the new-foothold-machine and in what role
 	   ;; (?new-foothold-role is a return value)
 	   (:goal [achieve-remote-execution ?new-foothold-machine ?new-foothold-role])
 	   ;;If so then actually make the connection to the victim from the new foothold
@@ -914,7 +918,7 @@
 ;;; and the user requests a job to be started
 ;;; and if the user job admitter allows it
 ;;; then an instance of a user process is started
-;;; it runs with the permission of the user 
+;;; it runs with the permission of the user
 
 
 ;;; These next several sections really are just knowledge rules
@@ -936,7 +940,7 @@
              (?os-instance operating-system)
 	     (?attacker-machine computer)
              (?superuser user))
-    :plan (:sequential 
+    :plan (:sequential
            (:goal [achieve-remote-shell ?os-instance ?superuser])
            (:action [control ?attacker ?network-stack ?attacker-machine]))
     )
@@ -949,7 +953,7 @@
     :typing ((?subnet switched-subnet)
              (?switch switch)
              (?network-stack network-stack))
-    :plan (:sequential 
+    :plan (:sequential
 	   (:goal [takes-direct-control-of ?attacker network-traffic ?network-stack ])
 	   (:action [observe ?attacker network-traffic ?subnet]))
     )
@@ -973,7 +977,7 @@ predicate promising the thing is known.
 
 ; Idea picked up at MRC PI Mtg
 ; Attacker let's lose a shit-storm with low value but high response cost
-; Then uses the opportunity created by the diversion of attention to 
+; Then uses the opportunity created by the diversion of attention to
 ; launch a high-value but perhaps more risky attack.
 ;;;
 ;;; Knowledge of memory contents as pre-requisite to overwriting attacks
@@ -1014,7 +1018,7 @@ predicate promising the thing is known.
 	       [named-component ?victim-machine os ?victim-os]
 	       )
     :prerequisites ([output-of ?sensor-machine ?signal]
-		    ;; the output of the sensor must be an input to 
+		    ;; the output of the sensor must be an input to
 		    ;; the controller process
 		    [input-of ?controller-process ?signal]
 		    [or [can-be-mastered-by ?controller-machine ?victim-machine ?bus]
@@ -1035,7 +1039,7 @@ predicate promising the thing is known.
 	   ;; shouldn't really be in the operators that detemine how to do the remote execution
 	   (:goal [achieve-remote-execution ?victim-machine ?entity])
 	   ;; issue a false sensor data report to the controller from the attacker machine over the bus
-	   ;; of the sensor type 
+	   ;; of the sensor type
 	   (:action [issue-false-sensor-data-report ?controller-machine ?victim-machine ?bus ?signal]))
     )
 
@@ -1055,7 +1059,7 @@ predicate promising the thing is known.
 ; 	   (:goal [remote-execution ?attacker ?entity ?os])
 ; 	   (:action [issue-incorrect-setpoint ?attacker ?machine ?other-machine ?bus]))
 ;     )
- 
+
 (defattack-method sensor-injection-attack
     :to-achieve [affect data-integrity ?signal]
     :bindings ([value-of ?signal.machines ?machine]
@@ -1086,4 +1090,3 @@ predicate promising the thing is known.
 	   (:action [login ?attacker white-list-member ?victim-os ?foothold-machine])
 	   (:action [download-malware-from-source ?attacker ?foothold-machine ?victim-machine mirai-client]))
     )
-

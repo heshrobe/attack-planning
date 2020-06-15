@@ -87,9 +87,21 @@
 
 
 
+(defun make-attacker-computer (name attacker &key location (typical? t))
+  (kill-redefined-object name)
+  (let ((his-computer (make-object 'attacker-computer
+			       :name name
+			       :typical-p typical?)))
+    (tell `[value-of (,attacker machines) ,his-computer])
+    (tell `[uses-machine ,attacker ,his-computer])
+    (when location
+      (tell `[value-of (,location computers) ,his-computer]) 
+      (tell `[value-of (,his-computer subnets) ,location]))
+    his-computer))
+    
 
-
-(defmacro define-attacker (name &key location (computer nil computer-p) 
+(defmacro define-attacker (name &key location 
+				     (computer nil computer-p) 
 				     (other-computers nil other-computers-p)
 				     (download-servers nil download-servers-p)
 				     )
@@ -98,32 +110,29 @@
 		    :other-computers ,(when other-computers-p 
 					`(list ,@(loop for name in other-computers
 						     collect `(follow-path (list ',name)))))
-		    :download-servers ,(when download-servers-p 
-					 `(list ,@(loop for name in download-servers
-							collect `(follow-path (list ',name)))))
+		    :download-servers ,(when download-servers-p
+					 (if (symbolp download-servers)
+					   `', download-servers
+					   `(list ,@(loop for name in download-servers
+						      collect `(follow-path (list ',name))))))
 		    :computer ,(when computer-p `(follow-path (list ',computer)))))
 
-(defun create-attacker (name &key location computer other-computers download-servers)
+(defun create-attacker (attacker-name &key location computer other-computers download-servers)
   (with-atomic-action
-   (let ((created-computer-name (intern (string-upcase (format nil "~a-computer" name)))))
-     (kill-redefined-object name)
-     (when (null computer) (kill-redefined-object created-computer-name))
-     (let* ((attacker (make-object 'attacker :name name))
+   (let ((created-computer-name (intern (string-upcase (format nil "~a-computer" attacker-name)))))
+     (kill-redefined-object attacker-name)
+     (let* ((attacker (make-object 'attacker :name attacker-name))
 	    (his-computer (or computer 
-			      (make-object 'attacker-computer 
-					   :name created-computer-name
-					   :typical-p t
-					   ))))
+			      (make-attacker-computer created-computer-name attacker
+						      :location location))))
        (tell `[value-of (,attacker location) ,location])
-       (tell `[value-of (,attacker machines) ,his-computer])
        (loop for computer in other-computers
 	   do (tell `[uses-machine ,attacker ,computer]))
-       (loop for computer in download-servers
-	   do (tell `[attacker-download-server ,attacker ,computer]))
-       (tell `[uses-machine ,attacker ,his-computer])
-       (tell `[value-of (,his-computer subnets) ,location])
-       (tell `[value-of (,location computers) ,computer])
-       (tell `[value-of (,attacker location) ,location])
+       (if (symbolp download-servers)
+	   (let ((attacker-computer (make-attacker-computer download-servers attacker :location location)))
+	     (tell `[attacker-download-server ,attacker ,attacker-computer]))
+	 (loop for computer in download-servers
+	     do (tell `[attacker-download-server ,attacker ,computer])))
        ;; has foothold always has a victim in it.  But in this initial state
        ;; there isn't one.  It's just a starting point.
        (tell `[in-state [has-foothold nil ,his-computer ,attacker foothold] initial])

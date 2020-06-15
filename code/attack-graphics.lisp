@@ -151,9 +151,14 @@
 (clim:define-presentation-method clim:present (item (type attacker) stream  (view clim:textual-view) &key)
   (write-string (string (role-name item)) stream))
 
+(defun construct-load-model-ptype ()
+  (let ((entries (common-lisp:directory (translate-logical-pathname #p"aplan:models;*.lisp"))))
+    `(or (clim:member-alist ,(loop for entry in entries
+				 collect (cons (pathname-name entry) entry)))
+	 clim:pathname)))
+
 (define-aplan-command (com-load-model :name t :menu t)
-    ((pathname '((clim:pathname) :merge-default t :default-type :lisp) :
-	       default #p"aplan:models;*.*"))
+    ((pathname (construct-load-model-ptype) :prompt nil))
   (clear)
   ;; clear makes the current version of *everywhere* invalid
   ;; by removing its parts.

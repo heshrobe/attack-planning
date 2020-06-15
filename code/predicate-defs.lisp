@@ -157,7 +157,7 @@
 
 (define-predicate has-remote-shell (attacker victime-machine role) (ltms:ltms-predicate-model))
 
-(define-predicate has-control-of (attacker process) (ltms:ltms-predicate-model))
+(define-predicate has-control-of (attacker property process) (ltms:ltms-predicate-model))
 
 (define-predicate controls-process (attacker victim-process how) (ltms:ltms-predicate-model))
 
