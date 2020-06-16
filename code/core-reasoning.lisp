@@ -83,17 +83,15 @@
 (defmethod plan-step-equal ((head1 (eql :action)) (head2 (eql :action)) step1 step2)
   ;; (format t "~%Checking action ~a ~a" (first step1) (first step2))
   (equal (first step1) (first step2)))
-		       
 
-
-
-(defun make-attacker-computer (name attacker &key location (typical? t))
+(defun make-attacker-computer (name attacker &key location (typical? t) (server? t))
   (kill-redefined-object name)
   (let ((his-computer (make-object 'attacker-computer
 			       :name name
 			       :typical-p typical?)))
     (tell `[value-of (,attacker machines) ,his-computer])
-    (tell `[uses-machine ,attacker ,his-computer])
+    (unless server?
+      (tell `[uses-machine ,attacker ,his-computer]))
     (when location
       (tell `[value-of (,location computers) ,his-computer]) 
       (tell `[value-of (,his-computer subnets) ,location]))
@@ -130,6 +128,7 @@
      (let* ((attacker (make-object 'attacker :name attacker-name))
 	    (his-computer (or computer 
 			      (make-attacker-computer created-computer-name attacker
+						      :server? nil
 						      :location location))))
        (tell `[value-of (,attacker location) ,location])
        (loop for computer in other-computers
