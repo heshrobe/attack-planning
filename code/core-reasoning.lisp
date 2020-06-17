@@ -23,7 +23,7 @@
   (loop for s in (final-states collector)
       collect (action-sequence s)))
 
-(defun do-it (&key (attacker (follow-path '(typical-attacker)))
+(defun do-it (&key (attacker (follow-path '(attacker)))
                    (property 'performance) 
 		   machine 
                    resource)

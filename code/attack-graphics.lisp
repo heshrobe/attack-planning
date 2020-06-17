@@ -168,7 +168,7 @@
 
 (define-aplan-command (com-find-plans :name t :menu t)
     ((computer 'computer)
-     (property 'desirable-property :default 'performance)
+     (property 'desirable-property)
      (resource `(computer-resource ,computer))
      &key (attacker 'attacker))
   (multiple-value-bind (answers final-states) (do-it :property property :machine computer :attacker attacker :resource resource)
@@ -214,6 +214,7 @@
         (cond
 	 (pdf?
 	  (let* ((real-name (translate-logical-pathname file-name)))
+	    (ensure-directories-exist real-name)
             (with-output-to-pdf-stream (real-name stream)
               (body stream))))
 	 (t
@@ -231,7 +232,7 @@
        top-level-goals
        #'print-merged-plan-object
        #'merged-plan-inferior
-       :graph-type #+acl :my-graph #+mcclim :di<graph
+       :graph-type #+allegro :my-graph #+mcclim :digraph
        :merge-duplicates t
        :maximize-generations nil
        :center-nodes t
@@ -310,6 +311,7 @@
     (cond
      (pdf?
       (let* ((real-name (translate-logical-pathname file-name)))
+	(ensure-directories-exist real-name)
 	(with-output-to-pdf-stream (real-name stream)
 	  (body stream)
 	  ))
