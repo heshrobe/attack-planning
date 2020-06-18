@@ -382,7 +382,8 @@
 		   (setf (plan goal-object) plan-object)
 		   goal-object))))
 	   (make-plan (plan-element parent)
-	     (destructuring-bind (connective . steps) plan-element
+	     (let ((connective (first plan-element))
+		   (steps (rest plan-element)))
 	       ;; (format t "~%For goal ~a with connective ~a there are ~a steps" parent connective (length steps))
 	       (let* ((plan-object (make-instance 'plan
 				  :connective connective

@@ -49,40 +49,64 @@
     (loop for plan in plans do (structure-attack-plan plan))
     (values plans final-states)))
 
-(defun plan-equal (thing1 thing2)
-  (plan-step-equal (first thing1) (first thing2) (rest thing1) (rest thing2)))
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;;
+;;; Plan Equality
+;;;
+;;; Each level is a plist whose first element is a key we dispatch on
+;;; The second element is the value for that key
+;;; here are only 3 types of entries:
+;;; goal, plan, action
+;;;
+;;; Each does its local checks and then dispatches back through here
+;;; for the sub-structure
+;;; 
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
-(defgeneric plan-step-equal (head1 head2 step1 step2))
+
+(defgeneric plan-step-equal (head1 head2 value1 value2 plist1 plist2))
+
+(defun plan-equal (thing1 thing2)
+  (let ((key1 (first thing1))
+	(key2 (first thing2))
+	(value1 (second thing1))
+	(value2 (second thing2)))
+    (plan-step-equal key1 key2 value1 value2
+		     (rest (rest thing1))
+		     (rest (rest thing2)))))
 
 ;;; Default method fails
-(defmethod plan-step-equal ((head1 t) (head2 t) (plan1 t) (plan2 t)) nil)
+(defmethod plan-step-equal ((head1 t) (head2 t) (value1 t) (value2 t) (plan1 t) (plan2 t)) nil)
 
 ;;; (:goal <goal> :plan (<steps>))
-(defmethod plan-step-equal ((head1 (eql :goal)) (head2 (eql :goal)) step1 step2)
-  (destructuring-bind (goal1 . plist1) step1
-    (destructuring-bind (goal2 . plist2) step2
-      ;; (format t "~%Checking goal ~a ~a" goal1 goal2)
-      (and (equal goal1 goal2)
-	   (plan-equal plist1 plist2)))))
+(defmethod plan-step-equal ((head1 (eql :goal)) (head2 (eql :goal)) goal1 goal2 plist1 plist2)
+  ;; (format t "~%Checking goal ~a ~a" goal1 goal2)
+  (and (equal goal1 goal2)
+       (plan-equal (member :plan plist1)
+		   (member :plan plist2))))
 
 ;;; (:plan (<connective> (<goals-or-actions>)))
-(defmethod plan-step-equal ((head1 (eql :plan)) (head2 (eql :plan)) step1 step2)
+(defmethod plan-step-equal ((head1 (eql :plan)) (head2 (eql :plan)) plan1 plan2 ignore1 ignore2)
+  (declare (ignore ignore1 ignore2))
   ;; Here the step is a list of the connective followed by substeps
   ;; Check that it's actually a cons before popping
   ;; probably not necessary because it's already decided that 
   ;; its a plan structure
-  (destructuring-bind ((keyword1 . rest1)) step1
-    (destructuring-bind ((keyword2 . rest2)) step2
-      ;; (format t "~%Checking plan ~a ~a" keyword1 keyword2)
-      (and (equal keyword1 keyword2)
-	   (loop for thing1 in rest1
-	       for thing2 in rest2
-	       always (plan-equal thing1 thing2))))))
+  (let ((keyword1 (first plan1))
+	(keyword2 (first plan2))
+	(steps1 (rest plan1))
+	(steps2 (rest plan2)))
+    ;; (format t "~%Checking plan ~a ~a" keyword1 keyword2)
+    (and (equal keyword1 keyword2)
+	 (loop for thing1 in steps1
+	     for thing2 in steps2
+	     always (plan-equal thing1 thing2)))))
 
 ;;; (:action action-predicate action-object)
-(defmethod plan-step-equal ((head1 (eql :action)) (head2 (eql :action)) step1 step2)
+(defmethod plan-step-equal ((head1 (eql :action)) (head2 (eql :action)) value1 value2 ignore1 ignore2)
+  (declare (ignore ignore1 ignore2))
   ;; (format t "~%Checking action ~a ~a" (first step1) (first step2))
-  (equal (first step1) (first step2)))
+  (equal value1 value2))
 
 (defun make-attacker-computer (name attacker &key location (typical? t) (server? t))
   (kill-redefined-object name)
