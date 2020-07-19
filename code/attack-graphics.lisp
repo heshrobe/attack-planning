@@ -170,7 +170,7 @@
     ((computer 'computer)
      (property 'desirable-property)
      (resource `(computer-resource ,computer))
-     &key (attacker 'attacker))
+     &key (attacker 'attacker :default (follow-path '(attacker))))
   (multiple-value-bind (answers final-states) (do-it :property property :machine computer :attacker attacker :resource resource)
     (let ((stream (clim:get-frame-pane clim:*application-frame* 'attack-structure )))
       (clim:with-text-face (stream :bold)

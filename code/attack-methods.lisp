@@ -1,5 +1,7 @@
 ;;; -*- Syntax: Joshua; Package: APLAN; syntax: joshua; readtable: Joshua  -*-
 
+(in-package :aplan)
+
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;
 ;;; Descriptions of How to hack a system
@@ -11,14 +13,8 @@
 ;;; Note: Several of the operators could take advantage of the guards field
 ;;; rather than the pre-requisite.  Guards get tested before bindings are done
 ;;; but they might need to do some of their own binding
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-
-
-(in-package :aplan)
-
-
-
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;;
+;;;
 ;;;
 ;;; the top level queries
 ;;;
@@ -68,7 +64,7 @@
     )
 
 
-
+
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;
 ;;; Performance
@@ -140,7 +136,7 @@
     :plan (:goal [increase-size ?user-job-launch-queue]))
 
 
-
+
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;
 ;;; Data Privacy
@@ -154,7 +150,7 @@
     :plan (:goal [achieve-knowledge-of-contents ?file])
     )
 
-
+
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;
 ;;; Data Integrity
@@ -210,6 +206,7 @@
 
     )
 
+
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;
 ;;; Direct Control
@@ -290,6 +287,7 @@
   then [protected-from cl-http-server-process buffer-overflow-attack]
   if t)
 
+
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;
 ;;; Indirect Control
@@ -325,7 +323,7 @@
     :plan (:goal [modify size ?input])
     )
 
-
+
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;
 ;;;  Modification
@@ -406,6 +404,8 @@
              (?user user))
     :plan (:goal [make-member-of ?user ?active-user-set])
     )
+
+
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;
@@ -529,6 +529,7 @@
 	   (:goal [get-foothold ?victim-machine ?protocol])
 	   (:action [launch-code-reuse-attack ?attacker ?process  ?protocol ?foothold-machine ?foothold-role])))
 
+
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;
 ;;; Performance related specifics
@@ -574,7 +575,7 @@
     :plan (:action [modify-data-structures ?process ?data-set ?foothold-machine ?foothold-role])
     )
 
-
+
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;
 ;;; Methods for hacking access rights and gaining access
@@ -695,7 +696,7 @@
     )
 
 
-
+
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;
 ;;; Active User Set and Logging in
@@ -709,6 +710,8 @@
              (?os-instance operating-system))
     :plan (:goal [achieve-remote-shell ?os-instance ?user])
     )
+
+
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;
@@ -828,6 +831,7 @@
 
 ;;; ((:goal (connect ?machine) :plan ((:action (connect-via ?protocol-name ?machine)))))
 
+
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;
 ;;; Lateral Motion
@@ -924,6 +928,7 @@
 ;;; These next several sections really are just knowledge rules
 ;;; not rules about attacking
 
+
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;
 ;;; Network Traffic
@@ -989,6 +994,7 @@ predicate promising the thing is known.
 
 
 
+
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;
 ;;; Things relevant to control systems
@@ -1071,7 +1077,7 @@ predicate promising the thing is known.
 	     (?system system))
     :plan (:action [signal-noise-injection ?attacker ?machine ?signal])
     )
-
+
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;
 ;;; Quick hack for botnet recruitment ala Mirai
