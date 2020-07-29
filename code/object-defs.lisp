@@ -153,6 +153,8 @@
 (define-aplan-object program
     :slots ((host-os )
 	    (processes :set-valued t )
+            (generic)
+            (cpe)
 	    (load-files :set-valued t ))
     :super-types (computer-resource))
 
@@ -229,6 +231,25 @@
 (define-aplan-object user-process
     :super-types (process)
     )
+
+(define-aplan-object browser-process 
+    :super-types (user-process))
+
+(define-aplan-object safari-process
+    :super-types (browser-process)
+    )
+
+(define-aplan-object chrome-process
+    :super-types (browser-process)
+    )
+
+(define-aplan-object ie-process
+    :super-types (browser-process)
+    )
+
+(define-aplan-object firefox
+  :super-types (browser-process)
+  )
 
 (define-aplan-object scheduler
   :super-types (system-process))

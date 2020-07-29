@@ -135,6 +135,7 @@
 
 (define-predicate vulnerable-to-overflow-attack (process protocol) (ltms:ltms-predicate-model))
 
+(define-predicate vulnerable-to-capec (thing capec cve-number) (ltms:ltms-predicate-model))
 
 (define-predicate is-typical-user (user) (non-stateful-predicate-model))
 

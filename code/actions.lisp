@@ -156,7 +156,11 @@
   :post-conditions ([knows-password ?attacker ?victim-user])
   )
 
-
+(define-action modify-data-structures (?process ?data-set ?foothold-machine ?foothold-role)
+  :bindings ([attacker-and-machine ?attacker ?])
+  :prerequisites ([has-control-of ?attacker execution ?process])
+  :post-conditions ([modified-by ?attacker ?data-set])
+  )
   
 
 
@@ -177,8 +181,4 @@
   :post-conditions ()
   )
 
-(define-action modify-data-structures (?process ?data-set ?foothold-machine ?foothold-role)
-  :bindings ([attacker-and-machine ?attacker ?])
-  :prerequisites ([has-control-of ?attacker execution ?process])
-  :post-conditions ([modified-by ?attacker ?data-set])
-  )
+

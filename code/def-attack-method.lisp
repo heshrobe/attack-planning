@@ -333,7 +333,7 @@
 	  (prior-action next-state) action)
     action))
 
-(defmacro define-action (name variables &key bindings prerequisites post-conditions (define-predicate t)) 
+(defmacro define-action (name variables &key bindings prerequisites post-conditions (define-predicate t) capecs) 
   (flet ((make-logic-variables (names)
 	   (loop for var in names 
 	       if (logic-variable-maker-p var)
@@ -348,21 +348,24 @@
 	   (names (make-symbols-from-lvs logic-variables))
 	   (rule-name (intern (string-upcase (format nil "do-~a" name))))
 	   (state-logic-variables (make-logic-variables '(input-state output-state)))
-	   (action-variable (first (make-logic-variables '(action)))))
+	   (capec-statements (loop for (victim capec-num cve-variable) in capecs
+                                 collect `(predication-maker '(vulnerable-to-capec ,victim ,capec-num ,cve-variable))))
+           (action-variable (first (make-logic-variables '(action)))))
       (destructuring-bind (input-state-variable output-state-variable) state-logic-variables
-	`(eval-when (:compile-toplevel :load-toplevel :execute)
-	   ,@(when define-predicate `((define-predicate ,name ,names (ltms:ltms-predicate-model))))
-	   (defrule ,rule-name (:backward)
-	     then [take-action [,name ,@logic-variables] ,@state-logic-variables ,action-variable]
-	     if [and ,@(process-bindings bindings input-state-variable)
-		     ,@(process-guards prerequisites input-state-variable)
-		     (prog1 t
-		       (when (unbound-logic-variable-p ,output-state-variable)
-			 (unify ,output-state-variable 
-				(intern-state (intern (string-upcase (gensym "state-"))) ,input-state-variable))))
-		     (prog1 t (unify ,action-variable (link-action ',name (list,@logic-variables) ,input-state-variable ,output-state-variable)))
-		     ,@(process-post-conditions post-conditions output-state-variable)
-		     ]))))))
+        `(eval-when (:compile-toplevel :load-toplevel :execute)
+           ,@(when define-predicate `((define-predicate ,name ,names (ltms:ltms-predicate-model))))
+           (defrule ,rule-name (:backward)
+             then [take-action [,name ,@logic-variables] ,@state-logic-variables ,action-variable]
+             if [and ,@(process-bindings bindings input-state-variable)
+                     ,@(process-guards prerequisites input-state-variable)
+                     ,@capec-statements
+                     (prog1 t
+                       (when (unbound-logic-variable-p ,output-state-variable)
+                         (unify ,output-state-variable 
+                                (intern-state (intern (string-upcase (gensym "state-"))) ,input-state-variable))))
+                     (prog1 t (unify ,action-variable (link-action ',name (list,@logic-variables) ,input-state-variable ,output-state-variable)))
+                     ,@(process-post-conditions post-conditions output-state-variable)
+                     ]))))))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;

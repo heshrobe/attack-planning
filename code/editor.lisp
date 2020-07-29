@@ -1,6 +1,6 @@
 ;;; -*- Mode: Lisp; package: aplan; readtable: joshua; syntax: joshua -*-
 
-(in-package :aplan) 
+(in-package :aplan)
 
 ;; (defvar *component-map* (make-hash-table))
 
@@ -16,12 +16,12 @@
    ;; #-mcl
    ;; (title :title
    ;;        :max-height 28
-   ;;        :display-string "APLAN") 
-   (pointer :pointer-documentation 
+   ;;        :display-string "APLAN")
+   (pointer :pointer-documentation
 	    :borders t
 	    :height 12
             :max-height 12)
-   (menu :command-menu 
+   (menu :command-menu
 	 :max-height '(4 :line)
          :display-function '(clim:display-command-menu :n-columns 4 :row-wise t)
          :scroll-bars t
@@ -31,7 +31,7 @@
 	       #-mcclim :initial-cursor-visibility #-mcclim :off
 	       :scroll-bars :vertical
 	       :end-of-line-action :wrap
-	       :borders t)   
+	       :borders t)
    (attack-structure :application
 		     #+mcclim :display-time #+allegro :display-after-command nil
 		     :incremental-redisplay nil
@@ -82,7 +82,7 @@
       (clim-env:enter-debugger condition stream :own-frame t ))))
 
 (defmethod aplan-top-level ((frame aplan) &REST OPTIONS)
-  (let ((*package* (find-package (string-upcase "aplan")))	
+  (let ((*package* (find-package (string-upcase "aplan")))
 	(*debugger-hook* #+(and clim allegro) #'debugger-hook #-(and clim allegro) nil))
     (ji:with-joshua-readtable
 	(APPLY #'clim:default-frame-top-level
@@ -129,7 +129,8 @@
 	       (unwind-protect
 		    (if debugger
 			(clim-debugger:with-debugger () (clim:run-frame-top-level frame))
-			(clim:disown-frame fm frame))))))
+                        (clim:run-frame-top-level frame))
+                 (clim:disown-frame fm frame)))))
       (if new-process
 	  (values (clim-sys:make-process #'run :name process-name)
 		  frame)
