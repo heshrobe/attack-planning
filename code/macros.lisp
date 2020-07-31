@@ -193,7 +193,13 @@
 (defmacro defprogram (role-name &key generic cpe)
   `(with-atomic-action
     (kill-redefined-object ',role-name)
-    (make-object 'program :name ',role-name :generic ',generic :cpe ,cpe)))
+    (let ((program (make-object 'program :name ',role-name)))
+      ,@(when generic
+          `((tell `[value-of (,program generic) ,',generic])))
+      ,@(when cpe
+          `((tell `[value-of (,program cpe) ,',cpe])))
+      program
+      )))
 
 
 (defmacro defprocess (role-name &key process-type machine program)
