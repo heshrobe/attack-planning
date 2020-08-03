@@ -185,7 +185,7 @@
 		collect `(tell `[value-of (,bus slots) ,',slot])))
       bus)))
 
-(defmacro define-connection (device interface bus slot) cpe
+(defmacro define-connection (device interface bus slot)
   `(let ((device (follow-path '(,device)))
 	 (bus (follow-path '(,bus))))
      (tell `[connected-to ,device ,',interface ,bus ,',slot])))
@@ -206,8 +206,8 @@
   `(with-atomic-action
     (kill-redefined-object ',role-name)
     (instantiate-a-process ',process-type '(,machine)
-                           :role-name ',role-name 
-                           :program '(,program))))
+                           :role-name ',role-name
+                           ,@(when program `((:program '(,program)))))))
 
 (defun instantiate-a-process (process-type machine &key role-name program)
   (let* ((process-name (or role-name (gentemp (concatenate 'string (string-upcase (string process-type)) "-"))))
@@ -218,7 +218,7 @@
     (when program
       (let ((program (follow-path program)))
 	(tell `[value-of (,process program) ,program])))
-    
+
     (tell `[value-of (,process host-os) ,os])
     (tell `[value-of (,process machines) ,machine])
     (typecase process
