@@ -201,13 +201,13 @@
       program
       )))
 
-
 (defmacro defprocess (role-name &key process-type machine program)
   `(with-atomic-action
     (kill-redefined-object ',role-name)
     (instantiate-a-process ',process-type '(,machine)
                            :role-name ',role-name
-                           ,@(when program `((:program '(,program)))))))
+                           ,@(when program `(:program '(,program))))))
+
 
 (defun instantiate-a-process (process-type machine &key role-name program)
   (let* ((process-name (or role-name (gentemp (concatenate 'string (string-upcase (string process-type)) "-"))))
@@ -273,6 +273,42 @@
 	     collect `(tell `[value-of (,resource machines) ,(follow-path '(,machine))]))
        ,@(loop for (operation capability) in capability-requirements
 	     collect `(tell `[value-of (,resource capability-requirements) (,',operation ,(follow-path '(,capability)))])))))
+
+
+
+
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;;
+;;; General purpose macro for creating an instance of any object type
+;;;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+
+(defmacro define-instance ((name type) &body key-value-pairs)
+  `(with-atomic-action
+    (kill-redefined-object ',name)
+    (let ((thing (make-object ',type :name ',name)))
+      ,@(loop for (key value) on key-value-pairs by #'cddr
+            for key-list = (if (listp key) key (list key))
+            for real-keys = (loop for key in key-list
+                                if (eql (symbol-package key) (find-package :keyword))
+                                collect `',(intern (string key))
+                                else collect `',key)
+            collect `(tell `[value-of (,thing ,@(list ,@real-keys)) ,,value])))))
+
+
+#|
+
+(defuser super)
+
+(define-instance (foo computer)
+    :typical-p t
+    (:os :superuser) (follow-path '(super)))
+
+|#
+
+
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;
@@ -421,6 +457,7 @@
 ;;; BUT FALSE DATA INJECTION TO SENSORS IS A GENERAL MOTIVATION
 (defmacro define-proximity (who what means)
   `(tell `[is-proximate-to ,(follow-path '(,who)) ,(follow-path '(,what)) ,',means]))
+
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;

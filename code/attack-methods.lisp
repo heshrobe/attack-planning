@@ -1096,3 +1096,47 @@ predicate promising the thing is known.
 	   (:action [login ?attacker white-list-member ?victim-os ?foothold-machine])
 	   (:action [download-malware-from-source ?attacker ?foothold-machine ?victim-machine mirai-client]))
     )
+
+#|
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;;
+;;; Escaping the sandbox via Internet Explorer PIDL vulnerability
+;;;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+
+(defattack-method IE-pidl-vulnerability
+    ;; The end goal of this attack is for the attacker to be able to execute malicious web-based code on the victim browser
+    :to-achieve [achieve-remote-execution ?victim-machine ?victim-user]
+    ;; Redundant to perform an attack on a machine that has already been infected
+    :guards ([not [place-already-visited? ?victim-machine remote-execution]])
+    ;; Probably need to implement a browser version binding because this attack is for IE only, the os is most likely always going to be Windows (not sure if I should specify the OS in this case)
+    :bindings(;;(break "breaking in bindings")
+              [named-component ?victim-machine os ?victim-os]
+	      ;;(break "~a ~a" ?victim-os ?victim-user)
+	      [value-of ?victim-os.users ?victim-user]
+	      )
+    :typing((break "breaking in typing before victim machine")
+	    (?victim-machine computer)
+	    (?victim-user user)
+	    (?process browser-process)
+	    )
+    ;; For this attack to work, the victim has to run a version of Internet Explorer including/earlier than IE 11
+    :prerequisites(;;(break "Breaking in prerequisite before vulnerable ~a" ?process)
+		   [is-vulnerable-to ?process pidl-url-attack]
+                   (break "Breaking in prerequisite after vulnerable")
+		   [user-click ?victim-user ?victim-machine ?object]
+		   )
+    ;; Check to see if machine has visited site before, break the sandbox, grasp the new foothold
+    :plan (:sequential
+	   (:break "In goals")
+	   (:note [place-visited ?victim-machine remote-execution])
+	   (:goal [break-browser-sandbox ?victim-machine ?victim-user ?process])
+	   )
+    ;; By the end of this attack, the attacker is able to execute arbitrary code on the victim machine and can peer into the local files
+    :post-conditions ([has-remote-execution ?attacker ?victim-machine ?foothold-role]
+		      [current-foothold ?current-foothold-machine ?current-foothold-role])
+    )
+
+|#

@@ -593,4 +593,11 @@
 	 :machine (follow-path '(high-server))
 	 :resource (follow-path '(high-database))))
 
+#|
+;; TODO: Bug with generic keyword not having methods applicable
+(defprogram ie-explorer :generic ie-explorer)
 
+;; pidl-url-attack process solely for internet explorer
+(defprocess pidl-url-attack :process-type ie-process :machine high-data-server :program ie-explorer)
+
+|#
