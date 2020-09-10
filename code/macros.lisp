@@ -22,7 +22,7 @@
 				  ;; if from-condition (or to-condition) is nil, the destructuring-binds
 				  ;; below will barf.  Allegro is more permissive, but ANSI say SBCL is correct
 				  &key (from-condition (list nil nil) from-condition-p)
-				    (to-condition (list nil nil)) to-condition-p)
+				    (to-condition (list nil nil) to-condition-p))
   (let ((rule-1-name (intern (string-upcase (concatenate 'string (string rule-name) "-1"))))
         (rule-2-name (intern (string-upcase (concatenate 'string (string rule-name) "-2")))))
     (destructuring-bind (from-property from-value) from-condition
@@ -76,7 +76,7 @@
 	(fill-in-subnet-mask net-mask ,address-string ,address-mask)
 	site))))
 
-;;; An ensemble is a collection of machines that identical from the attackers
+;;; An ensemble is a collection of machines that are identical from the attackers
 ;;; point of view.  Every ensemble has a typical instance which represents
 ;;; all the properties that are shared
 (defmacro defensemble (name &key (enterprise nil enterprise-p)

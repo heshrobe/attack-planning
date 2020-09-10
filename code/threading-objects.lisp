@@ -370,7 +370,11 @@
   then [value-of (?user machines) ?machine])
 
 
-
+;;; Def-symmetric-pointers is a macro that allows us to make sure that both forward and backward
+;;; pointers between objects are present.  The simple format is a rule-name and a pair of triples:
+;;; (object-type logic-variable slot-name) 
+;;; Two forward chaining rules are generated: One matches the first triple and asserts the second
+;;; the other one is vice versa.  
 (def-symmetric-pointers machine-superusers operating-system ?the-os superuser user ?superuser superuser-for)
 
 (def-symmetric-pointers machine-users computer ?the-computer users user ?the-user machines)
