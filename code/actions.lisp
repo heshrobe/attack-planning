@@ -121,6 +121,10 @@
   :post-conditions ([modified-by ?attacker ?victim-object])
   )
 
+(define-action read-with-rights-of (?attacker ?user ?victim-object)
+  :Prerequisites ([has-permission ?user read ?victim-object])
+  :post-conditions ([read-by ?attacker ?victim-object])
+  )
 
 ;;;; (define-action use-access-right-to-modify (?attacker write ?current-foothold-role ?object)
 ;;;;   :define-predicate nil
@@ -141,6 +145,14 @@
 		  [software-downloaded ?package ?victim-computer])
   :post-conditions ([software-loaded ?package ?victim-machine]))
 
+
+(define-action open-ftp-connection (?user ?from-machine ?to-machine)
+  :prerequisites ([accepts-connection ?to-machine ftp ?from-machine])
+  :post-conditions ([connection-established ?from-machine ?to-machine ftp]))
+                   
+(define-action trasmit-data (?user ?file ?from-machine ?to-machine)
+  :prerequisites ([connection-established ?from-machine ?to-machine ftp])
+  :post-conditions ([data-exfiltrated ?file ?from-machine ?to-machine]))
 
 ; (define-action install-malware (?attacker ?malware-type ?victim-machine)
 ;   ;; Probably this should be spelled out more so that he has to have

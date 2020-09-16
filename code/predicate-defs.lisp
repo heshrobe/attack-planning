@@ -168,6 +168,7 @@
 (define-predicate user-forced-to-login (user machine) (ltms:ltms-predicate-model))
 
 (define-predicate modified-by (attacker object) (ltms:ltms-predicate-model))
+(define-predicate read-by (attacker object) (ltms:ltms-predicate-model))
 
 (define-predicate malware-installed-on-machine (attacker machine malware) (ltms:ltms-predicate-model))
 
@@ -184,6 +185,7 @@
 
 ;;; This changes over time
 (define-predicate connection-established (source-machine victim-machine type) (ltms:ltms-predicate-model))
+(define-predicate data-exfiltrated (data source-machine victim-machine) (ltms:ltms-predicate-model))
 
 (define-predicate uses-machine (machine user) (non-stateful-predicate-model))
 

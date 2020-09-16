@@ -1,4 +1,4 @@
-
+;;; -*- Syntax: Joshua; Package: APLAN; syntax: joshua; readtable: Joshua  -*-
 
 (in-package :aplan)
 
@@ -348,6 +348,14 @@
           do (tell `[value-of (,subnet-mask ip-address ,octet-name) ,address-octet])
              (tell `[value-of (,subnet-mask mask ,octet-name) ,mask-octet]))))
 
+(defun ip-address-matches-mask (ip-address mask)
+  (let* ((mask-mask (ip-address-integer (follow-path `(,mask mask))))
+         (mask-ip-address (ip-address-integer (follow-path `(,mask ip-address))))
+         (real-ip-address (ip-address-integer ip-address)))
+    (let ((masked-address (logand real-ip-address mask-mask)))
+      ;; (break "~b ~%~b ~%~b ~%~b" mask-mask mask-ip-address real-ip-address masked-address)
+      (equal masked-address mask-ip-address))))
+
 (defun ip-address-is-on-subnet (ip-address subnet)
   (let* ((subnet-mask (ip-address-integer (follow-path `(,subnet mask mask))))
          (subnet-ip-address (ip-address-integer (follow-path `(,subnet mask ip-address))))
@@ -355,6 +363,14 @@
     (let ((masked-address (logand real-ip-address subnet-mask)))
       ;; (break "~b ~%~b ~%~b ~%~b" subnet-mask subnet-ip-address real-ip-address masked-address)
       (equal masked-address subnet-ip-address))))
+
+(defun ip-address-is-on-site (ip-address site)
+  (let* ((site-mask (ip-address-integer (follow-path `(,site net-mask mask))))
+         (site-ip-address (ip-address-integer (follow-path `(,site net-mask ip-address))))
+         (real-ip-address (ip-address-integer ip-address)))
+    (let ((masked-address (logand real-ip-address site-mask)))
+      ;; (break "~b ~%~b ~%~b ~%~b" subnet-mask subnet-ip-address real-ip-address masked-address)
+      (equal masked-address site-ip-address))))
 
 (defmethod subnet-is-at-site ((subnet external-internet) (site site)) nil)
 

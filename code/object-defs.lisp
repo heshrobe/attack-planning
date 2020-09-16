@@ -772,7 +772,11 @@
 
 (defmethod ip-address-string ((iadd ip-address))
   (format nil "~d.~d.~d.~d"
-	  (octet1 iadd) (octet2 iadd) (octet3 iadd) (octet4 iadd) ))
+	  (octet1 iadd) (octet2 iadd) (octet3 iadd) (octet4 iadd)))
+
+(defmethod octal-ip-address-string ((iadd ip-address))
+  (format nil "~o.~o.~o.~o"
+	  (octet1 iadd) (octet2 iadd) (octet3 iadd) (octet4 iadd)))
 
 (define-aplan-object basic-subnet-mask
     :parts ((ip-address ip-address)

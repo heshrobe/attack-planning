@@ -582,7 +582,6 @@
 ;;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
-;;; Eventually we need to treat actions as real things that change the state
 (defattack-method how-to-read-a-file
     :to-achieve [achieve-knowledge-of-contents ?file]
     :bindings ([value-of ?file.machines ?machine]
@@ -591,10 +590,10 @@
     :typing ((?file file))
     :plan (:sequential
 	   (:goal [achieve-remote-execution ?victim-machine ?user])
-           (:goal [achieve-access-right ?user read ?file ?privileged-user])
+           (:goal [achieve-access-right read ?file ?privileged-user])
            (:action [read-with-rights-of ?attacker ?privileged-user ?file])
-	   (:action [open-ftp-connection ?attacker ?attacker-machine])
-	   (:action [trasmit-data ?attacker ?file ?attacker-machine])
+	   (:action [open-ftp-connection ?attacker ?victim-machine ?attacker-machine])
+	   (:action [trasmit-data ?attacker ?file ?victim-machine ?attacker-machine])
 	   ))
 
 ;;; If your foothold role already has the access rights
