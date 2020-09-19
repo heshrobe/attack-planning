@@ -529,6 +529,47 @@
 	   (:goal [get-foothold ?victim-machine ?protocol])
 	   (:action [launch-code-reuse-attack ?attacker ?process  ?protocol ?foothold-machine ?foothold-role])))
 
+(defattack-method remote-execution-to-corrupt-attachment
+    :to-achieve [achieve-remote-execution ?victim-machine ?victim-user]
+    :guards ([not [place-already-visited? ?victim-machine remote-execution]])
+    :bindings ([attacker-and-machine ?attacker ?attacker-machine])
+    :typing ((?victim-user user)
+             (?process process))
+    :prerequisites ([email-client-of ?victim-user ?process])
+    :Plan (:sequential
+           (:note [place-visited ?victim-machine remote-execution])
+           (:goal [get-user-to-click-on ?attacker ?victim-user ?clicked-on-thing ?new-process])))
+
+;;; This includes implicitly the action of launching the process
+;;; that's appropriate for the attachment
+(defattack-method remote-execution-via-corrupt-email
+    :to-achieve [get-user-to-click-on ?attacker ?victim-user ?attachment ?new-process]
+    :bindings ([email-client-of ?victim-user ?process]
+               [value-of ?victim-user.machines ?victim-computer]
+               [value-of ?victim-computer.os ?os]
+	       [value-of ?attacker.machines ?attacker-machine]
+	       [value-of ?process.host-os ?os-instance]
+	       [value-of ?os-instance.machine ?email-server-machine]
+               [attacker-and-machine ?attacker ?attacker-machine]
+	       )
+    ;; Note that thet typing for normal-user implies that
+    ;; you can't throw this at a sysadmin
+    :typing ((?victim-user normal-user)
+	     (?process email-server-process)
+	     (?os-instance operating-system)
+             (?email-server-machine computer)
+	     (?attacker-machine computer))
+    :plan (:sequential
+           (:action [create-email-with-corrupt-attachment ?attacker office ?email-message ?attachment])
+	   (:goal [get-foothold ?email-server-machine smtp])
+	   (:bind [current-foothold ?foothold-machine ?foothold-role])
+	   (:action [send-email ?attacker ?email-message ?foothold-machine ?email-server-machine ?victim-user])
+           (:action [user-clicks-on-attachment ?victim-user ?victim-computer ?email-message ?attachment ?new-process])
+           (:action [system-launches-process-for-file ?os ?victim-computer ?victim-user ?attachment ?new-process])
+           )           
+    :post-conditions ([current-foothold ?victim-computer ?new-process]
+                      [has-remote-execution ?attacker ?victim-computer ?new-process])
+    )
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;

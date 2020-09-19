@@ -16,7 +16,7 @@
         (t (call-next-method))))
 
 (define-object-type can-be-typical-mixin
-    :slots ((typical-p :tms t :initform nil :initarg :typical-p))
+    :slots ((typical-p :initarg :typical-p))
     )
 
 (define-object-type aplan-object 
@@ -28,8 +28,8 @@
     (let* ((super-types (getf plist :super-types))
 	   (slots (getf plist :slots)))
       (loop for slot in slots
-	  unless (getf (rest slot) :tms)
-	  do (setf (getf (rest slot) :tms) t))
+	  unless (getf (rest slot) :truth-maintenance)
+	  do (setf (getf (rest slot) :truth-maintenance) 'value-of))
       (setf (getf plist :included-object-types) `(,@super-types aplan-object)
 	    (getf plist :tms) t
 	    ;;(getf plist :base-classes) '(aplan-object)
@@ -232,6 +232,15 @@
     :super-types (process)
     )
 
+(define-aplan-object application-process 
+    :super-types (user-process)
+    )
+
+(define-aplan-object office-process
+  :super-types (application-process)
+  )
+  
+
 (define-aplan-object browser-process 
     :super-types (user-process))
 
@@ -386,10 +395,16 @@
 	    (capabilities :set-valued t )
 	    (authorization-pool :set-valued t )
 	    (machines :set-valued t )
-	    (ensemble  :initform nil :initarg :ensemble)
-	    (superuser-for  :initform nil :set-valued t)
+	    (ensemble  :initarg :ensemble)
+	    (superuser-for :set-valued t)
 	    )
     :super-types (system-entity print-nicely-mixin))
+
+(define-aplan-object normal-user
+    :super-types (user))
+
+(define-aplan-object admin-user
+    :super-types (user))
 
 (define-aplan-object attacker
     :super-types (user)
@@ -410,10 +425,10 @@
 
 (define-aplan-object ensemble
     :super-types (print-nicely-mixin)
-    :slots ((typical-computer  :initform nil :initarg :typical-computer)
-	    (typical-user  :initform nil :initarg :typical-user)
+    :slots ((typical-computer :initarg :typical-computer)
+	    (typical-user :initarg :typical-user)
 	    (enterprise  :initarg :enterprise)
-	    (size  :initform 0 :initarg :size)
+	    (size  :initarg :size)
 	    (ip-range  :initarg :ip-range)
 	    )
     )
@@ -494,7 +509,7 @@
 (define-aplan-object operating-system
     :slots ((workload )
 	    (user-set )
-	    (superuser  :set-value t :Initform nil)
+	    (superuser :set-valued t :Initform nil)
 	    (machine )
 	    (users  :set-valued t :Initform nil)
 	    (authorization-pool )
@@ -629,8 +644,8 @@
 	    (communication-protocols :set-valued t )
 	    (system-type )
 	    (health-status )
-	    (ensemble  :initform nil :initarg :ensemble)
-	    (users  :set-valued t :initform nil :Initarg :users)
+	    (ensemble :initarg :ensemble)
+	    (users :set-valued t :initform nil :Initarg :users)
 	    )
     :super-types (has-policy-mixin hardware can-be-typical-mixin print-nicely-mixin))
 
@@ -920,7 +935,7 @@
   :super-types (print-nicely-mixin)
   :parts ((net-mask subnet-mask))
   :slots ((subnets :set-valued t )
-	  (enterprise  :initarg :enterprise :initform nil)
+	  (enterprise  :initarg :enterprise)
 	  ))
 
 (define-aplan-object external-internet
@@ -1015,6 +1030,18 @@
     :super-types (communication-protocols)
     )
 
+(define-aplan-object text
+    :super-types (data-resource)
+    )
+
+(define-aplan-object application-file
+    :super-types (data-resource)
+    :slots ((application :initarg :application)))
+
+(define-aplan-object email-message
+    :super-types (data-resource)
+    :slots ((body)
+            (attachments :set-valued t :initarg :attachments)))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;

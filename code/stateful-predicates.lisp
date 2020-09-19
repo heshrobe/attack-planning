@@ -264,7 +264,7 @@
 		  truth-value (negate-truth-value truth-value)))
 	  (ask-data internal-pred nil #'handle-predicate)))))))
 
-(define-predicate in-state (predication state) (stateful-predicate-mixin default-predicate-model))
+(define-predicate in-state (predication state) (stateful-predicate-mixin ltms:ltms-predicate-model))
 
 (defun is-predecessor-of (state1 state2)
   (let ((target-depth (depth state1)))

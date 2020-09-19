@@ -191,7 +191,13 @@
 
 (define-predicate email-client-of (user email-server) (non-stateful-predicate-model))
 
-(define-predicate email-sent-to (user attacker foothold-machine foothold-role) (ltms:ltms-predicate-model))
+(define-predicate email-sent-to (user attacker foothold-machine foothold-role email-server) (ltms:ltms-predicate-model))
+
+(define-predicate email-received (user email victim-machine) (ltms:ltms-predicate-model))
+
+(define-predicate file-clicked-on (user file application-type) (ltms:ltms-predicate-model))
+
+(define-predicate process-launched (process machine os user file) (ltms:ltms-predicate-model))
 
 ;;; This changes over time
 (define-predicate email-submitted (victim-machine kind-of-mail source-machine) (ltms:ltms-predicate-model))

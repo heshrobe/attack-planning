@@ -30,12 +30,51 @@
   :post-conditions ([has-control-of ?attacker execution ?process])
   )
 
-(define-action send-phishing-email (?attacker ?attacker-foothold-computer ?email-machine ?victim ?process)
+;;; This should be replaced by the one below and an action to create the phishing email
+(define-action send-phishing-email (?attacker ?attacker-foothold-computer ?email-server ?victim ?process)
   :prerequisites ([has-foothold ?email-machine ?sending-machine ?sending-role smtp]
 		  [attacker-and-machine ?attacker ?attacker-machine])
-  :post-conditions ([email-sent-to ?user ?attacker ?sending-machine ?sending-role]
+  :post-conditions ([email-sent-to ?user ?attacker ?sending-machine ?sending-role ?email-server]
 		    [knows-credentials ?attacker ?victim]
 		    )
+  )
+
+;;; The attacker sends an email from his machine to the email server for eventual
+;;; delivery to the victim-machine of the victim-user
+
+(define-action create-email-with-corrupt-attachment (?attacker ?attachment-type ?email-message ?attachment)
+  :prerequisites ()
+  :outputs ((?attachment (make-object 'application-file :name (make-name 'attachment) :application ?attachment-type))
+            (?attachments (list ?attachment))
+            (?email-message (make-object 'email-message :name (make-name 'email-message) :attachments ?attachments)))
+  :post-conditions ()
+  )
+
+(define-action send-email (?attacker ?email ?sending-machine ?email-server ?victim)
+  :bindings ([value-of ?victim.machines ?victim-machine])
+  :prerequisites ([has-foothold ?email-server ?sending-machine ?sending-role smtp]
+                  [attacker-and-machine ?attacker ?attacker-machine])
+  :post-conditions ([email-sent-to ?victim ?attacker ?sending-machine ?sending-role ?email-server]
+                    [email-received ?victim ?email ?victim-machine]
+		    )
+  )
+
+(define-action user-clicks-on-attachment (?user ?user-machine ?email-message ?attachment ?new-process)
+  :prerequisites ([email-received ?user ?email-message ?user-machine])
+  :bindings ([value-of ?email-message.attachments ?attachment]
+             [value-of ?attachment.application ?application-type])
+  :typing ((?email-message email-message)
+            (?attachment application-file))
+  :post-conditions ([file-clicked-on ?user ?attachment ?application-type])
+  )
+
+(define-action system-launches-process-for-file (?os ?user-machine ?user ?file ?new-process)
+  :prerequisites ([file-clicked-on ?user ?file ?application-type])
+  :bindings ([value-of ?file.application ?application-type])
+  :typing ((?file application-file))
+  :outputs ((?new-process (let ((process-type (smash ?application-type 'process)))
+                            (make-object process-type :name (make-name process-type)))))
+  :post-conditions ([process-launched ?new-process ?user-machine ?os ?user ?file])
   )
 
 (define-action login (?victim-user ?victim-os-instance ?current-foothold-machine ?current-foothold-role)
@@ -188,9 +227,9 @@
 
 ;;; (define-action trasmit-data (actor data target))
 
-(define-action issue-false-sensor-data-report (?controller-machine ?victim-machine ?bus ?sensor-type)
-  :prerequisites ()
-  :post-conditions ()
-  )
+;;;(define-action issue-false-sensor-data-report (?controller-machine ?victim-machine ?bus ?sensor-type)
+;;;  :prerequisites ()
+;;;  :post-conditions ()
+;;;  )
 
 

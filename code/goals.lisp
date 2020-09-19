@@ -119,3 +119,5 @@
 (define-goal brick-machine (attacker machine))
 
 (define-goal install-malware (attacker machine malware))
+
+(define-goal get-user-to-click-on (attacker user thing result))

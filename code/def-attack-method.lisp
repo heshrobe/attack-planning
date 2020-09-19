@@ -7,9 +7,8 @@
 ;;;
 ;;; Componenets of attack planning
 ;;;
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-
-;;; First a macro to make notation more abstract and clearer
+;;; First some useful utilitires 
+;;; Thena macro to make notation more abstract and clearer
 ;;; In this syntax in both the :to-achieve field and the :plan field
 ;;; there is a hidden last argument in the predications
 ;;; In the :to-achieve field this is ?plan
@@ -21,6 +20,25 @@
 ;;; In the :plan section, it traverses the structure, builds a buch of predication-makers
 ;;; for the sub-goal part of the rule and also builds up the plan list structure that 
 ;;; is unified with the plan logic-variable
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+(defvar name-to-number-hash-table (make-hash-table))
+
+(defun make-name (lead-in)
+  (let ((existing-number (gethash lead-in name-to-number-hash-table)))
+    (unless existing-number
+      (setf (gethash lead-in name-to-number-hash-table) 0))
+    (intern (string-upcase (format nil "~a-~d" lead-in (incf (gethash lead-in name-to-number-hash-table)))))))
+
+(defun smash (&rest names)
+  (let ((strings (loop for (name . rest) on names
+                     for string = (string name)
+                     collect string
+                     when rest 
+                          collect "-")))
+    (intern (string-upcase (apply #'concatenate 'string strings)))))
+
+
 
 (defun attach-logic-variable-to-predication-maker (predication-maker logic-variable-maker)
   (let ((new-statement (append (predication-maker-statement predication-maker)
@@ -135,11 +153,15 @@
     (when plan-structure
       (do-next-level plan-structure nil input-state output-state))))
 
-(defun process-post-conditions (assertions output-state)
+(defun process-post-conditions (assertions output-state &optional support)
   (when assertions
+    (if support
+        (loop for assertion in assertions
+	      collect `(tell [in-state ,assertion ,output-state]
+                             ,@(when support
+                                 `(:justification ,support))))
     `((prog1 t
-	,@(loop for assertion in assertions
-	      collect `(tell [in-state ,assertion ,output-state]))))))
+	,@(loop for assertion in assertions collect `(tell [in-state ,assertion ,output-state])))))))
 						
 (defun process-assertions (assertions input-state)
   (labels ((do-one (assertion)
@@ -322,6 +344,7 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 (define-predicate take-action (action-predicate input-state output-state action) (ltms:ltms-predicate-model))
+(define-predicate action-taken (action input-state output-state) (ltms:ltms-predicate-model))
    
 (defun link-action (name arguments prior-state next-state)
   (let ((action (make-instance 'action
@@ -333,7 +356,13 @@
 	  (prior-action next-state) action)
     action))
 
-(defmacro define-action (name variables &key bindings prerequisites post-conditions (define-predicate t) capecs) 
+(defun process-new-outputs (variable-list)
+  (loop for (lv form) in variable-list
+      collect `(unify ,lv ,form)))
+
+
+
+(defmacro define-action (name variables &key bindings prerequisites post-conditions (define-predicate t) capecs outputs typing) 
   (flet ((make-logic-variables (names)
 	   (loop for var in names 
 	       if (logic-variable-maker-p var)
@@ -347,6 +376,7 @@
     (let* ((logic-variables (make-logic-variables variables))
 	   (names (make-symbols-from-lvs logic-variables))
 	   (rule-name (intern (string-upcase (format nil "do-~a" name))))
+           (jusification-mnemonic (intern (string-upcase (format nil "prerequisites-satisfied-~a" name))))
 	   (state-logic-variables (make-logic-variables '(input-state output-state)))
 	   (capec-statements (loop for (victim capec-num cve-variable) in capecs
                                  collect `(predication-maker '(vulnerable-to-capec ,victim ,capec-num ,cve-variable))))
@@ -357,14 +387,25 @@
            (defrule ,rule-name (:backward)
              then [take-action [,name ,@logic-variables] ,@state-logic-variables ,action-variable]
              if [and ,@(process-bindings bindings input-state-variable)
+                     ,@(process-typing typing)
                      ,@(process-guards prerequisites input-state-variable)
                      ,@capec-statements
+                     ;; so at this point we've checked that the prerequisites are satisfied
                      (prog1 t
                        (when (unbound-logic-variable-p ,output-state-variable)
                          (unify ,output-state-variable 
-                                (intern-state (intern (string-upcase (gensym "state-"))) ,input-state-variable))))
-                     (prog1 t (unify ,action-variable (link-action ',name (list,@logic-variables) ,input-state-variable ,output-state-variable)))
-                     ,@(process-post-conditions post-conditions output-state-variable)
+                                (intern-state (intern (string-upcase (gensym "state-"))) ,input-state-variable)))
+                       (let* ((action-taken-pred (tell [action-taken [,name ,@logic-variables] ,input-state-variable ,output-state-variable]
+                                                       :justification :none))
+                              (justification (build-justification-from-backward-support (list* action-taken-pred +true+  ji::*backward-support*))))
+                         (destructuring-bind (nothing true-stuff false-stuff unknown-stuff) justification
+                           (declare (ignore nothing))
+                           (justify action-taken-pred +true+ ',jusification-mnemonic (remove-duplicates true-stuff) (remove-duplicates false-stuff) unknown-stuff))
+                         ,@(process-new-outputs outputs)
+                         ,@(let* ((mnemonic (intern (string-upcase (format nil "action-taken-~A" name))))
+                                  (justification-2 `(list ',mnemonic (list action-taken-pred))))
+                             (process-post-conditions post-conditions output-state-variable justification-2)))
+                     (unify ,action-variable (link-action ',name (list,@logic-variables) ,input-state-variable ,output-state-variable)))
                      ]))))))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;

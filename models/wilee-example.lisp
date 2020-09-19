@@ -114,7 +114,7 @@
 ;;; meaning they can read-or-write any resource that
 ;;; requires read or write capability
 (defuser typical-worker-bee
-    :user-type user
+    :user-type normal-user
     :ensemble worker-machines
     :machines (typical-worker-computer)
     :typical t
@@ -150,7 +150,7 @@
   )
 
 (defuser typical-sysadmin
-  :user-type user
+  :user-type admin-user
   :ensemble admin-machines
   :machines (typical-admin-computer typical-worker-computer)
   :typical t
