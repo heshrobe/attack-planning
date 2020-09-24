@@ -77,6 +77,11 @@
   :post-conditions ([process-launched ?new-process ?user-machine ?os ?user ?file])
   )
 
+(define-action launch-process (?attacker ?victim-machine ?victim-os ?new-process-type ?new-user ?current-role)
+  :prerequisites ([has-remote-execution ?attacker ?victim-machine ?current-role])
+  :outputs ((?new-process (make-object 'process :name (make-name 'shell-process))))
+  :post-conditions ([process-launched ?new-process ?victim-machine ?victim-os ?new-user ?current-role]))
+
 (define-action login (?victim-user ?victim-os-instance ?current-foothold-machine ?current-foothold-role)
   :bindings ([attacker-and-machine ?attacker ?attacker-machine]
 	     [current-foothold ?current-foothold-machine ?current-foothold-role]
@@ -212,7 +217,25 @@
   :prerequisites ([has-control-of ?attacker execution ?process])
   :post-conditions ([modified-by ?attacker ?data-set])
   )
+
+
+
+
+;;; actions for scanning something for a particular type of thing
+
+(define-action scan (?attacker ?collection ?relationship ?result)
+  :typing ((?collection collection))
+  :bindings ([value-of (?collection owner) ?system]
+             [system-role ?system ?relationship ?result])
+  :Post-conditions ([knows ?attacker ?relationship ?collection ?result]))
+
+(define-action decrypt (?attacker ?object ?key ?decrypted-thing)
+  :prerequisites ([system-role ?object key-for ?key])
+  :outputs ((?decrypted-thing (make-object (type-of ?object) :name (make-name (role-name ?object)))))
+  :post-conditions ([knows ?attacker decryped-value ?object ?decrypted-thing]))
   
+
+
 
 
 ;;; Actions related to control systems

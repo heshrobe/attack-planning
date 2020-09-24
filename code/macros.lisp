@@ -83,10 +83,12 @@
 				 (typical-computer nil computer-p)
 				 (typical-user nil user-p)
 				 (size 0 size-p)
-				 (address-range nil address-range-p))
+				 (address-range nil address-range-p)
+                                 (member-type 'computer)
+                                 )
   `(with-atomic-action
     (kill-redefined-object ',name)
-    (let* ((ensemble (make-object 'ensemble :name ',name)))
+    (let* ((ensemble (make-object 'ensemble :name ',name :member-type ',member-type)))
       ,@(when enterprise-p `((tell `[value-of (,ensemble enterprise) , (object-named ',enterprise)])))
       ,@(when computer-p `((tell `[value-of (,ensemble typical-computer) , (object-named ',typical-computer)])))
       ,@(when user-p `((tell `[value-of (,ensemble typical-user) ,(object-named ',typical-user)])))
@@ -117,20 +119,24 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 
-(defmacro defauthorization-pool (name)
+(defmacro defauthorization-pool (name &key (type 'authorization-pool))
   `(with-atomic-action
        (kill-redefined-object ',name)
-     (make-object 'authorization-pool :name ',name)
+     (make-object ',type :name ',name)
      ))
-(defmacro defcapability (name authorization-pool &key greater lesser)
+
+(defmacro defcapability (name authorization-pool &key greater lesser (role nil role-p))
   `(with-atomic-action
        (kill-redefined-object ',name)
-     (let ((capability (make-object 'capability :name ',name)))
-       (tell `[value-of (,capability authorization-pool) ,(follow-path '(,authorization-pool))])
+     (let* ((pool (follow-path '(,authorization-pool)))
+            (capability (make-object 'capability :name ',name)))
+       (tell `[value-of (,capability authorization-pool) ,pool])
        ,@(loop for g in greater
                collect `(tell `[value-of (,capability more-general) ,(follow-path '(,g))]))
        ,@(loop for l in lesser
-               collect `(tell `[value-of (,capability more-specific) ,(follow-path '(,l))]))
+             collect `(tell `[value-of (,capability more-specific) ,(follow-path '(,l))]))
+       ,@(when role-p 
+           `((tell `[value-of (,capability role) ,',role])))
        )))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -144,8 +150,10 @@
 (defmacro defcomputer (name computer-type
 		       &key ip-address-string
 			    superuser authorization-pool interfaces
-			    (typical nil typical-p)
-			    (ensemble nil ensemble-p))
+			    (typical nil typical-p)			    
+                            (ensemble nil ensemble-p)
+                            (role nil role-p)
+                            )
   `(with-atomic-action
        (kill-redefined-object ',name)
      (let ((computer (make-object ',computer-type :name ',name)))
@@ -162,6 +170,10 @@
 	       collect `(tell `[value-of (,computer hardware-interfaces) ,',interface])))
        ,@(when ensemble-p `((tell `[value-of (,computer ensemble) ,(object-named ',ensemble)])))
        ,@(when typical-p `((tell `[value-of (,computer typical-p) ,,typical])))
+       ,@(when role-p 
+           (destructuring-bind (role-name object) role
+             (unless (listp object) (setq object (list object)))
+             `((tell `[system-role ,(Follow-path ',object) ,',role-name ,computer]))))
        computer)))
 
 (defmacro define-peripheral (name &key peripheral-type interfaces commands)
@@ -233,6 +245,7 @@
 			     (ensemble nil ensemble-p)
 			     (typical nil typical-p)
 			     superuser-for
+                             (role nil role-p)
 			     )
   `(with-atomic-action
        (kill-redefined-object ',name)
@@ -250,7 +263,11 @@
        ,@(when ensemble-p `((tell `[value-of (,user ensemble) ,(object-named ',ensemble)])))
        ,@(when typical-p `((tell `[value-of (,user typical-p) ,,typical])))
        ,@(when superuser-for (loop for machine in superuser-for
-				collect `(tell `[value-of (,user superuser-for) ,(follow-path (list ',machine 'os))])))
+                                 collect `(tell `[value-of (,user superuser-for) ,(follow-path (list ',machine 'os))])))
+       ,@(when role-p 
+           (destructuring-bind (role-name object) role
+             (unless (listp object) (setq object (list object)))
+             `((tell `[system-role ,(Follow-path ',object) ,',role-name ,user]))))
        user)))
 
 (defun apply-positive-and-negative-masks (user
@@ -265,14 +282,31 @@
         (let ((negative-mask (make-negative-location-mask negative-mask-address negative-mask-mask)))
           (tell `[value-of (,user location) ,negative-mask])))))
 
-(defmacro defresource (name resource-type &key capability-requirements machines)
-  `(with-atomic-action
-       (kill-redefined-object ',name)
-       (let ((resource (make-object ',resource-type :name ',name)))
-       ,@(loop for machine in machines
-	     collect `(tell `[value-of (,resource machines) ,(follow-path '(,machine))]))
-       ,@(loop for (operation capability) in capability-requirements
-	     collect `(tell `[value-of (,resource capability-requirements) (,',operation ,(follow-path '(,capability)))])))))
+(defmacro defresource (name resource-type &key capability-requirements 
+                                               machines authorization-pool
+                                               (primary-machine nil primary-p)
+                                               (role nil role-p))
+  (let ((true-resource-type (if (symbolp resource-type) resource-type (first resource-type)))
+        (resource-type-args (if (symbolp resource-type) nil 
+                              (loop for (key value) on (rest resource-type) by #'cddr
+                                  collect key 
+                                  collect (if (symbolp value) `(follow-path '(,value)) value)))))
+    `(with-atomic-action
+      (kill-redefined-object ',name)
+      (let* ((resource (make-object ',true-resource-type :name ',name ,@resource-type-args)))
+        ,@(when primary-p
+            `((tell `[value-of (,resource primary-machine) ,(follow-path '(,primary-machine))])))
+        ,@(loop for machine in machines
+              collect `(tell `[value-of (,resource machines) ,(follow-path '(,machine))]))
+        ,@(loop for (operation capability) in capability-requirements
+              collect `(tell `[value-of (,resource capability-requirements) (,',operation ,(follow-path '(,capability)))]))
+        ,@(when authorization-pool
+         `((tell `[value-of (,resource authorization-pool) ,(follow-path '(,authorization-pool))])))
+        ,@ (when role-p 
+             (destructuring-bind (role-name object) role
+               (unless (listp object) (setq object (list object)))
+               `((tell `[system-role ,(Follow-path ',object) ,',role-name ,resource]))))
+        resource))))
 
 
 

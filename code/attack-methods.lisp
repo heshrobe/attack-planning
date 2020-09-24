@@ -625,12 +625,14 @@
 
 (defattack-method how-to-read-a-file
     :to-achieve [achieve-knowledge-of-contents ?file]
-    :bindings ([value-of ?file.machines ?machine]
-	       [attacker-and-machine ?attacker ?attacker-machine])
-    :prerequisites ()
-    :typing ((?file file))
+    :bindings ([value-of ?file.authorization-pool ?victim-pool]
+               [value-of ?victim-pool.users ?victim-user]
+               [value-of ?victim-user.machines ?victim-machine]
+               [attacker-and-machine ?attacker ?attacker-machine])
+    :prerequisites ([value-of (?victim-user typical-p) t])
+    :typing ((?file data-resource))
     :plan (:sequential
-	   (:goal [achieve-remote-execution ?victim-machine ?user])
+	   (:goal [achieve-remote-execution ?victim-machine ?victim-user])
            (:goal [achieve-access-right read ?file ?privileged-user])
            (:action [read-with-rights-of ?attacker ?privileged-user ?file])
 	   (:action [open-ftp-connection ?attacker ?victim-machine ?attacker-machine])
@@ -654,6 +656,30 @@
 	       [has-permission ?other-user ?right ?object])
     :guards ([not [has-permission ?foothold-role ?right ?object]])
     :plan (:goal [achieve-knowledge-of-password ?attacker ?other-user ?foothold-machine]))
+
+(defattack-method achieve-domain-admin-rights
+    :to-achieve [achieve-access-right ?right ?object ?domain-administrator]
+    :bindings ([current-foothold ?foothold-machine ?foothold-role]
+	       [attacker-and-machine ?attacker ?attacker-machine]
+               [has-remote-execution ?attacker ?victim-computer ?victim-role]
+               [value-of (?victim-computer os) ?victim-os]
+               [value-of (?object authorization-pool) ?domain]
+               [requires-access-right ?object ?right ?domain-admin]
+               [system-role ?domain domain-administrator ?domain-administrator]
+               )
+    :prerequisites ([value-of (?domain-admin role) domain-admin-capability])
+    :typing ((?object computer-resource)
+             (?domain domain)
+             (?sysvol directory)
+             )
+    :guards ([not [has-permission ?foothold-role ?right ?object]])
+    :plan (:sequential
+           (:action [scan ?attacker ?sysvol domain-admin-password ?password])
+           (:action [scan ?attacker ?sysvol domain-admin-password-key ?key])
+           (:action [decrypt ?attacker ?password ?key ?decrypted-password])
+           (:action [launch-process ?attacker ?victim-computer ?victim-os shell ?domain-administrator ?victim-role])
+           )
+    )
 
 ;;; The ?user part of this is actually to feed back to the higher
 ;;; level that it should read the file with the access rights of the user

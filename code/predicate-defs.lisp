@@ -197,11 +197,15 @@
 
 (define-predicate file-clicked-on (user file application-type) (ltms:ltms-predicate-model))
 
+;;; A process is launched on the machine/os running as user launching-source
 (define-predicate process-launched (process machine os user file) (ltms:ltms-predicate-model))
 
 ;;; This changes over time
 (define-predicate email-submitted (victim-machine kind-of-mail source-machine) (ltms:ltms-predicate-model))
 (define-predicate knows-password (attacker victim-user) (ltms:ltms-predicate-model))
+(define-predicate knows-key (attacker thing) (ltms:ltms-predicate-model))
+;;; A generic knows predicate in the form "the attacker knows that the domain passwordd of the domain is <foo>"
+(define-predicate knows (attacker role system thing) (ltms:ltms-predicate-model))
 
 ;;; These change over time
 (define-predicate software-downloaded (package computer) (ltms:ltms-predicate-model))

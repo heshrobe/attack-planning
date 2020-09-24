@@ -16,7 +16,7 @@
         (t (call-next-method))))
 
 (define-object-type can-be-typical-mixin
-    :slots ((typical-p :initarg :typical-p))
+    :slots ((typical-p :initarg :typical-p :initform nil))
     )
 
 (define-object-type aplan-object 
@@ -43,9 +43,17 @@
     :super-types (can-be-typical-mixin print-nicely-mixin)
     )
 
+(define-aplan-object in-authorization-pool
+    :slots ((authorization-pool :set-valued t)))
+
+(define-aplan-object has-owner-mixin
+    :super-types (print-nicely-mixin)
+    :slots ((owner :initarg :owner)))
+
 (define-aplan-object computer-resource
-    :super-types (can-be-typical-mixin print-nicely-mixin)
+    :super-types (has-owner-mixin in-authorization-pool can-be-typical-mixin print-nicely-mixin)
     :slots ((machines :set-valued t)
+            (primary-machine)
 	    (capability-requirements :set-valued t)))
 
 (define-aplan-object code-in-memory
@@ -136,10 +144,6 @@
 
 (define-aplan-object scheduler-policy-file
   :super-types (file))
-
-(define-aplan-object directory
-  :super-types (computer-resource)
-  :slots ((files :set-valued t )))
 
 (define-aplan-object process
     :slots ((host-os )
@@ -340,7 +344,7 @@
 ;;; requested (e.g. fingerprint spoofing).
 
 (define-aplan-object credential
-    :super-types (print-nicely-mixin)
+    :super-types (computer-resource)
     )
 
 (define-aplan-object password
@@ -355,6 +359,9 @@
     :super-types (credential)
     )
 
+(define-aplan-object encryption-key
+    :super-types (credential))
+
 (define-aplan-object biometric-characteristic
     :super-types (credential)
     )
@@ -367,12 +374,17 @@
     :super-types (biometric-characteristic)
     )
 
+(define-aplan-object has-resources-mixin
+    :slots ((resources :set-valued t )))
 
 (define-aplan-object authorization-pool
   :slots ((machines :set-valued t )
           (capabilities :set-valued t )
           (users :set-valued t ))
-  :super-types (print-nicely-mixin))
+  :super-types (has-resources-mixin print-nicely-mixin))
+
+(define-aplan-object domain
+    :super-types (authorization-pool))
 
 ;;; "capability" is a level of authorization good enough to access
 ;;; this thing.
@@ -380,7 +392,8 @@
 (define-aplan-object capability
   :slots ((more-general :set-valued t )
           (authorization-pool )
-          (more-specific :set-valued t ))
+          (more-specific :set-valued t)
+          (role :initarg :role))
   :super-types (print-nicely-mixin))
 
 ;;; Note: For mobile users don't we need to bind authorization
@@ -393,18 +406,20 @@
 	    (name )
 	    (email-address )
 	    (capabilities :set-valued t )
-	    (authorization-pool :set-valued t )
 	    (machines :set-valued t )
 	    (ensemble  :initarg :ensemble)
 	    (superuser-for :set-valued t)
 	    )
-    :super-types (system-entity print-nicely-mixin))
+    :super-types (in-authorization-pool system-entity print-nicely-mixin))
 
 (define-aplan-object normal-user
     :super-types (user))
 
 (define-aplan-object admin-user
     :super-types (user))
+
+(define-aplan-object domain-admin
+    :super-types (admin-user))
 
 (define-aplan-object attacker
     :super-types (user)
@@ -417,6 +432,22 @@
 	    )
     )
 
+(define-aplan-object collection
+    :super-types (print-nicely-mixin)
+    :slots ((member-type :initarg :member-type)
+            (members :initarg :member :set-valued t))
+    )
+
+(define-aplan-object file-collection
+    :super-types (data-resource collection)
+    :slots ((member-type :initform 'file))
+    )
+
+(define-aplan-object directory
+    :super-types (file-collection)
+    :slots ((files :set-valued t ))
+    )
+
 ;;; An ensemble is a collection of machines
 ;;; There are essentially the same from the attacker's perspective
 ;;; For each ensemble we specify a "typical" machine and a
@@ -424,7 +455,7 @@
 ;;; apply to all members of the ensemble
 
 (define-aplan-object ensemble
-    :super-types (print-nicely-mixin)
+    :super-types (collection print-nicely-mixin)
     :slots ((typical-computer :initarg :typical-computer)
 	    (typical-user :initarg :typical-user)
 	    (enterprise  :initarg :enterprise)
@@ -512,7 +543,6 @@
 	    (superuser :set-valued t :Initform nil)
 	    (machine )
 	    (users  :set-valued t :Initform nil)
-	    (authorization-pool )
 	    (job-launch-queue ) 
 	    (processes :set-valued t ))
     :initializations ((make-workload-for-os self)
@@ -526,7 +556,7 @@
             (access-controller access-controller)
             (network-monitor network-stack)
 	    )
-    :super-types (print-nicely-mixin))
+    :super-types (in-authorization-pool print-nicely-mixin))
 
 (defmethod initialize-os-slots-of-parts ((os operating-system))
   (ask `[part-of ,os ?part]
@@ -639,7 +669,6 @@
 	    (cycle-pool 'cycle-pool))
     :slots ((ip-addresses :set-valued t )
 	    (subnets :set-valued t )
-	    (resources :set-valued t )
 	    (site :set-valued t )
 	    (communication-protocols :set-valued t )
 	    (system-type )
@@ -647,7 +676,7 @@
 	    (ensemble :initarg :ensemble)
 	    (users :set-valued t :initform nil :Initarg :users)
 	    )
-    :super-types (has-policy-mixin hardware can-be-typical-mixin print-nicely-mixin))
+    :super-types (has-resources-mixin has-policy-mixin hardware can-be-typical-mixin print-nicely-mixin))
 
 (define-aplan-object attacker-computer
     :super-types (computer))

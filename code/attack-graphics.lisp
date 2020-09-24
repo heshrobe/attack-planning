@@ -97,6 +97,23 @@
   (write-string (string (role-name item)) stream))
 
 (eval-when (:compile-toplevel :load-toplevel :execute)
+  (clim:define-presentation-type authorization-pool ()))
+
+(clim:define-presentation-method clim:accept ((type authorization-pool) stream (view clim:textual-view) &key)
+  (let ((answers nil))
+    (ask [ltms:object-type-of ?m authorization-pool]
+         #'(lambda (just)
+             (declare (ignore just))
+             (pushnew ?m answers)))
+    (clim:completing-from-suggestions (stream :partial-completers '(#\-))
+      (loop for m in answers
+            do (clim:suggest (string (role-name m)) m)))
+    ))
+
+(clim:define-presentation-method clim:present (item (type authorization-pool) stream  (view clim:textual-view) &key)
+  (write-string (string (role-name item)) stream))
+
+(eval-when (:compile-toplevel :load-toplevel :execute)
   (clim:define-presentation-type desirable-property ()))
 
 (clim:define-presentation-method clim:present (object (type desirable-property) stream (view clim:textual-view) &key)
@@ -167,7 +184,7 @@
       (load pathname)))
 
 (define-aplan-command (com-find-plans :name t :menu t)
-    ((computer 'computer)
+    ((computer '(or computer authorization-pool))
      (property 'desirable-property)
      (resource `(computer-resource ,computer))
      &key (attacker 'attacker :default (follow-path '(attacker))))

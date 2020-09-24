@@ -397,7 +397,21 @@
 
 (def-symmetric-pointers user-pool user ?user authorization-pool authorization-pool ?pool users)
 
-(def-symmetric-pointers resource-machine computer-resource ?r machines computer ?c resources)
+#|
+(defrule resource-of-pool-resource-of-computer (:forward)
+  if [and [ltms:object-type-of ?p authorization-pool]
+          [value-of (?p resources) ?r]
+          [ltms:object-type-of ?r computer-resource]
+          [value-of (?p machines) ?o]
+          [ltms:object-type-of ?o operating-system]
+          [value-of (?o machine) ?m]
+          [ltms:object-type-of ? has-resources-mixin]
+          ]
+  then [value-of (?m resources) ?r])
+(UNDEFRULE 'RESOURCE-OF-POOL-RESOURCE-OF-COMPUTER)
+|#
+
+(def-symmetric-pointers resource-machine computer-resource ?r machines has-resources-mixin ?c resources)
 
 (def-symmetric-pointers file-directory file ?file directories directory ?directory files)
 

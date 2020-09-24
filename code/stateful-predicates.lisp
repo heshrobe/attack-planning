@@ -372,14 +372,27 @@
 	  (mark-state-useful prior-state)))
       ))))
 
-(defun clear-useless-states()
+(defun kill-state (state)
+  ;; kill all actions leading to a useless state
+  (ask `[action-taken ?action ?input-state ,state]
+       #'(lambda (backward-support)
+           (let ((predication (ask-database-predication backward-support)))
+             ;; kill all consequences which are the predications in 
+             ;; the useless state
+             (loop for consequence in (consequences predication)
+                 do (untell consequence))
+             (untell predication))))
+  )
+
+(defun clear-useless-states ()
   (labels ((do-one (state)
 	     (let ((successors (successors state))
 		   (useful-successors nil))
 	       (loop for successor in successors
 		   do (do-one successor)
-		 when (is-on-solution-path? successor)
-		   do (push successor useful-successors))
+		 if (is-on-solution-path? successor)
+		   do (push successor useful-successors)
+                   do (kill-state successor))
 	       (setf (successors state) useful-successors))))
     (do-one *initial-state*)))
 
