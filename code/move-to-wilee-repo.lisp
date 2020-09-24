@@ -10,7 +10,7 @@
 
 
 (defparameter *local-aplan-pathname* #p"~/Research-Projects/attack-planning/code/*.lisp")
-(defparameter *local-joshua-pathname* #p"~/josh-dist/joshua/code/*.lisp")
+(defparameter *local-joshua-pathname* #p"~/joshua-dist/joshua/code/*.lisp")
 (defparameter *local-models-pathname* #p"~/Research-Projects/attack-planning/models/mirai-for-wilee-example.lisp")
 
 
@@ -20,10 +20,10 @@
 				     #p"~/Research-Projects/attack-planning/code/editor.lisp"
 				     #p"~/Research-Projects/attack-planning/code/emacs-hacks.lisp"
 				     #p"~/Research-Projects/attack-planning/code/my-logical-pathnamess.lisp"
-				     #p"~/josh-dist/joshua/code/original-mapforms.lisp"
-				     #p"~/josh-dist/joshua/code/cloehacks.lisp"
-				     #p"~/josh-dist/joshua/code/joshua-defsystem.lisp"
-				     #p"~/josh-dist/joshua/code/move-to-wilee-repo.lisp"
+				     #p"~/joshua-dist/joshua/code/original-mapforms.lisp"
+				     #p"~/joshua-dist/joshua/code/cloehacks.lisp"
+				     #p"~/joshua-dist/joshua/code/joshua-defsystem.lisp"
+				     #p"~/joshua-dist/joshua/code/move-to-wilee-repo.lisp"
 				     ))
 
 (defun move-to-wilee-repo (&optional (force nil))
