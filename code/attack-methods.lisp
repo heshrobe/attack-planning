@@ -143,11 +143,11 @@
 ;;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
-(defattack-method read-file-property-directly
-    :to-achieve [affect data-privacy ?file]
-    :prerequisites ([desirable-property-of ?file data-privacy])
-    :typing ((?file data-resource))
-    :plan (:goal [achieve-knowledge-of-contents ?file])
+(defattack-method read-resource-property-directly
+    :to-achieve [affect data-privacy ?resource]
+    :prerequisites ([desirable-property-of ?resource data-privacy])
+    :typing ((?resource data-resource))
+    :plan (:goal [achieve-knowledge-of-contents ?resource])
     )
 
 
@@ -623,20 +623,20 @@
 ;;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
-(defattack-method how-to-read-a-file
-    :to-achieve [achieve-knowledge-of-contents ?file]
-    :bindings ([value-of ?file.authorization-pool ?victim-pool]
+(defattack-method how-to-read-a-resource
+    :to-achieve [achieve-knowledge-of-contents ?resource]
+    :bindings ([value-of ?resource.authorization-pool ?victim-pool]
                [value-of ?victim-pool.users ?victim-user]
                [value-of ?victim-user.machines ?victim-machine]
                [attacker-and-machine ?attacker ?attacker-machine])
     :prerequisites ([value-of (?victim-user typical-p) t])
-    :typing ((?file data-resource))
+    :typing ((?resource data-resource))
     :plan (:sequential
 	   (:goal [achieve-remote-execution ?victim-machine ?victim-user])
-           (:goal [achieve-access-right read ?file ?privileged-user])
-           (:action [read-with-rights-of ?attacker ?privileged-user ?file])
+           (:goal [achieve-access-right read ?resource ?privileged-user])
+           (:action [read-with-rights-of ?attacker ?privileged-user ?resource])
 	   (:action [open-ftp-connection ?attacker ?victim-machine ?attacker-machine])
-	   (:action [trasmit-data ?attacker ?file ?victim-machine ?attacker-machine])
+	   (:action [trasmit-data ?attacker ?resource ?victim-machine ?attacker-machine])
 	   ))
 
 ;;; If your foothold role already has the access rights

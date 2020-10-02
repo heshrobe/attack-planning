@@ -513,6 +513,9 @@
 ;;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
+(defun make-pathname-with-type (pathname type)
+  (make-pathname :type type :defaults pathname))
+
 #+allegro
 (defmacro with-output-to-pdf-stream ((pathname stream-var) &body body)
   `(let* ((real-name (translate-logical-pathname ,pathname))
@@ -524,7 +527,7 @@
        (clim:with-output-to-postscript-stream (,stream-var file #+mcclim :device-type #+mcclim :eps)
 	 ,@body))
      (excl:run-shell-command command :wait t :show-window :normal)
-     (delete-file ps-pathname)
+     ;;(delete-file ps-pathname)
      ))
 
 #+mcclim
