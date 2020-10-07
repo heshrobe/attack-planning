@@ -79,7 +79,7 @@
 	do (with-unification 
 	    (unify attacker-machine machine-of-state)
 	    (unify attacker attacker-of-state)
-	    (stack-let ((backward-support (list query +true+ (attacker-and-machine-pred this-state) '(ask-data attacker-and-machine))))
+	    (stack-let ((backward-support (list query +true+ (attacker-and-machine-pred this-state) )))
 	      (funcall continuation backward-support)))
 	   (return))))
 
@@ -155,7 +155,7 @@
 	    (unify existing-foothold-machine foothold-machine)
 	    (unify existing-foothold-role foothold-role)
 	    (unify existing-foothold-protocol foothold-protocol)
-	    (stack-let ((backward-support (list query +true+ existing-pred '(ask-data current-foothold))))
+	    (stack-let ((backward-support (list query +true+ existing-pred )))
 	      (funcall continuation backward-support))))))
       
       

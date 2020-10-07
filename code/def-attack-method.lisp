@@ -348,6 +348,7 @@
    
 (defun link-action (name arguments prior-state next-state)
   (let ((action (make-instance 'action
+                  :role-name name
 		  :action-name name
 		  :arguments arguments
 		  :prior-state prior-state
@@ -397,10 +398,10 @@
                                 (intern-state (intern (string-upcase (gensym "state-"))) ,input-state-variable)))
                        (let* ((action-taken-pred (tell [action-taken [,name ,@logic-variables] ,input-state-variable ,output-state-variable]
                                                        :justification :none))
-                              (justification (build-justification-from-backward-support (list* action-taken-pred +true+  ji::*backward-support*))))
+                              (justification (build-justification-from-backward-support ji::*backward-support*)))
                          (destructuring-bind (nothing true-stuff false-stuff unknown-stuff) justification
                            (declare (ignore nothing))
-                           (justify action-taken-pred +true+ ',jusification-mnemonic (remove-duplicates true-stuff) (remove-duplicates false-stuff) unknown-stuff))
+                           (justify action-taken-pred +true+ ',jusification-mnemonic true-stuff false-stuff unknown-stuff))
                          ,@(process-new-outputs outputs)
                          ,@(let* ((mnemonic (intern (string-upcase (format nil "action-taken-~A" name))))
                                   (justification-2 `(list ',mnemonic (list action-taken-pred))))

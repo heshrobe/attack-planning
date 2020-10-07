@@ -202,7 +202,7 @@
 			(unify value sub-object))))))
 		(otherwise
 		 (unify interned-internal-pred internal-pred)))
-	      (stack-let ((backward-support (list query +true+ database-predication '(ask-data statefule-predicate-mixin))))
+	      (stack-let ((backward-support (list query +true+ database-predication )))
 		(funcall continuation backward-support))))
 	   (handle-predicate (backward-support)
 	     ;; Succeed here should be called with a standard justification
@@ -227,7 +227,7 @@
 		   (with-unification
 		    (when (Unbound-logic-variable-p state-descriptor)
 		      (unify *initial-state* state-descriptor))
-		    (succeed interned-internal-pred nil))))
+		    (succeed interned-internal-pred interned-internal-pred))))
 		;; There's not a specific state specified
 		((unbound-logic-variable-p state-descriptor)
 		 (loop for winning-state in (if negated false-states true-states)
@@ -252,11 +252,11 @@
 		     finally (when (eql (predication-truth-value interned-internal-pred) truth-value)
 			       (with-unification
 				(unify state-descriptor *initial-state*)
-				(succeed interned-internal-pred nil)))))))))
+				(succeed interned-internal-pred interned-internal-pred)))))))))
 	(cond
 	 ((unbound-logic-variable-p internal-pred)
 	  (loop for interned-internal-pred being the hash-keys of *state-predicate-interning-ht*
-	      do (stack-let ((backward-support (list self +true+ interned-internal-pred '(ask-data stateful-predication))))
+	      do (stack-let ((backward-support (list self +true+ interned-internal-pred )))
 		   (handle-predicate backward-support))))
 	 (t ;; handle negated internal predication
 	  (when (typep internal-pred 'ji::not-model)
@@ -334,7 +334,7 @@
       (when answer
 	(with-unification
 	 (unify final-state answer)
-	 (stack-let ((backward-support (list self +true+ nil '(ask-data consistent-state))))
+	 (stack-let ((backward-support (list self +true+  '(ask-data consistent-state))))
 	   (funcall continuation backward-support)
 	   ))))))
 
@@ -392,7 +392,7 @@
 		   do (do-one successor)
 		 if (is-on-solution-path? successor)
 		   do (push successor useful-successors)
-                   do (kill-state successor))
+                   else do (kill-state successor))
 	       (setf (successors state) useful-successors))))
     (do-one *initial-state*)))
 
