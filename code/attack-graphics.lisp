@@ -82,12 +82,16 @@
 (eval-when (:compile-toplevel :load-toplevel :execute)
   (clim:define-presentation-type computer ()))
 
-(clim:define-presentation-method clim:accept ((type computer) stream (view clim:textual-view) &key)
+(defun get-all-computers ()
   (let ((answers nil))
     (ask [ltms:object-type-of ?m computer]
          #'(lambda (just)
              (declare (ignore just))
              (pushnew ?m answers)))
+    answers))
+
+(clim:define-presentation-method clim:accept ((type computer) stream (view clim:textual-view) &key)
+  (let ((answers (get-all-computers)))
     (clim:completing-from-suggestions (stream :partial-completers '(#\-))
       (loop for m in answers
             do (clim:suggest (string (role-name m)) m)))
@@ -99,12 +103,15 @@
 (eval-when (:compile-toplevel :load-toplevel :execute)
   (clim:define-presentation-type authorization-pool ()))
 
-(clim:define-presentation-method clim:accept ((type authorization-pool) stream (view clim:textual-view) &key)
+(defun get-all-authorization-pools ()
   (let ((answers nil))
     (ask [ltms:object-type-of ?m authorization-pool]
          #'(lambda (just)
              (declare (ignore just))
-             (pushnew ?m answers)))
+             (pushnew ?m answers)))))
+
+(clim:define-presentation-method clim:accept ((type authorization-pool) stream (view clim:textual-view) &key)
+  (let ((answers (get-all-authorization-pools)))
     (clim:completing-from-suggestions (stream :partial-completers '(#\-))
       (loop for m in answers
             do (clim:suggest (string (role-name m)) m)))
@@ -112,6 +119,19 @@
 
 (clim:define-presentation-method clim:present (item (type authorization-pool) stream  (view clim:textual-view) &key)
   (write-string (string (role-name item)) stream))
+
+(eval-when (:compile-toplevel :load-toplevel :execute)
+  (clim:define-presentation-type resource-owner ()))
+
+(clim:define-presentation-method clim:present (object (type resource-owner) stream (view clim:textual-view) &key)
+  (write-string (string (role-name object)) stream))
+
+(clim:define-presentation-method clim:accept ((type resource-owner) stream (view clim:textual-view) &key)
+  (let ((answers (append (get-all-computers) (get-all-authorization-pools))))
+    (clim:completing-from-suggestions (stream :partial-completers '(#\-))
+      (loop for m in answers
+            do (clim:suggest (string (role-name m)) m)))
+    ))
 
 (eval-when (:compile-toplevel :load-toplevel :execute)
   (clim:define-presentation-type desirable-property ()))
@@ -184,7 +204,7 @@
       (load pathname)))
 
 (define-aplan-command (com-find-plans :name t :menu t)
-    ((computer '(or computer authorization-pool))
+    ((computer 'resource-owner)
      (property 'desirable-property)
      (resource `(computer-resource ,computer))
      &key (attacker 'attacker :default (follow-path '(attacker))))
