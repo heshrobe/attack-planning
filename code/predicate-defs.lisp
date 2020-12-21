@@ -35,6 +35,7 @@
 		  (outer-pred `[not ,inner-pred]))
 	     (tell outer-pred :justification :premise)))))
 
+
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;
@@ -78,22 +79,33 @@
 ;;; It can be both asserted and queried.
 (define-predicate has-foothold (victim-machine foothold-machine foothold-role protocol-name) (special-stateful-predicate-model))
 
-;;; here purpose is either remote-execution or foothold
+
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;; The purpose of these predicates is to break cycles in searches initiated by get-foothold or get-remote-execution
+;;; These keep track of where we have been in the search (as opposed to some fact about the world)
 ;;; if it's for a foothold we'll also remember the protocol that that foothold needs to be able
 ;;; to use to talk to the target
 ;;; This one is always used inside a [in-state ... ] predication
-;;; so the sstate doesn't need to be in the predication
+;;; so the state doesn't need to be in the predication
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
 (define-predicate place-already-visited? (machine purpose) (tell-error-model special-stateful-predicate-model))
 
 ;;; Place-visited always occurs as a note within the :plan structure and the macro expansion
 ;;; puts the input and output states into the predication.
 (define-predicate place-visited (machine purpose) (special-stateful-predicate-model))
 
-
+;;; This just retrieves who the attacker is and what the attacker's home machine is
 (define-predicate attacker-and-machine (attacker attacker-machine) (special-stateful-predicate-model ltms:ltms-predicate-model))
 
+;;; There might be more of these, they retrieve systems under the attacker's control for some purpose
+;;; It might be better to have a more general predicate that lists the role, rather than several separate
+;;; predicates (e.g. there might be a soft-update-server under the attacker's control)
 (define-predicate attacker-download-server (attacker attacker-server-machine) (non-stateful-predicate-model))
 (define-predicate attacker-adware-server (attacker attacker-server-machine) (non-stateful-predicate-model))
+
+
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;
@@ -120,6 +132,17 @@
 
 (define-predicate value-of (path variable) (ji::slot-value-mixin ltms:ltms-mixin default-protocol-implementation-model))
 
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;;
+;;; These are used in reasoning about life-cycle attacks
+;;;
+;;; A residence is a place that a piece of code can live, such as the file system or memory
+;;; A format is something like source, object, linkable, binary-in-memory
+;;; Migrates-from describes how a process can move software from one residence to another
+;;; Transforms describes a process (e.g. compiler, linker, loader) that produces a new format of the software
+;;;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
 (define-predicate residence (thing place) (non-stateful-predicate-model))
 
 (define-predicate migrates-from (thing place1 place2 process) (non-stateful-predicate-model))
@@ -128,12 +151,14 @@
 
 (define-predicate transforms (process format1 format2) (non-stateful-predicate-model))
 
+
+
 ;;; Fix: Why do I have all three of these?
-(define-predicate is-vulnerable-to (process attack) (non-stateful-predicate-model))
+(define-predicate is-vulnerable-to (process attack-type protocol) (non-stateful-predicate-model))
 
-(define-predicate vulnerable-to (thing attack) (non-stateful-predicate-model))
+;;; (define-predicate vulnerable-to (thing attack) (non-stateful-predicate-model))
 
-(define-predicate vulnerable-to-overflow-attack (process protocol) (ltms:ltms-predicate-model))
+;;; (define-predicate vulnerable-to-overflow-attack (process protocol) (ltms:ltms-predicate-model))
 
 (define-predicate vulnerable-to-capec (thing capec cve-number) (ltms:ltms-predicate-model))
 
@@ -149,9 +174,7 @@
 
 (define-predicate requires-access-right (object operation capability) (ltms:ltms-predicate-model))
 
-
-
-(define-predicate protected-from (thing attack) (ltms:ltms-predicate-model))
+(define-predicate protected-from (thing attack protocol) (ltms:ltms-predicate-model))
 
 (define-predicate knows-credentials (attacker user) (ltms:ltms-predicate-model))
 
@@ -272,15 +295,3 @@
 (define-predicate can-issue-command-to (master victim command bus) (non-stateful-predicate-model))
 
 (define-predicate system-role (system role-name component) (non-stateful-predicate-model))
-
-#|
-
-Sample of what the new type of action definition would be
-The interpreter i.e. expansion of defaction-method would have to invoke this rule in every plan
-that has an action relevant code is in rebuild plan structure
-
-(define-action signal-noise-injection (attacker sensor signal)
-  (tell `[in-state [signal-noise-injection ?attacker ?signal ?sensor] ?output-state])
-  )
-
-|#

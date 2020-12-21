@@ -5,6 +5,7 @@
 (defpackage aplan
   (:shadow "DIRECTORY" "VALUE-OF")
   (:shadowing-import-from "CL-USER" "THROW")
+  (:import-from ltms "ASSUME")
   (:export "DO-IT"
 	   "ATTACK-PLAN-COLLECTOR" "ATTACK-PLANS" "MERGED-ATTACK-PLAN"  "MERGE-ATTACK-PLANS"
 	   "DUMP-PLAN"

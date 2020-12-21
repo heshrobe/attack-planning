@@ -213,79 +213,8 @@
 ;;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
-;;; This block of stuff is currently a mess and needs fixing
-
-#|
-(defattack-method take-control-of-directly
-    ;; Takes control of a component to ultimately affect some property of the target
-    :to-achieve [take-control-of ?attacker ?component-property ?component]
-    :plan (:goal [takes-direct-control-of ?attacker ?component-property ?component])
-    :post-conditiond ([has-control-of ?attacker ?component-property ?component])
-
-;;; one way to take direct control of a process is to
-;;; first find some way to modify the loadable file so as to affect the property of the target
-;;; and then cause the load of the loadable file of the program that's supposed to run in the process
-
-;;; Fix modify
-(defattack-method control-process-through-loadable-files
-    :to-achieve [takes-direct-control-of ?attacker ?victim-property ?victim]
-    :bindings ([value-of ?victim.program ?program]
-               [value-of ?program.load-files ?file])
-    :typing ((?victim process)
-             (?program program)
-             (?file dynamically-loadable-code-file))
-    :plan (:sequential
-           (:goal [modify contents ?file ?input-context])
-	   ;; Note: this is a hack right now.  Really it should be a goal which would involve
-	   ;; a series of actions to cause the file to get loaded (logging in?, robooting?)
-           (:action [load-file ?attacker ?file ?victim]))
-    )
 
 
-;;; Fix
-;;; This should reduce to one of the methods used for code-injection or code-reuse
-
-(defattack-method buffer-overflow-can-control-server-processes
-    :to-achieve [takes-direct-control-of ?attacker ?process-property ?process]
-    ;; :bindings ((?os-instance ?process.host-os])
-    :typing ((?process process)
-             ;; (?os-instance operating-system)
-             )
-    :prerequisites ((is-vulnerable-to ?process 'buffer-overflow-attack))
-    :plan (:action [take-control-with-buffer-overflow ?attacker ?process])
-    )
-|#
-
-
-(defrule check-vulnerabiity (:backward)
-  then [is-vulnerable-to ?process ?attack]
-  if (is-vulnerable-to ?process ?attack))
-
-;;; How to do the supertyping
-(defun is-vulnerable-to (process attack)
-  (labels ((do-one-type (type)
-             (let ((type-name (ji::object-type-name type)))
-               (ask `[protected-from ,type-name ,attack]
-                    #'(lambda (just)
-                        (declare (ignore just))
-                        (return-from is-vulnerable-to (values nil))))
-               (ask `[vulnerable-to ,type-name ,attack]
-                    #'(lambda (just)
-                        (declare (ignore just))
-                        (return-from is-vulnerable-to (values t))))
-               (loop for his-super in (ji::object-type-supertypes type)
-                   do (do-one-type his-super)))))
-    (let ((his-type (ji::basic-object-type process)))
-      (do-one-type his-type))
-    nil))
-
-(defrule web-servers-are-vulnerable (:backward)
-  then [vulnerable-to web-server-process buffer-overflow-attack]
-  if t)
-
-(defrule common-lisp-http-server-is-safe (:backward)
-  then [protected-from cl-http-server-process buffer-overflow-attack]
-  if t)
 
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -500,7 +429,7 @@
 	       [value-of ?process.machines ?victim-machine]
 	       [attacker-and-machine ?attacker ?attacker-machine])
     :typing ((?process web-server-process))
-    :prerequisites ([vulnerable-to-overflow-attack ?process ?protocol])
+    :prerequisites ([is-vulnerable-to ?process buffer-overflow-attack ?protocol])
     :plan (:sequential
 	   (:goal [get-foothold ?victim-machine ?protocol])
 	   (:action [launch-code-injection-attack ?attacker ?process ?protocol ?foothold-machine ?foothold-role]))
@@ -524,7 +453,7 @@
 	       [value-of ?process.machines ?victim-machine]
 	       [attacker-and-machine ?attacker ?attacker-machine])
     :typing ((?process web-server-process))
-    :prerequisites ([vulnerable-to-overflow-attack ?process ?protocol])
+    :prerequisites ([is-vulnerable-to ?process buffer-overflow-attack ?protocol])
     :plan (:sequential
 	   (:goal [get-foothold ?victim-machine ?protocol])
 	   (:action [launch-code-reuse-attack ?attacker ?process  ?protocol ?foothold-machine ?foothold-role])))

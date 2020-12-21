@@ -25,8 +25,8 @@
 ;;; on machine that the file lives on
 
 
-(define-action take-control-with-buffer-overflow (?attacker ?process)
-  :prerequisites ([is-vulnerable-to ?process buffer-overflow-attack])
+(define-action take-control-with-buffer-overflow (?attacker ?process ?protocol)
+  :prerequisites ([is-vulnerable-to ?process buffer-overflow-attack ?protocol])
   :post-conditions ([has-control-of ?attacker execution ?process])
   )
 
@@ -110,7 +110,7 @@
 	     [value-of ?victim-process.host-os ?victim-os]
 	     [value-of ?victim-os.machine ?victim-machine])
   :prerequisites ([has-foothold ?victim-machine ?foothold-machine ?foothold-role ?protocol] 
-		  [vulnerable-to-overflow-attack ?victim-process ?protocol]
+		  [is-vulnerable-to ?victim-process buffer-overflow-attack ?protocol]
 		  [connection-established ?foothold-machine ?victim-machine ?protocol-name])
   :post-conditions ([controls-process ?attacker ?victim-process code-reuse])
   )
@@ -121,7 +121,7 @@
 	     [value-of ?victim-os.machine ?victim-machine])
   :prerequisites ([has-foothold ?victim-machine ?foothold-machine ?foothold-role ?protocol]
 		  [connection-established ?foothold-machine ?victim-machine ?protocol]
-		  [vulnerable-to-overflow-attack ?victim-process ?protocol])
+		  [is-vulnerable-to ?victim-process buffer-overflow-attack ?protocol])
   :post-conditions ([has-control-of ?attacker execution ?victim-process]))
 
 

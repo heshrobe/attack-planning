@@ -67,6 +67,7 @@
 	       (:joshua-file "stateful-predicates" :depends-on ("predicate-defs"))
 	       (:joshua-file "object-defs" :depends-on ("stateful-predicates"))
 	       (:joshua-file "macros" :depends-on ("object-defs"))
+               (:joshua-file "background-knowlede" :depends-on ("macros"))
 	       (:joshua-file "def-attack-method" :depends-on ("macros"))
 	       (:joshua-file "predicate-methods" :depends-on ("def-attack-method"))
 	       (:joshua-file "goals" :depends-on ("predicate-methods"))
