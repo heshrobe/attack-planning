@@ -36,7 +36,7 @@
     :to-achieve [affect ?desirable-property ?victim]
     ;; find some component of the OS of a machine that the victim runs on
     :bindings ([value-of ?victim.machines ?computer]
-               [named-component ?computer os ?os-instance]
+               [value-of ?computer.os ?os-instance]
                [component ?os-instance ?component]
 	       [current-foothold ?foothold-machine ?foothold-role]
 	       [attacker-and-machine ?attacker ?attacker-machine])
@@ -124,7 +124,7 @@
 
 (defattack-method increase-workload-by-increasing-job-launch-queue
     :to-achieve [increase-size ?workload]
-    :bindings ([named-component ?workload os ?os]
+    :bindings ([value-of ?workload.os ?os]
 	       [value-of ?os.job-launch-queue ?queue]
 	       [value-of ?queue.user-job-launch-request-queue ?user-job-launch-queue]
 	       [current-foothold ?foothold-machine ?foothold-role]
@@ -180,7 +180,7 @@
 (defattack-method mung-database
     :to-achieve [affect data-integrity ?database]
     :bindings ([value-of ?database.machines ?database-machine]
-	       [named-component  ?database-machine os ?database-os]
+	       [value-of  ?database-machine.os ?database-os]
 	       [current-foothold ?current-foothold-machine ?current-foothold-role]
 	       )
     :typing ((?database database)
@@ -324,7 +324,7 @@
 
 (defattack-method modify-active-user-set
     :to-achieve [increase-size ?active-user-set]
-    :bindings ([named-component ?active-user-set os ?os-instance]
+    :bindings ([value-of ?active-user-set.os ?os-instance]
                [value-of ?os-instance.authorization-pool ?authorization-pool]
                [value-of ?authorization-pool.users ?user])
     :typing ((?active-user-set user-set)
@@ -369,7 +369,7 @@
 (defattack-method remote-execution-to-remote-shell
     :to-achieve [achieve-remote-execution ?victim-machine ?victim-user]
     :guards ([not [place-already-visited? ?victim-machine remote-execution]])
-    :bindings ([named-component ?victim-machine os ?victim-os]
+    :bindings ([value-of ?victim-machine.os ?victim-os]
 	       [value-of ?victim-os.users ?victim-user])
     :typing ((?victim-os operating-system)
              (?victim-user user)
@@ -415,7 +415,7 @@
 (defattack-method remote-execution-to-code-injection
     :to-achieve [achieve-remote-execution ?victim-machine ?victim-process]
     :guards ([not [place-already-visited? ?victim-machine remote-execution]])
-    :bindings ([named-component ?victim-machine os ?os-instance]
+    :bindings ([value-of ?victim-machine.os ?os-instance]
 	       [value-of ?os-instance.processes ?victim-process])
     :typing ((?os-instance operating-system)
 	     (?victim-process process))
@@ -439,7 +439,7 @@
 (defattack-method remote-execution-to-code-reuse
     :to-achieve [achieve-remote-execution ?victim-machine ?victim-process]
     :guards ([not [place-already-visited? ?victim-machine remote-execution]])
-    :bindings ([named-component ?victim-machine os ?os-instance]
+    :bindings ([value-of ?victim-machine.os ?os-instance]
 	       [value-of ?os-instance.processes ?victim-process])
     :typing ((?os-instance operating-system)
 	     (?victim-process process))
@@ -522,7 +522,7 @@
 (defattack-method modify-job-request-queue
     :to-achieve [increase-size ?user-job-launch-queue]
     :bindings ([value-of ?full-job-launch-queue.user-job-launch-request-queue ?user-job-launch-queue]
-               [named-component ?full-job-launch-queue os ?os-instance]
+               [value-of ?full-job-launch-queue.os ?os-instance]
 	       [value-of ?os-instance.job-launch-queue ?full-job-launch-queue]
 	       [value-of ?attacker.machines ?attacker-machine]
 	       )
@@ -627,7 +627,7 @@
     ;; all this is asking is there a process in the workload
     ;; and if so with which user's permissions is it running
     :bindings ([value-of ?object.machines ?machine]
-               [named-component ?machine os ?os-instance]
+               [value-of ?machine.os ?os-instance]
                [value-of ?os-instance.workload ?os-workload]
                [value-of ?os-workload.user-workload.processes ?the-process]
                [runs-with-permissions-of ?the-process ?user]
@@ -651,7 +651,7 @@
     ;; all this is asking is there a process in the workload
     ;; and if so with which user's permissions is it running
     :bindings ([value-of ?object.machines ?machine]
-               [named-component ?machine os ?os-instance]
+               [value-of ?machine.os ?os-instance]
                [value-of ?os-instance.workload ?os-workload]
                [value-of ?os-workload.server-workload.processes ?the-process]
                [runs-with-permissions-of ?the-process ?user]
@@ -674,11 +674,11 @@
 (defattack-method how-to-achieve-access-right-by-remote-shell-on-target
     :to-achieve [achieve-access-right ?right ?object ?other-user]
     :bindings ([value-of ?object.machines ?machine]
-               [named-component ?machine os ?os-instance]
+               [value-of ?machine.os ?os-instance]
                [requires-access-right ?object ?right ?capability]
 	       [value-of ?os-instance.authorization-pool ?pool]
 	       [current-foothold ?foothold-machine ?foothold-role]
-	       [named-component ?foothold-machine os ?foothold-os]
+	       [value-of ?foothold-machine.os ?foothold-os]
 	       [value-of ?pool.users ?other-user])
     :typing ((?object computer-resource)
              (?machine computer)
@@ -700,7 +700,7 @@
 
 (defattack-method join-active-user-set
     :to-achieve [make-member-of ?user ?active-user-set]
-    :bindings ([named-component ?active-user-set ?os-instance os])
+    :bindings ([value-of ?active-user-set.os ?os-instance])
     :typing ((?active-user-set user-set)
              (?os-instance operating-system))
     :plan (:goal [achieve-remote-shell ?os-instance ?user])
@@ -864,7 +864,7 @@
 (defattack-method direct-foothold
     :to-achieve [get-foothold ?victim-machine ?protocol-name]
     :guards ([not [place-already-visited? ?victim-machine foothold]])
-    :bindings ([named-component ?victim-machine os ?victim-os]
+    :bindings ([value-of ?victim-machine.os ?victim-os]
 	       [current-foothold ?current-foothold-machine ?current-foothold-role]
 	       )
     :typing ((?victim-os operating-system)
@@ -881,7 +881,7 @@
 	     [foothold-doesnt-exist ?victim-machine]
 	     ;; Use this method only if you can't get a connection to the victim from where you are
 	     [not [accepts-connection ?victim-machine ?protocol-name ?current-foothold-machine]])
-    :bindings ([named-component ?victim-machine os ?victim-os]
+    :bindings ([value-of ?victim-machine.os ?victim-os]
 	       ;; Now find somebody that can make the connection, accepts connection will find one if there is one
 	       [current-foothold ?current-foothold-machine ?current-foothold-role]
 	       [accepts-connection ?victim-machine ?protocol-name ?new-foothold-machine]
@@ -948,7 +948,7 @@
 (defattack-method read-network-traffic
     :to-achieve [observe-network-traffic ?attacker ?subnet]
     :bindings ([value-of ?subnet.switch ?switch]
-               [named-component ?switch os ?os]
+               [value-of ?switch.os ?os]
                [value-of ?os.network-monitor ?network-stack])
     :typing ((?subnet switched-subnet)
              (?switch switch)
@@ -1016,7 +1016,7 @@ predicate promising the thing is known.
 	       ;; now find a another (or the same) machine that's on that bus
 	       [connected-to ?victim-machine ? ?bus ?]
 	       ;; then find a process runnning on that machine
-	       [named-component ?victim-machine os ?victim-os]
+	       [value-of ?victim-machine.os ?victim-os]
 	       )
     :prerequisites ([output-of ?sensor-machine ?signal]
 		    ;; the output of the sensor must be an input to
@@ -1082,7 +1082,7 @@ predicate promising the thing is known.
 (defattack-method recruit-to-mirai-botnet
     :to-achieve [affect independence ?cycle-pool]
     :bindings ([value-of ?cycle-pool.machines ?victim-machine]
-	       [named-component ?cycle-pool os ?victim-os]
+	       [value-of ?cycle-pool.os ?victim-os]
 	       [attacker-and-machine ?attacker ?attacker-macine]
 	       )
     :plan (:sequential
@@ -1108,7 +1108,7 @@ predicate promising the thing is known.
     :guards ([not [place-already-visited? ?victim-machine remote-execution]])
     ;; Probably need to implement a browser version binding because this attack is for IE only, the os is most likely always going to be Windows (not sure if I should specify the OS in this case)
     :bindings(;;(break "breaking in bindings")
-              [named-component ?victim-machine os ?victim-os]
+              [value-of ?victim-machine.os ?victim-os]
 	      ;;(break "~a ~a" ?victim-os ?victim-user)
 	      [value-of ?victim-os.users ?victim-user]
 	      )

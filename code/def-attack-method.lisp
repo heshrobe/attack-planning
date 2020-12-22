@@ -252,6 +252,8 @@
       collect `(predication-maker '(ltms:object-type-of ,@form))
       else collect form))
 
+(defparameter *all-attack-methods* nil)
+
 (defmacro defattack-method (method-name &key to-achieve 
 					     (input-state `(logic-variable-maker ,(intern (string-upcase "?input-state"))))
 					     (output-state `(logic-variable-maker ,(intern (string-upcase "?output-state"))))
@@ -267,7 +269,9 @@
 	 (rebuilt-plan-structure (rebuild-plan-structure plan input-state output-state)))
     (destructuring-bind (stuff plan-structure thing) (or rebuilt-plan-structure (list nil nil nil))
       (declare (ignore thing))
-      `(defrule ,method-name (:backward)
+      `(eval-when (:load-toplevel :execute)
+         (pushnew ',method-name *all-attack-methods*)
+         (defrule ,method-name (:backward)
          then ,real-head
          if [and 
 	     ,@(process-bindings bindings input-state)
@@ -279,7 +283,7 @@
 	     ,@(when (null rebuilt-plan-structure)
 	       `((unify ,input-state ,output-state)))
 	     (unify ,plan-variable ,plan-structure)
-	     ]))))
+	     ])))))
 
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -288,7 +292,12 @@
 ;;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
-(defmacro define-goal (name variables) `(define-predicate ,name ,variables (ltms:ltms-predicate-model)))
+(defparameter *all-goals* nil)
+
+(defmacro define-goal (name variables) 
+  `(eval-when (:load-toplevel :execute :compile-toplevel)
+     (pushnew ',name *all-goals*)
+     (define-predicate ,name ,variables (ltms:ltms-predicate-model))))
 
 (define-predicate achieve-goal (goal-to-achieve input-state output-state plan) (ltms:ltms-predicate-model))
 
@@ -362,6 +371,7 @@
       collect `(unify ,lv ,form)))
 
 
+(defparameter *all-actions* nil)
 
 (defmacro define-action (name variables &key bindings prerequisites post-conditions (define-predicate t) capecs outputs typing) 
   (flet ((make-logic-variables (names)
@@ -384,6 +394,7 @@
            (action-variable (first (make-logic-variables '(action)))))
       (destructuring-bind (input-state-variable output-state-variable) state-logic-variables
         `(eval-when (:compile-toplevel :load-toplevel :execute)
+           (pushnew ',name *all-actions*)
            ,@(when define-predicate `((define-predicate ,name ,names (ltms:ltms-predicate-model))))
            (defrule ,rule-name (:backward)
              then [take-action [,name ,@logic-variables] ,@state-logic-variables ,action-variable]
