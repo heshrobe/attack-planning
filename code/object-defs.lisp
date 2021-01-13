@@ -31,10 +31,9 @@
 	  unless (getf (rest slot) :truth-maintenance)
 	  do (setf (getf (rest slot) :truth-maintenance) 'value-of))
       (setf (getf plist :included-object-types) `(,@super-types aplan-object)
-	    (getf plist :tms) t
-	    ;;(getf plist :base-classes) '(aplan-object)
-	    )
-      (remf plist :super-types))
+	    (getf plist :tms) t)
+      (remf plist :super-types)
+      )
     `(define-object-type ,name ,@plist)))
 
 (defmethod ji::part-of-predicate-for-object-type ((thing aplan-object)) 'named-component)

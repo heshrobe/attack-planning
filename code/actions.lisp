@@ -238,21 +238,21 @@
 
 
 
-;;; Actions related to control systems
+;;;  Actions related to control systems
 
-;;; (define-action control (actor network-stack))
+(define-action control (actor network-stack))
 
-;;; (define-action make-observation (actor network-traffic subnet))
+(define-action make-observation (actor network-traffic subnet))
 
-;;; (define-action open-ftp-connection (actor target))
+(define-action open-ftp-connection (actor target))
 
-;;; (define-action open-http-connection (actor target))
+(define-action open-http-connection (actor target))
 
-;;; (define-action trasmit-data (actor data target))
+(define-action trasmit-data (actor data target))
 
-;;;(define-action issue-false-sensor-data-report (?controller-machine ?victim-machine ?bus ?sensor-type)
-;;;  :prerequisites ()
-;;;  :post-conditions ()
-;;;  )
+(define-action issue-false-sensor-data-report (?controller-machine ?victim-machine ?bus ?sensor-type)
+  :prerequisites ()
+  :post-conditions ()
+  )
 
 
