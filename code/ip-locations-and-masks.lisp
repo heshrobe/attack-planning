@@ -329,7 +329,7 @@
 (defun create-ip-address (ip-address-string)
   (let* ((octets (parse-ip-address ip-address-string))
          (name (intern (apply #'format nil "IP-~d.~d.~d.~d" octets)))
-         (ip-address (or (follow-path (list name) t nil) (make-object 'ip-address :name name))))
+         (ip-address (or (follow-path (list name) t nil nil) (make-object 'ip-address :name name))))
     (loop for octet in '(octet1 octet2 octet3 octet4)
           for value in octets
           do (tell `[value-of (,ip-address ,octet) ,value]))

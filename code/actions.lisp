@@ -101,7 +101,11 @@
   )
 
 (defrule process-control-is-remote-execution (:forward)
-  if [in-state [controls-process ?attacker ?victim-process ?any-means] ?state]
+  if [and [in-state [controls-process ?attacker ?victim-process ?any-means] ?state]
+          [object-type-of ?victim-process process]
+          [in-state [value-of (?victim-process host-os) ?os-instance] ?state]
+          [object-type-of ?os-instance operating-system]
+          [in-state [value-of (?os-instance machine) ?victim-machine] ?state]]
   then [in-state [has-remote-execution ?attacker ?victim-machine ?victim-process] ?state]
   )
 

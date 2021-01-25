@@ -15,7 +15,7 @@
 (defrule web-server-vulnerable-to-buffer-overflow (:forward)
   If [and [object-type-of ?thing web-server-process]
           [not [protected-from ?thing buffer-overflow-attack http]]]
-  then [vulnerable-to ?thing buffer-overflow-attack http])
+  then [is-vulnerable-to ?thing buffer-overflow-attack http])
 
 #|
 

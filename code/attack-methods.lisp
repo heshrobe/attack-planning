@@ -302,14 +302,14 @@
 (defattack-method modify-through-access-rights
     :to-achieve [modify ?object-property ?object]
     :bindings ([value-of ?object.machines ?computer]
-	       [attacker-and-machine ?attacker ?attacker-computer]
+               [attacker-and-machine ?attacker ?attacker-computer]
 	       [current-foothold ?current-foothold-computer ?current-foothold-role])
     :typing ((?computer computer))
     ;; Use this only if you don't already have the required capability
     ;; (what if more than one capability implies the right?  Shouldn't
     ;; we check that he doesn't have any of them).
     :plan (:sequential
-	   (:goal [achieve-access-right write ?object ?other-role])
+           (:goal [achieve-access-right write ?object ?other-role])
 	   (:goal [make-connection ?computer database-protocol])
 	   (:action [use-access-right-to-modify ?attacker write ?other-role ?current-foothold-computer ?object ?computer]))
     )
