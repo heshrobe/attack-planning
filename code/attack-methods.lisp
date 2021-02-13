@@ -287,12 +287,20 @@
 ;;; but it will do for now.
 (defattack-method modify-loadable-code
     :to-achieve [modify ?file-property ?object-file]
-    :bindings ([value-of ?object-file.source-file ?source-file])
     :typing ((?object-file dynamically-loadable-code-file))
+    ;; This would normally be a binding except that
+    ;; the source-file field is only present in object-files
+    ;; so the typing has to be done first to prevent trying to do this
+    ;; extraction on the wrong kind of thing.
+    :prerequisites ([value-of ?object-file.source-file ?source-file])
     :plan (:sequential
 	   (:goal [modify code ?source-file])
 	   (:goal [force-compilation ?attacker ?source-file ?object-file]))
     )
+
+;;; The method compiler could be more clever about placement of bindings
+;;; and typing.  Typing of stuff that's available before binding can be move up
+;; in the if-part.
 
 ;;; Here ?user is again feedback to the caller about whose rights you got
 ;;; Is that different than ?foothold role ?

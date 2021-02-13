@@ -264,6 +264,32 @@
 		  truth-value (negate-truth-value truth-value)))
 	  (ask-data internal-pred nil #'handle-predicate)))))))
 
+
+
+;;; There's an issue with slot-value-mixin's where the path starts with a variable
+;;; In that case you have to figure out the type from the context and then
+;;; Map-over the sub-types
+(define-predicate-method (prefetch-forward-rule-matches stateful-predicate-mixin :around) (context continuation)
+  (with-statement-destructured (internal-pred state) self
+    (if (typep internal-pred 'slot-value-mixin)
+        ;; Fetch all the relevant slot-value assertions
+        ;; If the first element of the path is a variable
+        ;; this will map over the object hierarchy otherwise just fetches
+        ;; the single relevant slot-value assertion
+        (prefetch-forward-rule-matches 
+         internal-pred context
+         #'(lambda (value-of-pred)
+             ;; Now for each of those, find the stateful predication
+             ;; and then do the right thing
+             (ask-data `[,(predication-predicate self) ,value-of-pred ,state]
+                       (predication-truth-value self)
+                       #'(lambda (derivation)
+                           (funcall continuation (ask-database-predication derivation))))))
+      ;; for all other types of internal preds, just do the normal thing
+      (call-next-method))))
+  
+
+
 (define-predicate in-state (predication state) (stateful-predicate-mixin ltms:ltms-predicate-model))
 
 (defun is-predecessor-of (state1 state2)

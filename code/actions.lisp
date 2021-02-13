@@ -110,10 +110,10 @@
   )
 
 (define-action launch-code-reuse-attack (?attacker ?victim-process ?protocol ?foothold-machine ?foothold-role)
-  :bindings ([current-foothold ?foothold-machine ?foothold-role] 
+  :bindings ([current-foothold ?foothold-machine ?foothold-role]
 	     [value-of ?victim-process.host-os ?victim-os]
 	     [value-of ?victim-os.machine ?victim-machine])
-  :prerequisites ([has-foothold ?victim-machine ?foothold-machine ?foothold-role ?protocol] 
+  :prerequisites ([has-foothold ?victim-machine ?foothold-machine ?foothold-role ?protocol]
 		  [is-vulnerable-to ?victim-process buffer-overflow-attack ?protocol]
 		  [connection-established ?foothold-machine ?victim-machine ?protocol-name])
   :post-conditions ([controls-process ?attacker ?victim-process code-reuse])
@@ -197,8 +197,8 @@
 (define-action open-ftp-connection (?user ?from-machine ?to-machine)
   :prerequisites ([accepts-connection ?to-machine ftp ?from-machine])
   :post-conditions ([connection-established ?from-machine ?to-machine ftp]))
-                   
-(define-action trasmit-data (?user ?file ?from-machine ?to-machine)
+
+(define-action transmit-data (?user ?file ?from-machine ?to-machine)
   :prerequisites ([connection-established ?from-machine ?to-machine ftp])
   :post-conditions ([data-exfiltrated ?file ?from-machine ?to-machine]))
 
@@ -237,26 +237,29 @@
   :prerequisites ([system-role ?object key-for ?key])
   :outputs ((?decrypted-thing (make-object (type-of ?object) :name (make-name (role-name ?object)))))
   :post-conditions ([knows ?attacker decryped-value ?object ?decrypted-thing]))
-  
+
 
 
 
 
 ;;;  Actions related to control systems
 
-(define-action control (actor network-stack))
+(define-action control (actor network-stack)
+  :prerequisites ()
+  :post-conditions ()
+  )
 
-(define-action make-observation (actor network-traffic subnet))
+(define-action make-observation (actor network-traffic subnet)
+  :prerequisites ()
+  :post-conditions ())
 
-(define-action open-ftp-connection (actor target))
+(define-action open-http-connection (actor target)
+  :prerequisites ()
+  :post-conditions ())
 
-(define-action open-http-connection (actor target))
-
-(define-action trasmit-data (actor data target))
+;; (define-action trasmit-data (actor data target))
 
 (define-action issue-false-sensor-data-report (?controller-machine ?victim-machine ?bus ?sensor-type)
   :prerequisites ()
   :post-conditions ()
   )
-
-
