@@ -87,7 +87,7 @@
 	     [current-foothold ?current-foothold-machine ?current-foothold-role]
 	     [value-of ?victim-os-instance.machine ?victim-machine])
   :prerequisites ([connection-established ?current-foothold-machine ?victim-machine ?protocol-name]
-		  [knows-credentials ?attacker ?victim-user])
+                  [knows-credentials ?attacker ?victim-user])
   :post-conditions ([is-logged-in ?attacker ?victim-user ?victim-os ?victim-machine])
   )
 

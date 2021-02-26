@@ -541,7 +541,7 @@
 	    (user-set )
 	    (superuser :set-valued t :Initform nil)
 	    (machine )
-	    (users  :set-valued t :Initform nil)
+	    (users :set-valued t :Initform nil)
 	    (job-launch-queue ) 
 	    (processes :set-valued t ))
     :initializations ((make-workload-for-os self)

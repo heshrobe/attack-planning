@@ -215,6 +215,9 @@
 (define-aplan-predicate protected-from (thing attack protocol) (non-stateful-predicate-model))
 (define-aplan-predicate vulnerable-to-capec (thing capec cve-number) (non-stateful-predicate-model))
 
+;;; 
+(define-aplan-predicate bind (thing1 thing2) (ji:unification-model non-stateful-predicate-model))
+
 ;;; I think I got rid of the need for these.
 ;;; (define-aplan-predicate vulnerable-to (thing attack) (non-stateful-predicate-model))
 ;;; (define-predicate vulnerable-to-overflow-attack (process protocol) (ltms:ltms-predicate-model))
