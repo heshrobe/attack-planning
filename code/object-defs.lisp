@@ -523,9 +523,14 @@
   (with-atomic-action
       (let* ((os-name (role-name os-instance))
 	     (new-name (gentemp (concatenate 'string (string-upcase "job-launch-queue") "-" (string os-name) "-")))
-	     (job-launch-queue (make-object 'os-job-launch-request-queue :name new-name)))
+	     (job-launch-queue (make-object 'os-job-launch-request-queue :name new-name))
+             (user-job-launch-queue (subpart-named job-launch-queue 'user-job-launch-request-queue))
+             (server-job-launch-queue (subpart-named job-launch-queue 'server-job-launch-request-queue)))        
 	(tell `[value-of (,job-launch-queue os) ,os-instance])
-	(tell `[value-of (,os-instance job-launch-queue) ,job-launch-queue]))))
+	(tell `[value-of (,os-instance job-launch-queue) ,job-launch-queue])
+        (tell `[value-of (,user-job-launch-queue os) ,os-instance])
+        (tell `[value-of (,server-job-launch-queue os) ,os-instance])
+        )))
 
 ;;; Note:  This organization is probably wrong
 ;;; We probably want to characterize machines by their make and model number

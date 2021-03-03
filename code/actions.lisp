@@ -64,7 +64,7 @@
   :bindings ([value-of ?email-message.attachments ?attachment]
              [value-of ?attachment.application ?application-type])
   :typing ((?email-message email-message)
-            (?attachment application-file))
+           (?attachment application-file))
   :post-conditions ([file-clicked-on ?user ?attachment ?application-type])
   )
 

@@ -165,9 +165,9 @@
 
 (defattack-method mung-database
     :to-achieve [affect data-integrity ?database]
-    :bindings ([current-foothold ?current-foothold-machine ?current-foothold-role])
+    :bindings ([current-foothold ?current-foothold-machine ?current-foothold-role] )
     :typing ((?database database)
-	     (?current-foothold-role attacker))
+             (?current-foothold-role attacker))
     ;; This is wrong.
     ;; We need to find out who has permission to make a
     :prerequisites ()
@@ -353,7 +353,7 @@
     :to-achieve [achieve-remote-execution ?victim-machine ?victim-user]
     :outputs (?victim-user)
     :guards ([not [place-already-visited? ?victim-machine remote-execution]])
-    :bindings ([bind ?victim-machine.os.users ?victim-user])
+    :bindings ((?victim-user ?victim-machine.os.users))
     :typing ((?victim-machine.os operating-system)
              (?victim-machine.os.users user)
 	     (?victim-machine computer))
@@ -385,7 +385,7 @@
 	       ;; will happen is that foothold not the current one (they might be
 	       ;; the same in some cases);
                ;; [current-foothold ?current-foothold-machine ?current-foothold-role]
-               [value-of ?victim-os-instance.machine ?victim-computer]
+               (?victim-computer ?victim-os-instance.machine)
 	       [attacker-and-machine ?attacker ?attacker-machine]
 	       [protocol-for remote-execution remote-shell ?protocol])
     :typing ((?victim-os-instance operating-system)
@@ -432,7 +432,7 @@ Test case for how the early-typing hack works in the method compiler
 (defattack-method remote-execution-to-code-injection
     :to-achieve [achieve-remote-execution ?victim-machine ?victim-process]
     :guards ([not [place-already-visited? ?victim-machine remote-execution]])
-    :bindings ([value-of ?victim-machine.os.processes ?victim-process])
+    :bindings ((?victim-process ?victim-machine.os.processes))
     :typing ((?victim-machine.os operating-system)
              (?victim-machine computer)
 	     (?victim-machine.os.processes process))
@@ -459,7 +459,7 @@ Test case for how the early-typing hack works in the method compiler
     :to-achieve [achieve-remote-execution ?victim-machine ?victim-process]
     :outputs (?victim-process)
     :guards ([not [place-already-visited? ?victim-machine remote-execution]])
-    :bindings ([bind ?victim-machine.os.processes ?victim-process])
+    :bindings ((?victim-process ?victim-machine.os.processes))
     :prerequisites ([value-of ?victim-process.host-os ?victim-machine.os])
     :typing ((?victim-machine.os operating-system)
 	     (?victim-process process))
@@ -470,7 +470,7 @@ Test case for how the early-typing hack works in the method compiler
 ;;; Note that ?process is an input and is bound at this point
 (defattack-method code-reuse-against-web-server
     :to-achieve [achieve-code-reuse ?process ?os-instance]
-    :bindings ([value-of ?process.machines ?victim-machine]
+    :bindings ((?victim-machine ?process.machines)
 	       [attacker-and-machine ?attacker ?attacker-machine])
     :typing ((?process web-server-process)
              (?process.host-os operating-system))
@@ -485,7 +485,7 @@ Test case for how the early-typing hack works in the method compiler
     :to-achieve [achieve-remote-execution ?victim-machine ?victim-user]
     :outputs (?victim-user)
     :guards ([not [place-already-visited? ?victim-machine remote-execution]])
-    :bindings ([bind ?victim-machine.os.users ?victim-user]
+    :bindings ((?victim-user ?victim-machine.os.users)
                [attacker-and-machine ?attacker ?attacker-machine])
     :typing ((?victim-user user)
              (?process process))
@@ -500,11 +500,10 @@ Test case for how the early-typing hack works in the method compiler
 (defattack-method remote-execution-via-corrupt-email
     :to-achieve [get-user-to-click-on ?attacker ?victim-user ?attachment ?new-process]
     :bindings ([email-client-of ?victim-user ?email-process]
-               [value-of ?victim-user.machines ?victim-computer]
-               [value-of ?victim-computer.os ?victim-os]
-	       [value-of ?email-process.host-os.machine ?email-server-machine]
-	       [attacker-and-machine ?attacker ?attacker-machine]
-               [attacker-and-machine ?attacker ?attacker-machine]
+               (?victim-computer ?victim-user.machines)
+               (?victim-os ?victim-computer.os)
+	       (?email-server-machine ?email-process.host-os.machine)
+	       [attacker-and-machine ?attacker-machine ?attacker]
 	       )
     ;; Note that the typing for normal-user implies that
     ;; you can't throw this at a sysadmin
@@ -540,8 +539,8 @@ Test case for how the early-typing hack works in the method compiler
 ;;; They can affect performance by adding jobs
 (defattack-method add-jobs-after-job-launcher-is-hacked
     :to-achieve [use-control-of-to-affect-resource ?attacker ?controller performance ?target]
-    :bindings ([value-of ?os.job-admitter ?controller]
-               [value-of ?os-instance.workload ?input])
+    :bindings ((?controller ?os.job-admitter)
+               (?input ?os-instance.workload))
     :typing ((?controller os-job-admitter)
              (?os operating-system)
              (?input os-workload)
@@ -549,19 +548,15 @@ Test case for how the early-typing hack works in the method compiler
     :plan (:action [add-user-jobs ?attacker ?input])
     )
 
+
 (defattack-method modify-job-request-queue
     :to-achieve [increase-size ?user-job-launch-queue]
-    :bindings ([value-of ?full-job-launch-queue.user-job-launch-request-queue ?user-job-launch-queue]
-               [value-of ?full-job-launch-queue.os ?os-instance]
-	       [value-of ?os-instance.job-launch-queue ?full-job-launch-queue]
-	       [attacker-and-machine ?attacker ?attacker-machine]
-	       )
+    :bindings ([attacker-and-machine ?attacker ?attacker-machine])
     :typing ((?user-job-launch-queue job-launch-request-queue)
-             (?full-job-launch-queue os-job-launch-request-queue)
-             (?os-instance operating-system)
+             (?user-job-launch-queue.os.machine computer)
 	     (?attacker-machine computer))
     :plan (:sequential
-           (:goal [achieve-remote-execution ?os-instance ?entity])
+           (:goal [achieve-remote-execution ?user-job-launch-queue.os.machine ?entity])
            (:repeated-action [submit-user-jobs ?entity ?user-job-launch-queue])))
 
 ;;; If you control a process that produces an output
@@ -601,9 +596,8 @@ Test case for how the early-typing hack works in the method compiler
 ;;; If your foothold role already has the access rights
 ;;; do nothing
 (defattack-method achieve-a-right-you-already-have
-    :to-achieve [achieve-access-right ?right ?object ?role]
-    :bindings ([current-foothold ?foothold-machine ?foothold-role]
-	       [bind ?foothold-role ?role])
+    :to-achieve [achieve-access-right ?right ?object ?foothold-role]
+    :bindings ([current-foothold ?foothold-machine ?foothold-role])
     :guards ([has-permission ?foothold-role ?right ?object])
     :plan ()
     )
@@ -622,8 +616,8 @@ Test case for how the early-typing hack works in the method compiler
     :bindings ([current-foothold ?foothold-machine ?foothold-role]
 	       [attacker-and-machine ?attacker ?attacker-machine]
                [has-remote-execution ?attacker ?victim-computer ?victim-role]
-               [value-of (?victim-computer os) ?victim-os]
-               [value-of (?object authorization-pool) ?domain]
+               (?victim-os ?victim-computer.os)
+               (?domain ?object.authorization-pool)
                [requires-access-right ?object ?right ?domain-admin]
                [system-role ?domain domain-administrator ?domain-administrator]
                )
@@ -683,18 +677,12 @@ Test case for how the early-typing hack works in the method compiler
     :outputs (?user)
     ;; all this is asking is there a process in the workload
     ;; and if so with which user's permissions is it running
-    :bindings ([value-of ?object.machines ?machine]
-               [value-of ?machine.os ?os-instance]
-               [value-of ?os-instance.workload ?os-workload]
-               [value-of ?os-workload.server-workload.processes ?the-process]
+    :bindings ((?the-process ?object.machines.os.workload.server-workload.processes)
                [runs-with-permissions-of ?the-process ?user]
 	       [attacker-and-machine ?attacker ?attacker-machine]
 	       [current-foothold ?foothold-machine ?foothold-role]
                )
     :typing ((?object computer-resource)
-             (?machine computer)
-             (?os-instance operating-system)
-             (?os-workload os-workload)
              (?the-process process)
              )
     ;; This is the key pre-req: The process has the desired right to the object
@@ -712,9 +700,9 @@ Test case for how the early-typing hack works in the method compiler
                [value-of ?machine.os ?os-instance]
                [requires-access-right ?object ?right ?capability]
 	       [value-of ?os-instance.authorization-pool ?pool]
+	       [value-of ?pool.users ?other-user]
 	       [current-foothold ?foothold-machine ?foothold-role]
-	       [value-of ?foothold-machine.os ?foothold-os]
-	       [value-of ?pool.users ?other-user])
+	       [value-of ?foothold-machine.os ?foothold-os])
     :typing ((?object computer-resource)
              (?machine computer)
              (?os-instance operating-system)
@@ -736,7 +724,7 @@ Test case for how the early-typing hack works in the method compiler
 
 (defattack-method join-active-user-set
     :to-achieve [make-member-of ?user ?active-user-set]
-    :bindings ([value-of ?active-user-set.os ?os-instance])
+    :bindings ((?os-instance ?active-user-set.os))
     :typing ((?active-user-set user-set)
              (?os-instance operating-system))
     :plan (:goal [achieve-remote-shell ?os-instance ?user])
@@ -851,7 +839,7 @@ Test case for how the early-typing hack works in the method compiler
     :typing ((?user user)
              (?victim-machine computer)
              (?subnet subnet))
-    :bindings ([value-of ?victim-machine.subnets ?subnet])
+    :bindings ((?subnet ?victim-machine.subnets))
     :plan (:parallel
            (:goal [observe-network-traffic ?attacker ?subnet])
            (:action [sniff-a-password ?attacker ?user ?subnet]))
@@ -900,7 +888,7 @@ Test case for how the early-typing hack works in the method compiler
 (defattack-method direct-foothold
     :to-achieve [get-foothold ?victim-machine ?protocol-name]
     :guards ([not [place-already-visited? ?victim-machine foothold]])
-    :bindings ([value-of ?victim-machine.os ?victim-os]
+    :bindings ((?victim-os ?victim-machine.os)
 	       [current-foothold ?current-foothold-machine ?current-foothold-role]
 	       )
     :typing ((?victim-os operating-system)
@@ -913,7 +901,7 @@ Test case for how the early-typing hack works in the method compiler
 
 (defattack-method lateral-motion
     :to-achieve [get-foothold ?victim-machine ?protocol-name]
-    :bindings ([value-of ?victim-machine.os ?victim-os]
+    :bindings ((?victim-os ?victim-machine.os)
 	       ;; Now find somebody that can make the connection, accepts connection will find one if there is one
 	       [current-foothold ?current-foothold-machine ?current-foothold-role])
     :guards ([not [place-already-visited? ?victim-machine foothold]]
@@ -966,7 +954,7 @@ Test case for how the early-typing hack works in the method compiler
 
 (defattack-method control-the-network-stack
     :to-achieve [takes-direct-control-of ?attacker ?stack-property ?network-stack]
-    :bindings ([value-of (?network-stack host-os) ?os-instance]
+    :bindings ([value-of ?network-stack.host-os ?os-instance]
 	       [value-of ?os-instance.network-monitor ?network-stack]
                [value-of ?os-instance.superuser ?superuser]
 	       [attacker-and-machine ?attacker ?attacker-machine])
@@ -1039,7 +1027,7 @@ predicate promising the thing is known.
 
 (defattack-method fake-sensor-data
     :to-achieve [affect accuracy ?controller-process]
-    :bindings ([value-of ?controller-process.machines ?controller-machine]
+    :bindings ((?controller-machine ?controller-process.machines)
 	       ;; does that machine play the part of a controller in some control system
 	       [system-role ?system controller ?controller-machine]
 	       ;; if so find a sensor in that same system
@@ -1050,7 +1038,7 @@ predicate promising the thing is known.
 	       ;; now find a another (or the same) machine that's on that bus
 	       [connected-to ?victim-machine ? ?bus ?]
 	       ;; then find a process runnning on that machine
-	       [value-of ?victim-machine.os ?victim-os]
+	       (?victim-os ?victim-machine.os)
 	       )
     :prerequisites ([output-of ?sensor-machine ?signal]
 		    ;; the output of the sensor must be an input to
@@ -1138,9 +1126,8 @@ predicate promising the thing is known.
     :guards ([not [place-already-visited? ?victim-machine remote-execution]])
     ;; Probably need to implement a browser version binding because this attack is for IE only, 
     ;; the os is most likely always going to be Windows (not sure if I should specify the OS in this case)
-    :bindings([value-of ?victim-machine.os ?victim-os]
-	      [value-of ?victim-os.users ?victim-user]
-	      )
+    :bindings((?victim-os ?victim-machine.os)
+	      (?victim-user ?victim-os.users))
     :typing ((?victim-machine computer)
              (?victim-user user)
              (?process browser-process)

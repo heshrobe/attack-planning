@@ -227,29 +227,33 @@
    (t nil)))
 
 (defun de-prettify-binding (assertion)
-  (cond
-   ;; this case is a legacy since the implicit binding machinery 
-   ;; would have already taken care of the dotted-path notation
-   ;; But we need to keep it until define-action is updated with 
-   ;; the implicit binding machinery
-   ((predication-maker-p assertion)
-    (with-predication-maker-destructured  (path logic-variable) assertion
-      (flet ((process-path (list-of-strings)
-               (loop for thing in list-of-strings
-		   if (char-equal (aref thing 0) #\?)
-		   collect (ji::make-logic-variable-maker (intern thing))
-		   else collect (intern thing))))
+  (flet ((process-path (list-of-strings)
+           (loop for thing in list-of-strings
+               if (char-equal (aref thing 0) #\?)
+               collect (ji::make-logic-variable-maker (intern thing))
+               else collect (intern thing))))
+    (cond
+     ((predication-maker-p assertion)
+      (with-predication-maker-destructured  (path logic-variable) assertion
         (if (logic-variable-maker-p path)
             (let* ((name (logic-variable-maker-name path))
                    (exploded-path (explode-string name #\.))
                    (real-path (cons (ji::make-logic-variable-maker (intern (first exploded-path)))
                                     (process-path (rest exploded-path)))))
-              `(predication-maker '(value-of ,real-path ,logic-variable)))
+              (ji:make-predication-maker `(value-of ,real-path ,logic-variable)))
           (let ((expanded-path (process-path (explode-string path #\.))))
+            (ji:make-predication-maker `(value-of ,expanded-path ,logic-variable))))))
+     ((and (listp assertion) (eql (length assertion) 2) (logic-variable-maker-p (first assertion)))
+      (destructuring-bind (logic-variable path) assertion
+        (if (logic-variable-maker-p path)
+            (let* ((name (logic-variable-maker-name path))
+                   (exploded-path (explode-string name #\.))
+                   (real-path (cons (ji::make-logic-variable-maker (intern (first exploded-path)))
+                                    (process-path (rest exploded-path)))))
+              (ji:make-predication-maker `(value-of ,real-path ,logic-variable)))
+          (let ((expanded-path (process-path (explode-string path #\.))))
+            (ji:make-predication-maker `(value-of ,expanded-path ,logic-variable)))))))))
 
-            `(predication-maker '(value-of ,expanded-path ,logic-variable)))))))
-   ((and (listp assertion) (eql (length assertion) 2) (logic-variable-maker-p (first assertion)))
-    `(predication-maker '(value-of ,(second assertion) ,(first assertion))))))
 
 (defun process-bindings (assertions input-state)
   (let ((expanded-bindings (loop for assertion in assertions
@@ -284,13 +288,13 @@
       if (and (listp form) (eql (first form) :break))
          collect `(break ,@(rest form))
       else if (and (listp form) (= (length form) 2))
-      collect `(predication-maker '(ltms:object-type-of ,@form))
+      collect (destructuring-bind (thing type) form
+                (ji:make-predication-maker `(ltms:object-type-of ,thing ,type)))
       else collect form))
 
 (defun mentioned-in? (lv-maker set-of-forms)
-  (let ((name (logic-variable-maker-name lv-maker)))
+  (let ((name (if (symbolp lv-maker) lv-maker (logic-variable-maker-name lv-maker))))
     (labels ((in? (form)
-               ;; (format t "~%Testing ~a in ~a" name form)
                (cond
                 ((logic-variable-maker-p form)
                  (if (eql name (logic-variable-maker-name form))
@@ -334,7 +338,7 @@
 ;;;  e.g.  ?foo.bar.baz.  Whenever one of these is found a binding of the form [value-of (?foo bar bar) ?lv-xxx]
 ;;; is generated and all references to ?foo.bar.baz are replaced by ?lv-xxx.  This is just a notational convenience.
 ;;; If ?foo.bar.baz is frequently referenced, it's easier to make an explicit binding in the bindings section.
-;;; These implicit bindings are place just in front of the first reference to ?foo.bar.baz.
+;;; These implicit bindings are placed just in front of the first reference to ?foo.bar.baz.
 ;;;
 ;;; The order of the generated code:
 ;;; Early typing: typing that only references the inputs
@@ -357,6 +361,9 @@
 ;;; But there is a simplified notation when you just want to bind a variable to the value
 ;;; indicated by a dotted-path.  In that case, you can just use a list of length 2
 ;;; with the variable coming first and the path second.
+;;; Fix: When you use this simplified notation and they chain, for example:
+;;; (?a ...) (? ?a.xxx) this screws up the ordering, but no when you use
+;;; explicit value-of assertions
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 (defparameter *all-attack-methods* nil)
@@ -364,84 +371,61 @@
 (defmacro defattack-method (method-name &key to-achieve 
 					     (input-state `(logic-variable-maker ,(intern (string-upcase "?input-state"))))
 					     (output-state `(logic-variable-maker ,(intern (string-upcase "?output-state"))))
-					     guards 
-					     bindings
-					     prerequisites
+					     bindings 
+					     guards
 					     typing
+					     prerequisites
 					     plan
 					     post-conditions
-                                             outputs
+                                             outputs ;; Marks that variables in the to-achieve that are bound during execution
 					     )
   (let* ((plan-variable `(logic-variable-maker ,(gensym "?PLAN")))
          (real-head `(predication-maker '(achieve-goal ,to-achieve ,input-state  ,output-state ,plan-variable)))
          (rebuilt-plan-structure (rebuild-plan-structure plan input-state output-state))
-         (early-typing nil)
-         (late-typing nil)
-         (bindings-for-typing nil)
-         (bindings-for-bindings nil)
-         (bindings-for-prereqs nil) 
-         (bindings-for-post-conditions nil) 
-         (bindings-for-plan nil)
          )
-    ;; First find all implicit bindings i.e. things of the form ?foo.bar.baz and note where the first reference occurs
-    ;; Also for each generate a new logic-variable-maker
-    (multiple-value-bind (all-refs hidden-bindings-alist) (find-bindings prerequisites post-conditions typing plan bindings)
-      ;; Now replace all these implicit references by the corresponding logic-variable-maker
-      (multiple-value-setq (prerequisites post-conditions typing bindings plan)
-        (substitute-all-hidden-variables prerequisites post-conditions typing bindings plan all-refs))
-      ;; Pull out all typing that refers only to the inputs 
-      ;; And then leave the rest as late-typing.
-      ;; This makes the first category act as prerequisites because they will be the first thing checked.
-      ;; The reason for constraining them to only refer to inputs is that the generate code is an [objec-type-of xxx yyy]
-      ;; form and if xxx is an unbound variable, this will successively bind xxx to all possible objects of type yyy
-      ;; which isn't what we intended for a typing statement.  This requires us to declare any variable in the to-achieve
-      ;; form that won't be bound as an "output".  That's probably a good thing to do anyhow, rather than just have it in a comment.
-      (setq early-typing (loop for type in typing 
-                             for variable = (first type) 
-                             if (and (eql variable :break) (loop for var in (rest (rest type)) thereis (mentioned-in var real-head)))
-                             collect type
-                             else when (and (mentioned-in? variable real-head) (not (member (logic-variable-maker-name variable) outputs :key #'logic-variable-maker-name)))
-                             collect type))
-      (setq late-typing (set-difference typing early-typing :test #'equal))
-      (loop for (dotted-form lv) in (second (assoc 'prerequisites hidden-bindings-alist))
-          do (push (ji:make-predication-maker `(value-of ,dotted-form ,lv)) bindings-for-prereqs))
-      (loop for (dotted-form lv) in (second (assoc 'typing hidden-bindings-alist))
-          do (push (ji:make-predication-maker `(value-of ,dotted-form ,lv)) bindings-for-typing))
-      (loop for (dotted-form lv) in (second (assoc 'post-conditions hidden-bindings-alist))
-          do (push (ji:make-predication-maker `(value-of ,dotted-form ,lv)) bindings-for-post-conditions))
-      (loop for (dotted-form lv) in (second (assoc 'bindings hidden-bindings-alist))
-          do (push (ji:make-predication-maker `(value-of ,dotted-form ,lv)) bindings-for-bindings))
-      (loop for (dotted-form lv) in (second (assoc 'plan hidden-bindings-alist))
-          do (push (ji:make-predication-maker `(value-of ,dotted-form ,lv)) bindings-for-plan))
-      (destructuring-bind (goals-to-achieve plan-structure thing) (or rebuilt-plan-structure (list nil nil nil))
-        (declare (ignore thing))
-        (setq goals-to-achieve (substitute-hidden-variables goals-to-achieve all-refs)
-              plan-structure (substitute-hidden-variables plan-structure all-refs))
-        `(eval-when (:load-toplevel :execute)
-           (pushnew ',method-name *all-attack-methods*)
-           ;; Now generate the backward rule
-           ;; Note that by this time, any dotted notation in a binding form
-           ;; will have been removed so the process-bindings code can be simplified.
-           (defrule ,method-name (:backward)
-             then ,real-head
-             if [and 
-                 ,@(process-typing early-typing)
-                 ,@(process-bindings bindings-for-bindings input-state)
-                 ,@(process-bindings bindings-for-typing input-state)
-                 ,@(process-bindings bindings input-state)
-                 ,@(process-guards guards input-state)
-                 ,@(process-typing late-typing)
-                 ,@(process-bindings bindings-for-prereqs input-state)
-                 ,@(process-prerequisites prerequisites input-state)
-                 ,@(process-bindings bindings-for-plan input-state)
-                 ,@goals-to-achieve
-                 ;; I think these refer to the input state ???
-                 ,@(process-bindings bindings-for-post-conditions input-state)
-                 ,@(process-post-conditions post-conditions output-state)
-                 ,@(when (null rebuilt-plan-structure)
-                     `((unify ,input-state ,output-state)))
-                 (unify ,plan-variable ,plan-structure)
-                 ]))))))
+    ;; Pull out all typing that refers only to the inputs 
+    ;; And then leave the rest as late-typing.
+    ;; This makes the first category act as prerequisites because they will be the first thing checked.
+    ;; The reason for constraining them to only refer to inputs is that the generate code is an [objec-type-of xxx yyy]
+    ;; form and if xxx is an unbound variable, this will successively bind xxx to all possible objects of type yyy
+    ;; which isn't what we intended for a typing statement.  This requires us to declare any variable in the to-achieve
+    ;; form that won't be bound as an "output".  That's probably a good thing to do anyhow, rather than just have it in a comment.
+    (multiple-value-bind (early-typing late-typing)
+        (loop for type in typing 
+            for variable = (first type) 
+            if (and (eql variable :break) (loop for var in (rest (rest type)) thereis (mentioned-in? var real-head)))
+            collect type into early
+            else when (and (mentioned-in? variable real-head) (not (member (logic-variable-maker-name variable) outputs :key #'logic-variable-maker-name)))
+            collect type into early
+            else collect type into late
+            finally (return (values early late)))
+      ;; First find all implicit bindings i.e. things of the form ?foo.bar.baz and note where the first reference occurs
+      ;; Also for each generate a new logic-variable-maker
+      (multiple-value-bind (all-refs hidden-bindings-alist) (find-hidden-bindings guards prerequisites post-conditions late-typing plan bindings)
+        ;; (break "~a~%~{~a~^~%~}" all-refs hidden-bindings-alist)
+        (destructuring-bind (goals-to-achieve plan-structure thing) (or rebuilt-plan-structure (list nil nil nil))
+          (declare (ignore thing))
+          (setq goals-to-achieve (substitute-hidden-bindings goals-to-achieve all-refs)
+                plan-structure (substitute-hidden-bindings plan-structure all-refs))
+          `(eval-when (:load-toplevel :execute)
+             (pushnew ',method-name *all-attack-methods*)
+             ;; Now generate the backward rule
+             ;; Note that by this time, any dotted notation in a binding form
+             ;; will have been removed so the process-bindings code can be simplified.
+             (defrule ,method-name (:backward)
+               then ,real-head
+               if [and 
+                   ,@(process-typing early-typing)
+                   ,@(process-assertions (merge-and-substitute-hidden-bindings bindings all-refs hidden-bindings-alist 'bindings) input-state)
+                   ,@(merge-and-substitute-hidden-bindings (process-guards guards input-state) all-refs hidden-bindings-alist 'guards)
+                   ,@(merge-and-substitute-hidden-bindings (process-typing late-typing) all-refs hidden-bindings-alist 'typing)
+                   ,@(merge-and-substitute-hidden-bindings (process-prerequisites prerequisites input-state) all-refs hidden-bindings-alist 'prerequsities)
+                   ,@(merge-and-substitute-hidden-bindings goals-to-achieve all-refs hidden-bindings-alist 'plan)
+                   ,@(merge-and-substitute-hidden-bindings (process-post-conditions post-conditions output-state) all-refs hidden-bindings-alist 'post-conditions)
+                   ,@(when (null rebuilt-plan-structure)
+                       `((unify ,input-state ,output-state)))
+                   (unify ,plan-variable ,plan-structure)
+                   ])))))))
 
 
 
@@ -461,19 +445,41 @@
 ;;; don't make an entry if it's already there
 ;;; need to distinguish what you need to substitute vs
 ;;; what new bindings need to be introduced for each category
+;;; Because this records the first mention of each variable it's important
+;;; that the scanning happens in the same order as the generated code, which is:
+;;;
+;;; Early typing that depends only input variables.
+;;; bindings
+;;; guards
+;;; Late typing that might apply to anything
+;;; Prerequisites
+;;; Goals to achieve
+;;; Post-Conditions
+;;; Plan-structure that is the "return value"
 
-(defun find-bindings (prerequisites post-conditions typing plan bindings)
+;;; Also when handling bindings, there is a special concern not to create
+;;; a binding for a simple value-of of or (?variable ?path) binding
+;;; (which the second is just syntactic sugar for the first)
+;;; so as not to create a superfluous binding that would occur out of order.
+
+(defun find-hidden-bindings (guards prerequisites post-conditions typing plan bindings)
   (let ((bindings-by-set-type nil) (master-alist nil))
     (labels ((do-one (form set-type)
                (cond
-                ((and (predication-maker-p form) (eql (predication-maker-predicate form) 'value-of))
-                 (with-predication-maker-destructured (slot value) form
-                   (declare (ignore slot))
-                   (do-one value set-type)))
+                ((and (predication-maker-p form) 
+                      (eql (predication-maker-predicate form) 'value-of))
+                 (when  (not (eql set-type 'bindings))
+                   ;; don't scan value-of forms if we're doing bindings
+                   (with-predication-maker-destructured (slot value) form
+                     (declare (ignore slot))
+                     (do-one value set-type))))
                 ((predication-maker-p form)
                  (do-one (predication-maker-statement form) set-type))
                 ((logic-variable-maker-p form)
                  (do-one (logic-variable-maker-name form) set-type))
+                ((and (listp form) (= (length form) 2) (eql set-type 'bindings))
+                 ;; if it's the short syntax and we're doing bindings, then do nothing                 
+                 )
                 ((listp form)
                  (loop for token in form do (do-one token set-type)))
                 ((and (symbolp form) (find #\. (string form) :test #'char-equal))
@@ -491,18 +497,60 @@
                        (push pair master-alist)
                        ;; and to the alist of new entries for this set-type
                        (push pair (second entry)))))))))
+      (loop for binding in bindings do (do-one binding 'bindings))
+      (loop for guard in guards do (do-one guard 'guards))
+      (loop for type in typing do (do-one type 'typing))
       (Loop for prereq in prerequisites do (do-one prereq 'prerequisites))
       (loop for postcon in post-conditions do (do-one postcon 'post-conditions))
-      (loop for type in typing do (do-one type 'typing))
-      (loop for binding in bindings do (do-one binding 'bindings))
       (loop for plan-element in plan do (do-one plan-element 'plan))
       )
+    ;; Reverse the entries so that they are in the order of occurence
+    (loop for entry in bindings-by-set-type
+        do (setf (second entry) (nreverse (second entry))))
     (values master-alist bindings-by-set-type)))
 
-;;; To do: Break out the inner routine so that it can be called from top-level 
-;;; Goals-to-achieve and plan-structure need to be handled later rather than with the bulk of the rest
+(defun normal-binding? (form)
+  (or (and (predication-maker-p form) 
+           (eql (predication-maker-predicate form) 'value-of))
+      (and (listp form) 
+           (= (length form) 2)
+           (logic-variable-maker-p (first form)))))
 
-(defun substitute-hidden-variables (set-of-stuff reference-alist)
+;;; Put the hidden bindings in line just before the first usage
+;;; Then substitute the hidden-variables into each form
+(defun merge-and-substitute-hidden-bindings (set-of-stuff reference-alist bindings-by-set-type set-type)
+  ;; (break "~{~a~^, ~}~%~a~%~{~a~^,~}~%~a" set-of-stuff reference-alist bindings-by-set-type set-type)
+  (let ((bindings-for-set-type (second (assoc set-type bindings-by-set-type))))
+    (cond
+     ((and (null reference-alist) (eql set-type 'bindings))
+      (loop for thing in set-of-stuff 
+          if (normal-binding? thing)
+          collect (de-prettify-binding thing)
+          else collect thing))
+     ((null reference-alist) set-of-stuff)
+     ((and (null bindings-for-set-type) (eql set-type 'bindings))
+      (loop for thing in set-of-stuff
+          if (normal-binding? thing)
+          collect (de-prettify-binding thing)
+          else collect (substitute-hidden-bindings thing reference-alist)))
+     ((null bindings-for-set-type)
+      (substitute-hidden-bindings set-of-stuff reference-alist))
+     (t (let ((already-emitted nil))
+          ;; loop over the forms
+          ;; for each check all the implicit bindings
+          ;; and if it's already been emitted skip it
+          ;; otherwise if it's in the form, emit it and remember that it's been emitted
+          (loop for thing in set-of-stuff
+              append (loop for (implicit-binding lv) in bindings-for-set-type
+                         when (and (mentioned-in? implicit-binding thing)
+                                   (not (member lv already-emitted)))
+                         collect (de-prettify-binding (ji:make-predication-maker `(value-of ,implicit-binding ,lv)))
+                         and do (push lv already-emitted))
+              if (normal-binding? thing)
+                       collect (de-prettify-binding thing)
+                       else collect (substitute-hidden-bindings thing reference-alist)))))))
+              
+(defun substitute-hidden-bindings (set-of-stuff reference-alist)
   (labels ((do-one (form)
              (cond
               ((and (predication-maker-p form) (eql (predication-maker-predicate form) 'value-of))
@@ -530,13 +578,13 @@
 
 ;;; Just a convenience for doing most of the substitutions all at once
 
-(defun substitute-all-hidden-variables (prerequisites post-conditions typing bindings plan reference-alist)
+(defun substitute-all-hidden-bindings (prerequisites post-conditions typing bindings plan reference-alist)
   (values
-   (substitute-hidden-variables prerequisites reference-alist)
-   (substitute-hidden-variables post-conditions reference-alist)
-   (substitute-hidden-variables typing reference-alist)
-   (substitute-hidden-variables bindings reference-alist)
-   (substitute-hidden-variables plan reference-alist)
+   (substitute-hidden-bindings prerequisites reference-alist)
+   (substitute-hidden-bindings post-conditions reference-alist)
+   (substitute-hidden-bindings typing reference-alist)
+   (substitute-hidden-bindings bindings reference-alist)
+   (substitute-hidden-bindings plan reference-alist)
    ))
 
 
@@ -660,7 +708,7 @@
 	   (state-logic-variables (make-logic-variables '(input-state output-state)))
 	   (capec-statements (loop for (victim capec-num cve-variable) in capecs
                                  collect `(predication-maker '(vulnerable-to-capec ,victim ,capec-num ,cve-variable))))
-           (early-typing (loop for type in typing for lv = (first type) when (mentioned-in lv logic-variables) collect lv))
+           (early-typing (loop for type in typing for lv = (first type) when (mentioned-in? lv logic-variables) collect type))
            (late-typing (set-difference typing early-typing))
            (action-variable (first (make-logic-variables '(action)))))
       (destructuring-bind (input-state-variable output-state-variable) state-logic-variables
