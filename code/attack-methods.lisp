@@ -599,7 +599,7 @@ Test case for how the early-typing hack works in the method compiler
     :to-achieve [achieve-access-right ?right ?object ?foothold-role]
     :bindings ([current-foothold ?foothold-machine ?foothold-role])
     :guards ([has-permission ?foothold-role ?right ?object])
-    :plan ()
+    :plan (:action [goal-already-satisfied [achieve-access-right ?right ?object ?foothold-role]])
     )
 
 (defattack-method achieve-a-right-you-dont-have

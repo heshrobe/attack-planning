@@ -402,7 +402,7 @@
       ;; First find all implicit bindings i.e. things of the form ?foo.bar.baz and note where the first reference occurs
       ;; Also for each generate a new logic-variable-maker
       (multiple-value-bind (all-refs hidden-bindings-alist) (find-hidden-bindings guards prerequisites post-conditions late-typing plan bindings)
-        ;; (break "~a~%~{~a~^~%~}" all-refs hidden-bindings-alist)
+        ;; (Break "~a~%~{~a~^~%~}" all-refs hidden-bindings-alist)
         (destructuring-bind (goals-to-achieve plan-structure thing) (or rebuilt-plan-structure (list nil nil nil))
           (declare (ignore thing))
           (setq goals-to-achieve (substitute-hidden-bindings goals-to-achieve all-refs)
@@ -471,8 +471,8 @@
                  (when  (not (eql set-type 'bindings))
                    ;; don't scan value-of forms if we're doing bindings
                    (with-predication-maker-destructured (slot value) form
-                     (declare (ignore slot))
-                     (do-one value set-type))))
+                     (declare (ignore value))
+                     (do-one slot set-type))))
                 ((predication-maker-p form)
                  (do-one (predication-maker-statement form) set-type))
                 ((logic-variable-maker-p form)
@@ -708,37 +708,50 @@
 	   (state-logic-variables (make-logic-variables '(input-state output-state)))
 	   (capec-statements (loop for (victim capec-num cve-variable) in capecs
                                  collect `(predication-maker '(vulnerable-to-capec ,victim ,capec-num ,cve-variable))))
-           (early-typing (loop for type in typing for lv = (first type) when (mentioned-in? lv logic-variables) collect type))
-           (late-typing (set-difference typing early-typing))
-           (action-variable (first (make-logic-variables '(action)))))
-      (destructuring-bind (input-state-variable output-state-variable) state-logic-variables
-        `(eval-when (:compile-toplevel :load-toplevel :execute)
-           (pushnew ',name *all-actions*)
-           ,@(when define-predicate `((define-predicate ,name ,names (ltms:ltms-predicate-model))))
-           (defrule ,rule-name (:backward)
-             then [take-action [,name ,@logic-variables] ,@state-logic-variables ,action-variable]
-             if [and ,@(process-typing early-typing) 
-                     ,@(process-bindings bindings input-state-variable)
-                     ,@(process-typing late-typing)
-                     ,@(process-guards prerequisites input-state-variable)
-                     ,@capec-statements
-                     ;; so at this point we've checked that the prerequisites are satisfied
-                     (prog1 t
-                       (when (unbound-logic-variable-p ,output-state-variable)
-                         (unify ,output-state-variable 
-                                (intern-state (intern (string-upcase (gensym "state-"))) ,input-state-variable)))
-                       (let* ((action-taken-pred (tell [action-taken [,name ,@logic-variables] ,input-state-variable ,output-state-variable]
-                                                       :justification :none))
-                              (justification (build-justification-from-backward-support ji::*backward-support*)))
-                         (destructuring-bind (nothing true-stuff false-stuff unknown-stuff) justification
-                           (declare (ignore nothing))
-                           (justify action-taken-pred +true+ ',jusification-mnemonic true-stuff false-stuff unknown-stuff))
-                         ,@(process-new-outputs outputs)
-                         ,@(let* ((mnemonic (intern (string-upcase (format nil "action-taken-~A" name))))
-                                  (justification-2 `(list ',mnemonic (list action-taken-pred))))
-                             (process-post-conditions post-conditions output-state-variable justification-2)))
-                     (unify ,action-variable (link-action ',name (list,@logic-variables) ,input-state-variable ,output-state-variable)))
-                     ]))))))
+           (action-variable (first (make-logic-variables '(action))))
+           (real-head (ji:make-predication-maker `(take-action [,name ,@logic-variables] ,@state-logic-variables ,action-variable))))
+      (multiple-value-bind (early-typing late-typing)
+          (loop for type in typing 
+              for variable = (first type) 
+              if (and (eql variable :break) (loop for var in (rest (rest type)) thereis (mentioned-in? var real-head)))
+              collect type into early
+              else when (and (mentioned-in? variable real-head) (not (member (logic-variable-maker-name variable) outputs :key #'logic-variable-maker-name)))
+              collect type into early
+              else collect type into late
+              finally (return (values early late))) 
+        ;; First find all
+        ;; implicit bindings i.e. things of the form ?foo.bar.baz and
+        ;; note where the first reference occurs
+        ;; Also for each generate a new logic-variable-maker
+        (multiple-value-bind (all-refs hidden-bindings-alist) (find-hidden-bindings nil prerequisites post-conditions late-typing nil bindings)
+          (destructuring-bind (input-state-variable output-state-variable) state-logic-variables
+            `(eval-when (:compile-toplevel :load-toplevel :execute)
+               (pushnew ',name *all-actions*)
+               ,@(when define-predicate `((define-predicate ,name ,names (ltms:ltms-predicate-model))))
+               (defrule ,rule-name (:backward)
+                 then ,real-head
+                 if [and ,@(process-typing early-typing) 
+                         ,@(merge-and-substitute-hidden-bindings (process-bindings bindings input-state-variable) all-refs hidden-bindings-alist 'bindings)
+                         ,@(merge-and-substitute-hidden-bindings (process-typing late-typing) all-refs hidden-bindings-alist 'typing)
+                         ,@(merge-and-substitute-hidden-bindings (process-prerequisites prerequisites input-state-variable) all-refs hidden-bindings-alist 'prerequsities)
+                         ,@capec-statements
+                         ;; so at this point we've checked that the prerequisites are satisfied
+                         (prog1 t
+                           (when (unbound-logic-variable-p ,output-state-variable)
+                             (unify ,output-state-variable 
+                                    (intern-state (intern (string-upcase (gensym "state-"))) ,input-state-variable)))
+                           (let* ((action-taken-pred (tell [action-taken [,name ,@logic-variables] ,input-state-variable ,output-state-variable]
+                                                           :justification :none))
+                                  (justification (build-justification-from-backward-support ji::*backward-support*)))
+                             (destructuring-bind (nothing true-stuff false-stuff unknown-stuff) justification
+                               (declare (ignore nothing))
+                               (justify action-taken-pred +true+ ',jusification-mnemonic true-stuff false-stuff unknown-stuff))
+                             ,@(process-new-outputs outputs)
+                             ,@(let* ((mnemonic (intern (string-upcase (format nil "action-taken-~A" name))))
+                                      (justification-2 `(list ',mnemonic (list action-taken-pred))))
+                                 (merge-and-substitute-hidden-bindings (process-post-conditions post-conditions output-state-variable justification-2) all-refs hidden-bindings-alist 'post-conditions))))
+                         (unify ,action-variable (link-action ',name (list,@logic-variables) ,input-state-variable ,output-state-variable))
+                         ]))))))))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;

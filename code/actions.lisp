@@ -132,12 +132,12 @@
 ;;; This is essentially a no-op if the victim user and the attacker
 ;;; are the same.
 (define-action use-own-password (?victim-user ?victim-machine)
-  :bindings ([value-of (?victim-machine os) ?victim-os-instance]
-	     [value-of (?victim-os-instance users) ?victim-user]
-	     [value-of (?victim-os-instance authorization-pool) ?pool])
-  :prerequisites ([unifiable ?victim-user ?victim-machine]
-		  [value-of (?pool users) ?victim-user])
-  :post-conditions ([knows-credentials ?attacker ?user])
+  :bindings ((?victim-os-instance ?victim-machine.os)
+             (?pool ?victim-os-instance.authorization-pool)
+	     [attacker-and-machine ?attacker ?attacker-machine])
+  :prerequisites ([value-of ?victim-os-instance.users ?victim-user]
+		  [value-of ?pool.users ?victim-user])
+  :post-conditions ([knows-credentials ?attacker ?victim-user])
   )
 
 (define-action guess-password (?attacker ?user ?victim-machine)
@@ -260,6 +260,13 @@
 ;; (define-action trasmit-data (actor data target))
 
 (define-action issue-false-sensor-data-report (?controller-machine ?victim-machine ?bus ?sensor-type)
+  :prerequisites ()
+  :post-conditions ()
+  )
+
+
+
+(define-action goal-already-satisfied (?goal)
   :prerequisites ()
   :post-conditions ()
   )
