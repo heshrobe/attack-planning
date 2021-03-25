@@ -1115,6 +1115,7 @@ predicate promising the thing is known.
                [protocol-for remote-execution remote-shell ?protocol-name])
     :prerequisites ([accepts-connection ?victim-computer ?protocol-name ?current-foothold-computer])
     :plan (:sequential
+           ;; Fix this retunrs the same target multiple times.
            (:goal [find-easy-login-target ?current-foothold-computer ?current-foothold-role ?victim-computer ?report-server ?credentials])
            (:goal [propagate-easy-login ?attacker ?loader-server ?victim-computer ?protocol-name ?credentials])
            (:repeat
@@ -1161,9 +1162,11 @@ predicate promising the thing is known.
     :to-achieve [find-another-potential-victim ?current-victim ?protocol-name ?other-victim]
     :output-variables (?other-victim)
     :bindings ((?victim-site ?current-victim.site)
-               (?victim-subnet ?vicitm-site.subnets)
-               (?other-victim ?victim-subet.computers))
-    :prerequisites ([not [unifiable ?other-victim ?current-victim]]))
+               (?victim-subnet ?victim-site.subnets)
+               (?other-victim ?victim-subnet.computers))
+    :prerequisites ([not [unifiable ?other-victim ?current-victim]]
+                    (break "Other victim ~a" ?other-victim))
+    )
                
 
 #|
