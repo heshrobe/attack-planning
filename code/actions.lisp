@@ -91,6 +91,29 @@
   :post-conditions ([is-logged-in ?attacker ?victim-user ?victim-os ?victim-machine])
   )
 
+(define-action login-with-credentials (?victim-user ?victim-os-instance ?from-computer ?from-role ?protocol-name ?credentials)
+  :bindings ([value-of ?victim-os-instance.machine ?victim-computer])
+  :prerequisites ([connection-established ?from-computer ?victim-computer ?protocol-name]
+                  [knows ?from-role credentials ?victim-user ?credentials])
+  :post-conditions ([is-logged-in ?from-role ?victim-user ?victim-os-instance ?victim-computer]
+                    [has-remote-execution ?from-role ?victim-computer ?victim-user])
+  )
+
+
+;;; This should really be an action with 2 potential outcomes, success and failure
+;;; but I haven't yet introduced conditional actions and methods.
+;;; For plan recognition it probably doesn't matter
+;;; The attacker, acting from its foothold, attempts to login into a victim computer over some protocol
+;;; using a white list of user-id password pairs returning the credentials (user-id and password) of a 
+;;; successful entry on the white list.
+;;; The white-list probably doesn't need to be represented here?
+(define-action attempt-login (?attacker ?foothold-machine ?victim-computer ?protocol ?credentials)
+  :output-variables (?credentials)
+  :bindings ((?victim-user ?victim-computer.users)
+             (?credentials ?victim-user.credentials))
+  :prerequisites ([connection-established ?foothold-machine ?victim-computer ?protocol])
+  :post-conditions ([knows ?attacker credentials ?victim-user ?credentials]))
+
 (defrule logged-in-implies-remote-execution (:forward)
   if [in-state [is-logged-in ?attacker ?victim-user ?victim-os ?victim-machine] ?state]
   then  [in-state [has-remote-shell ?attacker ?victim-machine ?victim-user] ?state])
@@ -182,14 +205,13 @@
 
 (define-action download-software (?package ?source-computer ?destination-computer ?role)
   :bindings ([attacker-and-machine ?attacker ?attacker-computer])
-  :prerequisites ([current-foothold ?destination-computer ?role])
+  :prerequisites ([has-remote-execution ?attacker  ?destination-computer ?role])
   :post-conditions ([software-downloaded ?package ?victim-computer]
 		    ))
 
-
 (define-action load-software (?package ?victim-computer)
   :bindings ([attacker-and-machine ?attacker ?attacker-computer])
-  :prerequisites ([current-foothold ?victim-computer ?role]
+  :prerequisites ([has-remote-execution ?attacker ?victim-computer ?role]
 		  [software-downloaded ?package ?victim-computer])
   :post-conditions ([software-loaded ?package ?victim-machine]))
 
@@ -200,7 +222,7 @@
 
 (define-action transmit-data (?user ?file ?from-machine ?to-machine)
   :prerequisites ([connection-established ?from-machine ?to-machine ftp])
-  :post-conditions ([data-exfiltrated ?file ?from-machine ?to-machine]))
+  :post-conditions ([data-exfiltrated ?file ?user ?from-machine ?to-machine]))
 
 ; (define-action install-malware (?attacker ?malware-type ?victim-machine)
 ;   ;; Probably this should be spelled out more so that he has to have

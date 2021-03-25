@@ -172,6 +172,10 @@
 ;;; predicates (e.g. there might be a soft-update-server under the attacker's control)
 (define-aplan-predicate attacker-download-server (attacker attacker-server-machine) (non-stateful-predicate-model))
 (define-aplan-predicate attacker-adware-server (attacker attacker-server-machine) (non-stateful-predicate-model))
+(define-aplan-predicate attacker-command-and-control-server (attacker attacker-server-machine) (non-stateful-predicate-model))
+(define-aplan-predicate attacker-computer-with-role (attacker role machine) (non-stateful-predicate-model))
+
+
 
 (define-aplan-predicate desirable-property-of (system property) (non-stateful-predicate-model))
 
@@ -270,7 +274,7 @@
 
 ;;; This changes over time
 (define-aplan-predicate connection-established (source-machine victim-machine type) ())
-(define-aplan-predicate data-exfiltrated (data source-machine victim-machine) ())
+(define-aplan-predicate data-exfiltrated (data actor source-machine victim-machine) ())
 
 (define-aplan-predicate uses-machine (machine user) (non-stateful-predicate-model))
 

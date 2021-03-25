@@ -15,9 +15,20 @@
 ;;; We'll regard anything not within the 192.168 class B as the rest of the world
 
 ;;; The outside world is anything outside our Class B address space
-(defexternal-internet outside ("192.168.0.0" "255.255.0.0"))
+(defexternal-internet outside "192.168.0.0/24")
 
-(create-attacker 'typical-attacker :world-name 'outside)
+;;; Mirai has 3 servers:
+;;; 1) Command and Control: Only involved with infected bots, issues attack command
+;;; 2) Report: Gets info from bots about newly discovered vulnerable targets
+;;; 3) Loader: Logs into newly discovered vulnerable tagets, logs in and downloads the malware
+;;;            Loads the malware and the deletes the malware file
+
+(define-attacker attacker 
+    :location outside
+    :command-and-control-servers attacker-c&c-server
+    :servers ((report-server attacker-report-server)
+              (loader attacker-loader)                             
+              ))
 
 
 ;;; This is the name of our enterprise
@@ -36,10 +47,10 @@
 ;;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
-(defsite worker-enclave "192.168.0.0" "255.255.255.0"
+(defsite worker-enclave "192.168.0.0/16"
 	 :enterprise victim)
 
-(defsubnet worker-subnet switched-subnet "192.168.0.0" "255.255.255.0")
+(defsubnet worker-subnet switched-subnet "192.168.0.0/16")
 
 ;;; Vanilla ability to read any user file
 
@@ -56,7 +67,7 @@
 ;;; our point of view
 (defensemble worker-machines
     :enterprise victim
-    :address-range ("192.168.0.0" "255.255.255.0")
+    :address-range "192.168.0.0/24"
     :size 40)
 
 ;;; The typical worker computer is a "windows" computer
@@ -67,7 +78,20 @@
   :authorization-pool victim-authorization-pool
   :ensemble worker-machines
   :superuser ()
-  ) 
+  )
+
+(defensemble other-worker-machines
+    :enterprise victim
+    :address-range "192.168.1.0/24"
+    :size 40)
+
+(defcomputer other-typical-worker-computer windows-computer
+  :ip-address-string "192.168.1.3"
+  :typical t
+  :authorization-pool victim-authorization-pool
+  :ensemble other-worker-machines
+  :superuser ()
+  )  
 
 ;;; Typical worker bee is a typical user of a typical
 ;;; machine in the worker-machines ensemble
@@ -94,6 +118,11 @@
 (defrouter victim-router ("192.168.0.1")
   :authorization-pool victim-authorization-pool
   :external-networks (outside))
+
+(defswitch worker-net-switch wired-switch "192.168.0.2"
+	   :authorization-pool victim-authorization-pool
+	   :superuser ())
+    
 
 ;;; These whitelist and blacklist descriptions are supposed to say
 ;;; what traffic will be allowed to pass in from the outside

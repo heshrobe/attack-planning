@@ -118,6 +118,11 @@
 ;;; 
 (define-goal brick-machine (attacker machine))
 
-(define-goal install-malware (attacker machine malware))
+(define-goal install-malware (attacker server-machine victim-machine malware))
 
 (define-goal get-user-to-click-on (attacker user thing result))
+
+(define-goal find-easy-login-target (prober-computer prober victim-enclave report-server credentials))
+(define-goal propagate-easy-login (attacker loader-server vicimt-machine protocol-name credrntials))
+(define-goal find-another-potential-victim (current-victim protocol-name other-victim))
+(define-goal exfiltrate-data (actor data from-computer to-computer))

@@ -344,6 +344,7 @@
 
 (define-aplan-object credential
     :super-types (computer-resource)
+    :slots  ((user :initarg :user))
     )
 
 (define-aplan-object password
@@ -408,8 +409,12 @@
 	    (machines :set-valued t )
 	    (ensemble  :initarg :ensemble)
 	    (superuser-for :set-valued t)
+            (credentials :initform (make-credentials-for-user self))
 	    )
     :super-types (in-authorization-pool system-entity print-nicely-mixin))
+
+(defun make-credentials-for-user (user)
+  (make-object 'credential :user user :name (make-name 'credential)))
 
 (define-aplan-object normal-user
     :super-types (user))

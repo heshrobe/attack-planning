@@ -24,7 +24,7 @@
     (clim:with-drawing-options (stream :line-thickness 2)
       (let ((connective (first step)))
         (case connective
-	  ((:sequential :parallel)
+	  ((:sequential :parallel :repeat)
 	   (clim:surrounding-output-with-border (stream :shape :rectangle :ink clim:+green+)
 	     (clim:with-text-face (stream :bold)
 	       (format stream "~A" (first step)))))
@@ -47,7 +47,7 @@
 
 (defun plan-inferior (step)
   (case (first step)
-    ((:sequential :parallel :singleton)
+    ((:sequential :parallel :singleton :repeat)
      (rest step))
     (:goal (let ((plan (getf step :plan)))
 	     (when plan
@@ -58,9 +58,9 @@
 (defun plan-inferior-action-only (step)
   (labels ((collect-actions-below (step)
 	     (case (first step)
-	       ((:sequential :parallel)
+	       ((:sequential :parallel :repeat)
 		(loop for thing in (rest step)
-		    append (if (member (first thing) '(:action :repeated-action :sequential :parallel))
+		    append (if (member (first thing) '(:action :repeated-action :sequential :parallel :repeat))
 			       (list thing)
 			     (collect-actions-below thing))))
 	       (:singleton (collect-actions-below (second step)))
@@ -71,7 +71,7 @@
 			     (if (member (first (second plan)) '(:action :repeated-action))
 				 (rest plan)
 			       (collect-actions-below (second plan))))
-			    ((:sequential :parallel :action :repeated-action)
+			    ((:sequential :parallel :action :repeated-action :repeat)
 			     (list plan))
 			    (otherwise (break "~a" plan))
 			    ))))
@@ -303,7 +303,7 @@
       (clim:with-text-face (stream :bold)
 	(let ((combinator (combinator plan)))
 	  (format stream "~a" (case combinator
-				((:sequential :parallel) combinator)
+				((:sequential :parallel :repeat) combinator)
 				(:singleton :reduces-to)
 				(:otherwise (break "~a ~a" combinator plan)))))
         ))))

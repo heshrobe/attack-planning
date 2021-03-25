@@ -69,15 +69,19 @@
   ;; as we traverse the plan-structure tree we accumulate the list structure
   ;; of the plan and push
   ;; each this returns 3 values.  I'm not sure why the third yet
+  ;; Every sublevel of structure is supposed to return 3 things:
+  ;; 1) The code to emit????
+  ;; 2) The plan structure for this level
+  ;; 3) The output state at the end of this level
   (labels ((do-next-level (structure connective input-state output-state)
-	     ;; each level should either be a :sequential/:parallel
+	     ;; each level should either be a :sequential/:parallel/:repeat
 	     ;;  or a :goal/:plan pair
 	     ;;  or maybe a :action item (to be dealth with later)
              (destructuring-bind (key . stuff) structure
                (case key
-                 (:sequential
+                 ((:sequential :repeat)
                   (loop for (thing . more-to-come) on stuff
-		      for last = (or (not more-to-come) (not (loop for (key) in more-to-come thereis (member key '(:goal :action)))))
+		      for last = (or (not more-to-come) (not (loop for (key) in more-to-come thereis (member key '(:sequential :parallel :repeat :goal :action)))))
 		      for next-input-state = input-state then his-output-state
 		      for next-output-state = (when last output-state)
 		      for his-result = (do-next-level thing key next-input-state next-output-state)
@@ -377,7 +381,7 @@
 					     prerequisites
 					     plan
 					     post-conditions
-                                             outputs ;; Marks that variables in the to-achieve that are bound during execution
+                                             output-variables ;; Marks that variables in the to-achieve that are bound during execution
 					     )
   (let* ((plan-variable `(logic-variable-maker ,(gensym "?PLAN")))
          (real-head `(predication-maker '(achieve-goal ,to-achieve ,input-state  ,output-state ,plan-variable)))
@@ -395,7 +399,7 @@
             for variable = (first type) 
             if (and (eql variable :break) (loop for var in (rest (rest type)) thereis (mentioned-in? var real-head)))
             collect type into early
-            else when (and (mentioned-in? variable real-head) (not (member (logic-variable-maker-name variable) outputs :key #'logic-variable-maker-name)))
+            else when (and (mentioned-in? variable real-head) (not (member (logic-variable-maker-name variable) output-variables :key #'logic-variable-maker-name)))
             collect type into early
             else collect type into late
             finally (return (values early late)))
@@ -690,7 +694,7 @@
 
 (defparameter *all-actions* nil)
 
-(defmacro define-action (name variables &key bindings prerequisites post-conditions (define-predicate t) capecs outputs typing) 
+(defmacro define-action (name variables &key bindings prerequisites post-conditions (define-predicate t) capecs outputs typing output-variables) 
   (flet ((make-logic-variables (names)
 	   (loop for var in names 
 	       if (logic-variable-maker-p var)
@@ -715,7 +719,9 @@
               for variable = (first type) 
               if (and (eql variable :break) (loop for var in (rest (rest type)) thereis (mentioned-in? var real-head)))
               collect type into early
-              else when (and (mentioned-in? variable real-head) (not (member (logic-variable-maker-name variable) outputs :key #'logic-variable-maker-name)))
+              else when (and (mentioned-in? variable real-head)
+                             (not (member (logic-variable-maker-name variable) outputs :key #'(lambda (thing) (logic-variable-maker-name (first thing)))))
+                             (not (member (logic-variable-maker-name variable) output-variables :key #'logic-variable-maker-name)))
               collect type into early
               else collect type into late
               finally (return (values early late))) 

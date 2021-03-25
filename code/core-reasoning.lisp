@@ -127,6 +127,8 @@
 				     (other-computers nil other-computers-p)
 				     (download-servers nil download-servers-p)
 				     (adware-servers nil adware-servers-p)
+                                     (command-and-control-servers nil command-and-control-servers-p)
+                                     (servers nil servers-p)
 				     )
   `(create-attacker ',name
 		    :location (follow-path (list ',location))
@@ -136,16 +138,23 @@
 		    :adware-servers ,(when adware-servers-p
 				      (if (symbolp adware-servers)
 					  `', adware-servers
-					`(list ,@(loop for name in adware-servers
+					`(List ,@(Loop for name in adware-servers
 						     collect `(follow-path (list ',name))))))
 		    :download-servers ,(when download-servers-p
 					 (if (symbolp download-servers)
 					   `', download-servers
 					   `(list ,@(loop for name in download-servers
-						      collect `(follow-path (list ',name))))))
+                                                        collect `(follow-path (list ',name))))))
+                    
+		    :command-and-control-servers ,(when command-and-control-servers-p
+					 (if (symbolp command-and-control-servers)
+					   `', command-and-control-servers
+					   `(list ,@(loop for name in command-and-control-servers
+                                                        collect `(follow-path (list ',name))))))
+                    :servers-and-roles ,(when servers-p `',servers)                                          
 		    :computer ,(when computer-p `(follow-path (list ',computer)))))
 
-(defun create-attacker (attacker-name &key location computer other-computers download-servers adware-servers)
+(defun create-attacker (attacker-name &key location computer other-computers download-servers command-and-control-servers adware-servers servers-and-roles)
   (with-atomic-action
    (let ((created-computer-name (intern (string-upcase (format nil "~a-computer" attacker-name)))))
      (kill-redefined-object attacker-name)
@@ -162,12 +171,19 @@
 	     (tell `[attacker-download-server ,attacker ,attacker-computer]))
 	 (loop for computer in download-servers
 	     do (tell `[attacker-download-server ,attacker ,computer])))
+       (if (symbolp command-and-control-servers)
+	   (let ((attacker-computer (make-attacker-computer command-and-control-servers attacker :location location)))
+	     (tell `[attacker-command-and-control-server ,attacker ,attacker-computer]))
+	 (loop for computer in command-and-control-servers
+	     do (tell `[attacker-command-and-control-server ,attacker ,computer])))
        (if (symbolp adware-servers)
 	   (let ((attacker-computer (make-attacker-computer adware-servers attacker :location location)))
 	     (tell `[attacker-adware-server ,attacker ,attacker-computer]))
 	 (loop for computer in adware-servers
 	     do (tell `[attacker-adware-server ,attacker ,computer])))
-       ;; has foothold always has a victim in it.  But in this initial state
+       (loop for (role computer-name his-location) in servers-and-roles
+           for attacker-computer = (make-attacker-computer computer-name attacker :location (or his-location location))
+           do (tell `[attacker-computer-with-role ,attacker ,role ,attacker-computer]))  
        ;; there isn't one.  It's just a starting point.
        (tell `[in-state [has-foothold nil ,his-computer ,attacker foothold] initial])
        (tell `[in-state [attacker-and-machine ,attacker ,his-computer] initial])
@@ -307,7 +323,7 @@
 			      (traverse his-plan the-interned-goal))
 			    the-interned-goal))
 		   ((:action :repeated-action) (intern-action (second step) (eq type :repeated-action)))
-		   ((:sequential :parallel :singleton)
+		   ((:sequential :parallel :singleton :repeat)
 		    (let ((steps (loop for his-step in (rest step)
 				     collect (traverse his-step supergoal))))
 		      (intern-plan type steps supergoal)))

@@ -351,7 +351,7 @@
 
 (defattack-method remote-execution-to-remote-shell
     :to-achieve [achieve-remote-execution ?victim-machine ?victim-user]
-    :outputs (?victim-user)
+    :output-variables (?victim-user)
     :guards ([not [place-already-visited? ?victim-machine remote-execution]])
     :bindings ((?victim-user ?victim-machine.os.users))
     :typing ((?victim-machine.os operating-system)
@@ -379,7 +379,7 @@
 ;;; screws up, see *cl-temp* buffer
 (defattack-method how-to-logon
     :to-achieve [achieve-remote-shell ?victim-os-instance ?victim-user]
-    :outputs ()
+    :output-variables ()
     :bindings (;; I think this isn't right.  We're posting a get-foothold goal
 	       ;; below, which means that the foothold from which the login
 	       ;; will happen is that foothold not the current one (they might be
@@ -404,7 +404,7 @@ Test case for how the early-typing hack works in the method compiler
 
 (defattack-method how-to-logon-test
     :to-achieve [achieve-remote-shell ?victim-os-instance ?victim-user]
-    :outputs (?victim-user)
+    :output-variables (?victim-user)
     :bindings (;; I think this isn't right.  We're posting a get-foothold goal
 	       ;; below, which means that the foothold from which the login
 	       ;; will happen is that foothold not the current one (they might be
@@ -457,7 +457,7 @@ Test case for how the early-typing hack works in the method compiler
 ;;; Note that ?victim-process is an output and isn't bound at this point!
 (defattack-method remote-execution-to-code-reuse
     :to-achieve [achieve-remote-execution ?victim-machine ?victim-process]
-    :outputs (?victim-process)
+    :output-variables (?victim-process)
     :guards ([not [place-already-visited? ?victim-machine remote-execution]])
     :bindings ((?victim-process ?victim-machine.os.processes))
     :prerequisites ([value-of ?victim-process.host-os ?victim-machine.os])
@@ -483,7 +483,7 @@ Test case for how the early-typing hack works in the method compiler
 ;;; Note that ?victim-user is an output and isn't bound on entry
 (defattack-method remote-execution-to-corrupt-attachment
     :to-achieve [achieve-remote-execution ?victim-machine ?victim-user]
-    :outputs (?victim-user)
+    :output-variables (?victim-user)
     :guards ([not [place-already-visited? ?victim-machine remote-execution]])
     :bindings ((?victim-user ?victim-machine.os.users)
                [attacker-and-machine ?attacker ?attacker-machine])
@@ -604,7 +604,7 @@ Test case for how the early-typing hack works in the method compiler
 
 (defattack-method achieve-a-right-you-dont-have
     :to-achieve [achieve-access-right ?right ?object ?other-user]
-    :outputs (?other-user)
+    :output-variables (?other-user)
     :bindings ([current-foothold ?foothold-machine ?foothold-role]
 	       [attacker-and-machine ?attacker ?attacker-machine]
 	       [has-permission ?other-user ?right ?object])
@@ -649,7 +649,7 @@ Test case for how the early-typing hack works in the method compiler
 
 (defattack-method achieve-access-right-by-user-process-subversion
     :to-achieve [achieve-access-right ?right ?object ?user]
-    :outputs (?user)
+    :output-variables (?user)
     ;; all this is asking is there a process in the workload
     ;; and if so with which user's permissions is it running
     :bindings ([value-of ?object.machines ?machine]
@@ -674,7 +674,7 @@ Test case for how the early-typing hack works in the method compiler
 
 (defattack-method achieve-access-right-by-server-process-subversion
     :to-achieve [achieve-access-right ?right ?object ?user]
-    :outputs (?user)
+    :output-variables (?user)
     ;; all this is asking is there a process in the workload
     ;; and if so with which user's permissions is it running
     :bindings ((?the-process ?object.machines.os.workload.server-workload.processes)
@@ -695,7 +695,7 @@ Test case for how the early-typing hack works in the method compiler
 ;;; ?other-user is an output variable that isn't bound at this point
 (defattack-method how-to-achieve-access-right-by-remote-shell-on-target
     :to-achieve [achieve-access-right ?right ?object ?other-user]
-    :outputs (?other-user)
+    :output-variables (?other-user)
     :bindings ([value-of ?object.machines ?machine]
                [value-of ?machine.os ?os-instance]
                [requires-access-right ?object ?right ?capability]
@@ -761,37 +761,39 @@ Test case for how the early-typing hack works in the method compiler
     :plan (:action [guess-password ?attacker ?user ?victim-machine])
     )
 
-(defattack-method get-sysadmin-password-by-bricking
+ (defattack-method get-sysadmin-password-by-bricking
     :to-achieve [achieve-knowledge-of-password ?attacker ?victim-user ?victim-machine]
     :bindings ([value-of ?victim-user.machines ?victim-machine]
 	       [value-of ?victim-machine.os.superuser ?victim-user]
-	       [current-foothold ?foothold-machine ?foothold-role])
+	       [current-foothold ?foothold-machine ?foothold-role]
+               [attacker-download-server ?attacker ?download-server])
     :typing ((?victim-user user)
 	     (?victim-machine computer))
     :prerequisites ()
     :plan (:sequential
-	   (:goal [install-malware ?attacker ?victim-machine key-logger])
+	   (:goal [install-malware ?attacker ?download-server ?victim-machine key-logger])
 	   (:goal [brick-machine ?attacker ?victim-machine])
 	   (:action [capture-password-through-keylogger ?attacker ?victim-user ?victim-machine])
 	   ))
 
 (defattack-method brick-machine-by-kill-disk
     :to-achieve [brick-machine ?attacker ?victim-machine]
-    :bindings ()
+    :bindings ([attacker-download-server ?attacker ?download-server])
     :prerequisites ([has-remote-execution ?attacker ?victim-machine ?role])
     :plan (:sequential
-	   (:goal [install-malware ?attacker ?victim-machine kill-disk])
+	   (:goal [install-malware ?attacker ?download-server ?victim-machine kill-disk])
 	   (:action [fill-disk ?attacker ?victim-machine kill-disk])
 	   ))
 
+;;; Generalize so that the source isn't necessarily the attacker download server!!!
 (defattack-method download-and-load-malware
-    :to-achieve [install-malware ?attacker ?victim-machine ?malware-package]
-    :bindings ([attacker-download-server ?attacker ?download-server])
+    :to-achieve [install-malware ?attacker ?download-server ?victim-machine ?malware-package]
+    :bindings ()
     :typing ()
     :prerequisites ([has-remote-execution ?attacker ?victim-machine ?foothold-role])
     :plan (:sequential
 	   (:action [connect-via ?victim-machine ?foothold-role ?download-server ftp])
-	   (:action [download-software ?malware-package ?download-server ?victim-machine ?foothold-role])
+           (:action [download-software ?malware-package ?download-server ?victim-machine ?foothold-role])
 	   (:action [load-software ?malware-package ?victim-machine]))
     :Post-conditions ([malware-installed-on-machine ?attacker ?victim-machine ?malware-package])
     )
@@ -1101,14 +1103,68 @@ predicate promising the thing is known.
 ;;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
+
 (defattack-method recruit-to-mirai-botnet
     :to-achieve [affect independence ?cycle-pool]
-    :bindings ([attacker-and-machine ?attacker ?attacker-macine])
+    :bindings ([attacker-and-machine ?attacker ?attacker-macine]
+               [attacker-computer-with-role ?attacker report-server ?report-server]
+               [attacker-computer-with-role ?attacker loader ?loader-server]
+               (?victim-computer ?cycle-pool.machines)
+               (?victim-os ?victim-computer.os)
+               [current-foothold ?current-foothold-computer ?current-foothold-role]
+               [protocol-for remote-execution remote-shell ?protocol-name])
+    :prerequisites ([accepts-connection ?victim-computer ?protocol-name ?current-foothold-computer])
     :plan (:sequential
-	   (:action [port-scan ?attacker ?cycle-pool.machines ?attacker-machine telnet-ports])
-	   (:goal [get-foothold ?cycle-pool.machines telnet ?input-context ?foothold-context])
-	   (:action [login ?attacker white-list-member ?cycle-pool.os ?foothold-machine])
-	   (:action [download-malware-from-source ?attacker ?foothold-machine ?victim-machine mirai-client])))
+           (:goal [find-easy-login-target ?current-foothold-computer ?current-foothold-role ?victim-computer ?report-server ?credentials])
+           (:goal [propagate-easy-login ?attacker ?loader-server ?victim-computer ?protocol-name ?credentials])
+           (:repeat
+            (:goal [find-another-potential-victim ?victim-computer ?protocol-name ?other-victim-computer])
+            (:goal [find-easy-login-target ?victim-computer ?credentials.user ?other-victim-computer ?reporrt-server ?new-credentials])
+            (:goal [propagate-easy-login ?attacker ?loader-server ?other-victim-computer ?protocol-name ?new-credentials])                   
+            )))
+
+(defattack-method find-and-report-easy-login-victim
+    :to-achieve [find-easy-login-target ?prober-computer ?prober ?victim-computer ?report-server ?credentials]
+    :output-variables (?credentials)
+    :bindings ((?victim ?victim-computer.users)
+               [protocol-for remote-execution remote-shell ?protocol-name])
+    :prerequisites ([accepts-connection ?victim-computer ?protocol-name ?prober-computer])
+    :plan (:sequential
+           (:action [connect-via ?prober-computer ?prober ?victim-computer ?protocol-name])
+           (:action [attempt-login ?prober ?prober-computer ?victim-computer ?protocol-name ?credentials]) 
+           (:goal [exfiltrate-data ?victim ?credentials ?victim-computer ?report-server])
+           ;; after this action, the report server and the download server communicate but that's
+           ;; probaly not observable and guaranteed to succeed.  Could always add that later, skip for now.
+           ))
+
+;;; Fix: This should be generalized over possible transport protocols such as HTTP and FTP
+(defattack-method exfiltrate-data
+    :to-achieve [exfiltrate-data ?actor ?data ?source-computer ?t-computer]
+    :prerequisites ([accepts-connection ?target-computer ftp ?source-computer])
+    :plan (:sequential 
+           (:action [open-ftp-connection ?actor ?source-computer ?target-computer])
+           (:action [transmit-data ?actor ?data ?source-computer ?target-computer])))
+
+(defattack-method login-and-exploit-easy-target
+    :to-achieve [propagate-easy-login ?attacker ?loader-server ?victim-computer ?protocol-name ?credentials]
+    :prerequisites ([accepts-connection ?victim-computer ?protocol-name ?loader-server]
+                    [unifiable ?victim-computer.users ?victim-user])
+    :bindings ((?victim-user ?credentials.user)
+               (?victim-os ?victim-computer.os))
+    :plan (:sequential
+           (:action [connect-via ?loader-server ?attacker ?victim-computer ?protocol-name])
+           (:action [login-with-credentials ?victim-user ?victim-os ?loader-server ?attacker ?protocol-name ?credentials])
+           (:goal [install-malware ?attacker ?loader-server ?victim-computer mirai-malware])
+           ))
+
+(defattack-method find-other-victim-computers
+    :to-achieve [find-another-potential-victim ?current-victim ?protocol-name ?other-victim]
+    :output-variables (?other-victim)
+    :bindings ((?victim-site ?current-victim.site)
+               (?victim-subnet ?vicitm-site.subnets)
+               (?other-victim ?victim-subet.computers))
+    :prerequisites ([not [unifiable ?other-victim ?current-victim]]))
+               
 
 #|
 
