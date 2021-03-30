@@ -247,6 +247,9 @@
 			;; should build a justification
 		     do (succeed interned-internal-pred 
 				 (gethash this-state (gethash interned-internal-pred *state-predicate-interning-ht*)))
+                        ;; you hit State where it's definitely matched
+                        ;; don't look for predecessors
+                        (return-from handle-predicate)
 			;; if it doesn't hit in any state but does hit in the "base" environment
 			;; and it has the right truth-value then succeed
 		     finally (when (eql (predication-truth-value interned-internal-pred) truth-value)

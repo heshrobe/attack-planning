@@ -406,10 +406,10 @@
       ;; First find all implicit bindings i.e. things of the form ?foo.bar.baz and note where the first reference occurs
       ;; Also for each generate a new logic-variable-maker
       (multiple-value-bind (all-refs hidden-bindings-alist) (find-hidden-bindings guards prerequisites post-conditions late-typing plan bindings)
-        ;; (Break "~a~%~{~a~^~%~}" all-refs hidden-bindings-alist)
+        ;; (format t "~%All refs: ~a~%Binding Alist: ~{~a~^~%~}" all-refs hidden-bindings-alist)
         (destructuring-bind (goals-to-achieve plan-structure thing) (or rebuilt-plan-structure (list nil nil nil))
           (declare (ignore thing))
-          (setq goals-to-achieve (substitute-hidden-bindings goals-to-achieve all-refs)
+          (setq ;; goals-to-achieve (substitute-hidden-bindings goals-to-achieve all-refs)
                 plan-structure (substitute-hidden-bindings plan-structure all-refs))
           `(eval-when (:load-toplevel :execute)
              (pushnew ',method-name *all-attack-methods*)
@@ -551,8 +551,8 @@
                          collect (de-prettify-binding (ji:make-predication-maker `(value-of ,implicit-binding ,lv)))
                          and do (push lv already-emitted))
               if (normal-binding? thing)
-                       collect (de-prettify-binding thing)
-                       else collect (substitute-hidden-bindings thing reference-alist)))))))
+              collect (de-prettify-binding thing)
+              else collect (substitute-hidden-bindings thing reference-alist)))))))
               
 (defun substitute-hidden-bindings (set-of-stuff reference-alist)
   (labels ((do-one (form)

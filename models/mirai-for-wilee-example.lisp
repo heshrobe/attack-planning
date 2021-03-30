@@ -107,6 +107,15 @@
     :authorization-pools (victim-authorization-pool)
     )
 
+(defuser other-typical-worker-bee
+    :user-type user
+    :ensemble other-worker-machines
+    :machines (other-typical-worker-computer)
+    :typical t
+    :capabilities (user-write)
+    :authorization-pools (victim-authorization-pool)
+    )
+
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;
 ;;; the Main Router

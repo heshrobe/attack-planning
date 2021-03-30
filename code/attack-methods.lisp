@@ -1101,8 +1101,10 @@ predicate promising the thing is known.
 ;;;
 ;;; Quick hack for botnet recruitment ala Mirai
 ;;;
+;;; Note: To be correct, this should include a logout after the probing login
+;;; Notre: It might be nice to aggregate this a bit more with intermediate method
+;;;        rather than methods with lots of actions.  Just for display purposes.
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-
 
 (defattack-method recruit-to-mirai-botnet
     :to-achieve [affect independence ?cycle-pool]
@@ -1115,20 +1117,19 @@ predicate promising the thing is known.
                [protocol-for remote-execution remote-shell ?protocol-name])
     :prerequisites ([accepts-connection ?victim-computer ?protocol-name ?current-foothold-computer])
     :plan (:sequential
-           ;; Fix this retunrs the same target multiple times.
-           (:goal [find-easy-login-target ?current-foothold-computer ?current-foothold-role ?victim-computer ?report-server ?credentials])
+           (:goal [find-easy-login-target ?current-foothold-computer ?current-foothold-role ?victim-computer ?report-server ?protocol-name ?credentials])
            (:goal [propagate-easy-login ?attacker ?loader-server ?victim-computer ?protocol-name ?credentials])
            (:repeat
             (:goal [find-another-potential-victim ?victim-computer ?protocol-name ?other-victim-computer])
-            (:goal [find-easy-login-target ?victim-computer ?credentials.user ?other-victim-computer ?reporrt-server ?new-credentials])
-            (:goal [propagate-easy-login ?attacker ?loader-server ?other-victim-computer ?protocol-name ?new-credentials])                   
+            (:goal [find-easy-login-target ?victim-computer ?credentials.user ?other-victim-computer ?report-server ?protocol-name ?new-credentials]) 
+            (:goal [propagate-easy-login ?attacker ?loader-server ?other-victim-computer ?protocol-name ?new-credentials])
             )))
 
 (defattack-method find-and-report-easy-login-victim
-    :to-achieve [find-easy-login-target ?prober-computer ?prober ?victim-computer ?report-server ?credentials]
+    :to-achieve [find-easy-login-target ?prober-computer ?prober ?victim-computer ?report-server ?protocol-name ?credentials]
     :output-variables (?credentials)
     :bindings ((?victim ?victim-computer.users)
-               [protocol-for remote-execution remote-shell ?protocol-name])
+               [attacker-and-machine ?attacker ?attacker-computer])
     :prerequisites ([accepts-connection ?victim-computer ?protocol-name ?prober-computer])
     :plan (:sequential
            (:action [connect-via ?prober-computer ?prober ?victim-computer ?protocol-name])
@@ -1136,11 +1137,15 @@ predicate promising the thing is known.
            (:goal [exfiltrate-data ?victim ?credentials ?victim-computer ?report-server])
            ;; after this action, the report server and the download server communicate but that's
            ;; probaly not observable and guaranteed to succeed.  Could always add that later, skip for now.
-           ))
+           )
+    ;; This is necessary since in the repeat it's the probing victim user (not the attqcker) who logs in
+    ;; The post-condition from that is that probing victim user knows the credentials of the next victim
+    ;; the result of exfiltrating it is that the attacker know it.
+    :post-conditions ([knows ?attacker credentials ?victim ?credentials]))
 
 ;;; Fix: This should be generalized over possible transport protocols such as HTTP and FTP
 (defattack-method exfiltrate-data
-    :to-achieve [exfiltrate-data ?actor ?data ?source-computer ?t-computer]
+    :to-achieve [exfiltrate-data ?actor ?data ?source-computer ?target-computer]
     :prerequisites ([accepts-connection ?target-computer ftp ?source-computer])
     :plan (:sequential 
            (:action [open-ftp-connection ?actor ?source-computer ?target-computer])
@@ -1148,10 +1153,10 @@ predicate promising the thing is known.
 
 (defattack-method login-and-exploit-easy-target
     :to-achieve [propagate-easy-login ?attacker ?loader-server ?victim-computer ?protocol-name ?credentials]
-    :prerequisites ([accepts-connection ?victim-computer ?protocol-name ?loader-server]
-                    [unifiable ?victim-computer.users ?victim-user])
     :bindings ((?victim-user ?credentials.user)
                (?victim-os ?victim-computer.os))
+    :prerequisites ([accepts-connection ?victim-computer ?protocol-name ?loader-server]
+                    [unifiable ?victim-computer.users ?victim-user])
     :plan (:sequential
            (:action [connect-via ?loader-server ?attacker ?victim-computer ?protocol-name])
            (:action [login-with-credentials ?victim-user ?victim-os ?loader-server ?attacker ?protocol-name ?credentials])
@@ -1164,8 +1169,7 @@ predicate promising the thing is known.
     :bindings ((?victim-site ?current-victim.site)
                (?victim-subnet ?victim-site.subnets)
                (?other-victim ?victim-subnet.computers))
-    :prerequisites ([not [unifiable ?other-victim ?current-victim]]
-                    (break "Other victim ~a" ?other-victim))
+    :prerequisites ([not [unifiable ?other-victim ?current-victim]])
     )
                
 
