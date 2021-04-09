@@ -43,6 +43,7 @@
 ;;; delivery to the victim-machine of the victim-user
 
 (define-action create-email-with-corrupt-attachment (?attacker ?attachment-type ?email-message ?attachment)
+  :output-variables (?email-message ?attachment)
   :prerequisites ()
   :outputs ((?attachment (make-object 'application-file :name (make-name 'attachment) :application ?attachment-type))
             (?attachments (list ?attachment))

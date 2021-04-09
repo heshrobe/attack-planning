@@ -45,18 +45,37 @@
 ;;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
+
+
+
 (eval-when (:load-toplevel :compile-toplevel :execute)
   (defparameter *all-aplan-predicates* nil)
+  (defparameter *aplan-predicate-binding-map* (make-hash-table))
   
   (define-predicate-model aplan-predicate-model () (ltms:ltms-predicate-model))
+  
+  (defun record-predicate-output-variable (predicate name) 
+    (pushnew name (gethash predicate *aplan-predicate-binding-map*)))
+  
+  (defun corresponding-abstract-variable (predication-maker logic-variable-maker)
+    (let ((position (position logic-variable-maker (predication-maker-statement predication-maker)
+                              :test #'equal))
+          (arglist (ji::find-predicate-arglist (predication-maker-predicate predication-maker))))
+      (nth (1- position) arglist)))
 
-  (defmacro define-aplan-predicate (name parameters models)
+  (defun lookup-predicate-output-variable (predicate name)
+    (member name (gethash predicate *aplan-predicate-binding-map*)))
+  
+  (defmacro define-aplan-predicate (name parameters models &key outputs)
     (let ((all-models (if (member 'aplan-predicate-model models) 
                           models
                         (append models (list 'aplan-predicate-model)))))
       `(eval-when (:load-toplevel :compile-toplevel :execute)
          (pushnew ',name *all-aplan-predicates*)
-         (define-predicate ,name ,parameters ,all-models)))))
+         (define-predicate ,name ,parameters ,all-models)
+         (loop for output in ',outputs do
+               (record-predicate-output-variable ',name output))
+         ))))
 
 
 
@@ -113,7 +132,8 @@
 ;;; Current-foothold always occurs within the :bindings clause which wraps it inside an [in-state ... ]
 ;;; It's only asked
 
-(define-aplan-predicate current-foothold (foothold-machine foothold-role) (special-stateful-predicate-model))
+(define-aplan-predicate current-foothold (foothold-machine foothold-role) (special-stateful-predicate-model)
+                        :outputs (foothold-machine foothold-role))
 
 ;;; Foothold-exists always occurs within the :guards clause which wraps it inside an [in-state ... ]
 ;;; so this is always asked
@@ -146,15 +166,18 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;
 ;;; Predicates for retrieving properties and components of objects
+;;; (can these be aplan predicates or do the need special treatmet)
 ;;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
-(define-predicate named-component (superpart-object name subpart-object) 
-  (ji::named-part-of-mixin ltms:ltms-predicate-model))
+(define-aplan-predicate named-component (superpart-object name subpart-object) (ji::named-part-of-mixin)
+                        :outputs (subpart-object))
 
-(define-predicate component (superpart-object subpart-object) (ji::part-of-mixin ltms:ltms-predicate-model))
+(define-aplan-predicate component (superpart-object subpart-object) (ji::part-of-mixin)
+                        :outputs (subpart-object))
 
-(define-predicate value-of (path variable) (ji::slot-value-mixin ltms:ltms-mixin default-protocol-implementation-model))
+(define-aplan-predicate value-of (path variable) (ji::slot-value-mixin)
+                        :outputs (variable))
 
 
 
@@ -165,29 +188,37 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 ;;; This just retrieves who the attacker is and what the attacker's home machine is
-(define-aplan-predicate attacker-and-machine (attacker attacker-machine) (special-stateful-predicate-model))
+(define-aplan-predicate attacker-and-machine (attacker attacker-machine) (special-stateful-predicate-model)
+                        :outputs (attacker attacker-machine))
 
 ;;; There might be more like these, they retrieve systems under the attacker's control for some purpose
 ;;; It might be better to have a more general predicate that lists the role, rather than several separate
 ;;; predicates (e.g. there might be a soft-update-server under the attacker's control)
-(define-aplan-predicate attacker-download-server (attacker attacker-server-machine) (non-stateful-predicate-model))
-(define-aplan-predicate attacker-adware-server (attacker attacker-server-machine) (non-stateful-predicate-model))
-(define-aplan-predicate attacker-command-and-control-server (attacker attacker-server-machine) (non-stateful-predicate-model))
-(define-aplan-predicate attacker-computer-with-role (attacker role machine) (non-stateful-predicate-model))
-
-
+(define-aplan-predicate attacker-download-server (attacker attacker-server-machine) (non-stateful-predicate-model)
+                        :outputs (attqacker-server-machine))
+(define-aplan-predicate attacker-adware-server (attacker attacker-server-machine) (non-stateful-predicate-model)
+                        :outputs (attqacker-server-machine))
+(define-aplan-predicate attacker-command-and-control-server (attacker attacker-server-machine) (non-stateful-predicate-model)
+                        :outputs (attqacker-server-machine))
+(define-aplan-predicate attacker-computer-with-role (attacker role machine) (non-stateful-predicate-model)
+                        :outputs (machine))
 
 (define-aplan-predicate desirable-property-of (system property) (non-stateful-predicate-model))
 
 ;;; This is used in the sense that a process controls a data-set
-(define-aplan-predicate process-controls-data-set (thing1 thing2) (non-stateful-predicate-model))
+(define-aplan-predicate process-controls-data-set (thing1 thing2) (non-stateful-predicate-model)
+                        :outputs (thing1))
 
 ;;; Some property of one component affects a property of another component of the OS
-(define-aplan-predicate impacts (feature component property thing) (non-stateful-predicate-model))
+(define-aplan-predicate impacts (feature component property thing) (non-stateful-predicate-model)
+                        :outputs (feature component))
 
-(define-aplan-predicate input-of (component resource) (non-stateful-predicate-model))
+(define-aplan-predicate input-of (component resource) (non-stateful-predicate-model)
+                        :outputs (component resource))
 
-(define-aplan-predicate output-of (component resource) (non-stateful-predicate-model))
+(define-aplan-predicate output-of (component resource) (non-stateful-predicate-model)
+                        :outputs (component)
+                        )
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;
@@ -215,7 +246,8 @@
 ;;; then installing a patch could change these and you could imagine an attacker in which
 ;;; the attacker gets the user to install a patch that introduces a vulnerabiity (e.g. Solar Winds)
 ;;; in which case these should be normal stateful predicates.
-(define-aplan-predicate is-vulnerable-to (process attack-type protocol) (non-stateful-predicate-model))
+(define-aplan-predicate is-vulnerable-to (process attack-type protocol) (non-stateful-predicate-model)
+                        :outputs (protocol))
 (define-aplan-predicate protected-from (thing attack protocol) (non-stateful-predicate-model))
 (define-aplan-predicate vulnerable-to-capec (thing capec cve-number) (non-stateful-predicate-model))
 
@@ -278,7 +310,8 @@
 
 (define-aplan-predicate uses-machine (machine user) (non-stateful-predicate-model))
 
-(define-aplan-predicate email-client-of (user email-server) (non-stateful-predicate-model))
+(define-aplan-predicate email-client-of (user email-server-process) (non-stateful-predicate-model)
+                        :outputs (email-server-process))
 
 (define-aplan-predicate email-sent-to (user attacker foothold-machine foothold-role email-server) ())
 
@@ -314,14 +347,16 @@
 
 (define-aplan-predicate policy-for-host (host connection-type location-mask) (non-stateful-predicate-model))
 
-(define-aplan-predicate protocol-is-relevant-for (goal protocol-name) (non-stateful-predicate-model))
+(define-aplan-predicate protocol-is-relevant-for (goal protocol-name) (non-stateful-predicate-model)
+                        :outputs (protocol-name))
 
 (define-aplan-predicate is-protocol (protocol-name) (non-stateful-predicate-model restorable-predicate))
 
 (define-aplan-predicate port-for-protocol (protocol-name port-number) (non-stateful-predicate-model restorable-predicate))
 
 ;;; An example of this: [protocol-for remote-execution remote-shell telnet]
-(define-aplan-predicate protocol-for (major-purpose sub-type protocol-name) (non-stateful-predicate-model restorable-predicate))
+(define-aplan-predicate protocol-for (major-purpose sub-type protocol-name) (non-stateful-predicate-model restorable-predicate)
+                        :outputs (protocol-name))
 
 #+allegro
 (excl:def-fwrapper wrap-arglist-2 (symbol)

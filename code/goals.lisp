@@ -59,7 +59,9 @@
 ;;; given that he's achieved a foothold in some role on some machine
 ;;; (the intent is that whatever lateral motion needed has already been done and this
 ;;;  goal shouldn't be satisfied by doing more)
-(define-goal achieve-access-right (operation thing principal))
+(define-goal achieve-access-right (operation thing principal)
+  :outputs (principal))
+
 ;;; This is an action now
 ;;; (define-goal use-access-right-to-modify (attacker operation principal thing))
 
@@ -96,7 +98,7 @@
 ;;; The victim-machine is the one you're trying to get execution on (input only)
 ;;; The victime-role is the role (i.e. user or process) on the victim machine that you're trying to achieve (input and more commonly output)
 
-(define-goal achieve-remote-execution (victim-machine victim-role))
+(define-goal achieve-remote-execution (victim-machine victim-role) :outputs (victim-role))
 
 (define-goal achieve-code-injection (process victim-os-instance))
 
@@ -120,9 +122,12 @@
 
 (define-goal install-malware (attacker server-machine victim-machine malware))
 
-(define-goal get-user-to-click-on (attacker user thing result))
+(define-goal get-user-to-click-on (attacker user thing result)
+  :outputs (thing result))
 
-(define-goal find-easy-login-target (prober-computer prober victim-enclave report-server protocol-name credentials))
+(define-goal find-easy-login-target (prober-computer prober victim-enclave report-server protocol-name credentials)
+  :outputs (credentials))
 (define-goal propagate-easy-login (attacker loader-server vicimt-machine protocol-name credrntials))
-(define-goal find-another-potential-victim (current-victim protocol-name other-victim))
+(define-goal find-another-potential-victim (current-victim protocol-name other-victim)
+  :outputs (other-victim))
 (define-goal exfiltrate-data (actor data from-computer to-computer))

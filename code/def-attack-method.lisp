@@ -394,6 +394,8 @@
     ;; form and if xxx is an unbound variable, this will successively bind xxx to all possible objects of type yyy
     ;; which isn't what we intended for a typing statement.  This requires us to declare any variable in the to-achieve
     ;; form that won't be bound as an "output".  That's probably a good thing to do anyhow, rather than just have it in a comment.
+    (let ((usage-map (build-usage-map to-achieve bindings typing guards prerequisites post-conditions plan output-variables)))
+      (perform-usage-checks usage-map method-name))
     (multiple-value-bind (early-typing late-typing)
         (loop for type in typing 
             for variable = (first type) 
@@ -409,8 +411,7 @@
         ;; (format t "~%All refs: ~a~%Binding Alist: ~{~a~^~%~}" all-refs hidden-bindings-alist)
         (destructuring-bind (goals-to-achieve plan-structure thing) (or rebuilt-plan-structure (list nil nil nil))
           (declare (ignore thing))
-          (setq ;; goals-to-achieve (substitute-hidden-bindings goals-to-achieve all-refs)
-                plan-structure (substitute-hidden-bindings plan-structure all-refs))
+          (setq plan-structure (substitute-hidden-bindings plan-structure all-refs))
           `(eval-when (:load-toplevel :execute)
              (pushnew ',method-name *all-attack-methods*)
              ;; Now generate the backward rule
@@ -591,7 +592,176 @@
    (substitute-hidden-bindings plan reference-alist)
    ))
 
+
 
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;;
+;;; Checking for unbound variables and unused variables
+;;;
+;;; Rules:
+;;; 1) Variables defined in the head should be referenced in bindings, pre-conditions, post-conditions or plan
+;;; 2) Variables defined in bindings should be referenced in pre-reqs, post-conditions or plan or another binding
+;;;    Variables referenced in the bindings should be defined in the head or another binding
+;;; 3) Variable referenced in pre-reqs should have been defined in head or bindings or another pre-req
+;;;    Variables defined in pre-reqs should be referenced in plan or post-conditon
+;;; 4) Variables in post-conditions, or plan should have been in head or bindings (or pre-requisites)
+;;;    Within the plan a new variable might be introduced but that's OK if it's used later in the plan
+;;;
+;;; FIX:To be addressed: An output variable in the head, isn't a def its a ref that should be defined somewhere later on
+;;;  All the downstream sets with a def should check for a ref in the head.
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+(defclass usage-record ()
+  ((variable-name :accessor variable-name :initarg :variable-name)
+   (ref :accessor ref :initarg :ref :initform nil)
+   (def :accessor def :initarg :def :initform nil)))
+
+(defmethod print-object ((record usage-record) stream)
+  (format stream "#<usage ~a ref ~a def ~a>" (variable-name record) (ref record) (def record)))
+
+(defparameter *set-names* '(head bindings guards prerequisites plan post-conditions))
+
+;;; The head is special: Any ref in the head should be def'd in the body
+;;; All others anything def'd should be checked against all followers plus the head.
+;;; Fix: I use compiler::warn here which is the right thing for ACL, need to shadow warn 
+;;; and import the right thing as warn for each implementation (mainly SBCL).
+(defun perform-usage-checks (alist method)
+  (let* ((head (second (assoc 'head alist)))
+         (bindings (second (assoc 'bindings alist)))
+         ;; (typing (second (assoc 'typing alist)))
+         (plan (second (assoc 'plan alist)))
+         (guards (second (assoc 'guards alist)))
+         (prerequisites (second (assoc 'prerequisites alist)))
+         (post-conditions (second (assoc 'post-conditions alist))))
+    (macrolet ((do-checks (set-name)
+                 (let* ((position (position set-name *set-names*))
+                        (before (subseq *set-names* 0 (1+ position)))
+                        (after (subseq *set-names* position)))
+                   `(loop for entry in ,set-name
+                        for var = (variable-name entry)
+                        for def = (def entry)
+                        for ref = (ref entry)
+                        do ,(cond
+                             ((eql set-name 'head)
+                              `(cond
+                                (ref (unless (or def (check-for-over-sets var (list ,@after) 'def))
+                                       (compiler::warn "In ~a, Variable ~a is referenced in the head but is not defined after"
+                                                       method var)))
+                                (def (unless (or ref (check-for-over-sets var (list ,@after) 'ref))
+                                       (compiler::warn "In ~a, Varable ~a is defined in the head but is not referenced after"
+                                                       method var)))))
+                             (t `(cond
+                                  (ref (unless (or def (check-for-over-sets var (list ,@before) 'def))
+                                         (compiler::warn "In ~a, Variable ~a is referenced in the ~a but is not defined earlier" method var ',set-name)))
+                                  (def (unless (or ref (check-for-over-sets var (list head ,@after) 'ref))
+                                         (compiler::warn "In ~a, Variable ~a is defined in the ~a but is not used"
+                                                        method var ',set-name))))))))))
+      (labels ((check-for (variable-name set type)
+                 (let ((entry (find variable-name set :key #'variable-name)))
+                   (cond ((null entry) nil)
+                         ((eql type 'def) (def entry))
+                         ((eql type 'ref) (ref entry)))))
+               (check-for-over-sets (variable-name sets type)
+                 (loop for set in sets thereis (check-for variable-name set type))))
+        ;; 1) for variables in the head, make sure that all variables are referenced
+        (do-checks head)
+        ;; 2) for variables in bindings, if it's defined make sure it's referenced somewhere
+        ;; if it's reference make sure it was defined in the head.or in another binding.
+        (do-checks bindings)
+        ;; 3) Variables referenced in the prereqs should have been defined in the head, bindings or another prereq
+        ;;    Variables defined in the prereqs should be referenced in the plan, post-conditions or another prereq
+        (do-checks guards)
+        (do-checks prerequisites)
+        ;; 4) Variable referenced in plan should have defined in head, bindings, prereqs, or plan
+        ;;    Variables defined in the plan should be used in the plan or the post-conditions
+        (do-checks plan)
+        ;; 5) Variables referenced in the post-conditions should have been defined in head, bindings, prerequs, plan or post-conditions
+        ;;    Variables defined in the post-conditions should be used in the post-conditions
+        (do-checks post-conditions)
+        ))))
+
+(defun build-usage-map (head bindings typing guards prerequisites post-conditions plan output-variables)
+  ;; Do we really want to ignore the typing
+  ;; or do we want to treat it as a usage
+  (declare (ignore typing))
+  (let ((alist nil) (all-refs nil))
+    (macrolet ((do-one (name)
+                 `(multiple-value-bind (entry updated-all-ref)
+                      (find-all-variables ,name ',name all-refs output-variables)
+                    (push entry alist)
+                    (setq all-refs updated-all-ref))))
+      (do-one head)
+      (do-one bindings)
+      (do-one guards)
+      (do-one prerequisites)
+      ;; (do-one typing)
+      (do-one plan)
+      (do-one post-conditions))    
+  alist))
+    
+(defun find-all-variables (set-of-stuff tag already-seen output-variables)
+  (let ((answers nil))
+    (labels ((do-one (stuff &optional predication-maker)
+               (cond
+                ((predication-maker-p stuff)
+                 (do-one (predication-maker-statement stuff) (unless (eql tag 'head) stuff)))
+                ((logic-variable-maker-p stuff)
+                 (let ((string-of-name (string (logic-variable-maker-name stuff))))
+                   (unless (search "anonymous" string-of-name :test #'string-equal)
+                     (let* ((first-dot (position #\. string-of-name :test #'char-equal))
+                            (symbol (if first-dot
+                                        (intern (subseq string-of-name 0 first-dot))
+                                      (intern string-of-name)))
+                            (entry (find symbol answers :key #'variable-name))
+;;;                            (abstract-variable (when predication-maker (corresponding-abstract-variable predication-maker stuff)))
+;;;                            (predicate (when predication-maker (predication-maker-predicate predication-maker)))
+;;;                            (is-output? (or (eql tag 'head)
+;;;                                            (when predication-maker (lookup-predicate-output-variable predicate abstract-variable))))
+;;;                            (is-new-locally (null entry))
+                            )
+                       ;; (format t "~%Var ~a Pred maker ~a Pred ~a Abs-var ~a Output? ~a" symbol predication-maker predicate abstract-variable is-output?)
+                       (unless entry
+                         (setq entry (make-instance 'usage-record :variable-name symbol))
+                         (push entry answers))
+                       ;; Maybe the logic should be simpler:
+                       ;; Except for the head
+                       ;; Any 2nd mention is a ref, Any 1st mention is a def
+                       ;; For any normal predicate this seems true, it will bind the unbound variables.
+                       ;; when pattern matching.  
+                       (cond 
+                        ((member symbol already-seen)
+                         ;; a 2nd mention of an variable that is an output-variable of the predicate
+                         ;; that's already defined in this set is taken to be a reference
+                         ;; (unless (and (def entry) is-new-locally)
+                         ;;   (setf (ref entry) t))
+                         (if (member symbol output-variables :key #'logic-variable-maker-name)
+                             (setf (def entry) t)
+                           (setf (ref entry) t))
+                         )
+                        (t (push symbol already-seen)
+                           ;; (if is-output? 
+                           ;;     (setf (def entry) t)
+                           ;;   (setf (ref entry) t))
+                           (cond ((eql tag 'head)
+                                  (if (member symbol output-variables :key #'logic-variable-maker-name)
+                                      (setf (ref entry) t)
+                                    (setf (def entry) t)))
+                                 (t (setf (def entry) t)))
+                           ))))))
+                ((and (listp stuff) (= (length stuff) 2) (eql tag 'bindings) (logic-variable-maker-p (first stuff))
+                      (null (find #\. (string (logic-variable-maker-name (first stuff))))))
+                 (let* ((name (logic-variable-maker-name (first stuff)))
+                        (entry (find name answers :key #'variable-name)))
+                   (unless entry
+                     (setq entry (make-instance 'usage-record :variable-name name :def t))
+                     (push entry answers))
+                   (push name already-seen))
+                 (do-one (rest stuff)) predication-maker)
+                ((listp stuff)
+                 (loop for thing in stuff do (do-one thing predication-maker))))))
+      (do-one set-of-stuff))
+    (values (list tag answers)
+            already-seen)))
 
 
 
@@ -603,10 +773,11 @@
 
 (defparameter *all-goals* nil)
 
-(defmacro define-goal (name variables) 
+(defmacro define-goal (name variables &key outputs) 
   `(eval-when (:load-toplevel :execute :compile-toplevel)
      (pushnew ',name *all-goals*)
-     (define-predicate ,name ,variables (ltms:ltms-predicate-model))))
+     (define-predicate ,name ,variables (ltms:ltms-predicate-model))
+     (setf (gethash ',name *aplan-predicate-binding-map*) ',outputs)))
 
 (define-predicate achieve-goal (goal-to-achieve input-state output-state plan) (ltms:ltms-predicate-model))
 
@@ -734,6 +905,10 @@
             `(eval-when (:compile-toplevel :load-toplevel :execute)
                (pushnew ',name *all-actions*)
                ,@(when define-predicate `((define-predicate ,name ,names (ltms:ltms-predicate-model))))
+               ,@(loop for var in output-variables
+                     for var-name = (string (logic-variable-maker-name var))
+                     for stripped-name = (intern (subseq var-name 1))
+                     collect `(record-predicate-output-variable ',name ',stripped-name))
                (defrule ,rule-name (:backward)
                  then ,real-head
                  if [and ,@(process-typing early-typing) 
