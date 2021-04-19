@@ -37,7 +37,7 @@
 (define-goal force-load (attacker code target))
 
 ;;; Modify some featue of an object
-;;; given that the attacker has a foothold in some role on some machine
+;;; given that the attacker has a foothold in some role on some computer
 (define-goal modify (object-property object))
 
 ;;; Used?
@@ -46,7 +46,7 @@
 (define-goal achieve-knowledge-of-contents (thing))
 
 ;;; achieve knowledge of a victim's password for some entity
-(define-goal achieve-knowledge-of-password (attacker victim-user machine))
+(define-goal achieve-knowledge-of-password (attacker victim-user computer))
 
 (define-goal know (attacker thing property))
 
@@ -56,7 +56,7 @@
 
 ;;; Privilege Escalation:
 ;;; The attacker achieves a particular principal's capability (operation object) 
-;;; given that he's achieved a foothold in some role on some machine
+;;; given that he's achieved a foothold in some role on some computer
 ;;; (the intent is that whatever lateral motion needed has already been done and this
 ;;;  goal shouldn't be satisfied by doing more)
 (define-goal achieve-access-right (operation thing principal)
@@ -71,7 +71,7 @@
 (define-goal guess (attacker thing property))
 
 
-;;; discover the existence of a physical resource (e.g. a machine)
+;;; discover the existence of a physical resource (e.g. a computer)
 (define-goal discover (attacker thing property))
 
 ;;; This predicate is the bedrock of lateral motion:
@@ -92,13 +92,13 @@
 (define-goal make-connection (victim connection-type))
 
 ;;; This is called with the last three arguments describing the attacker's footholds.
-;;; The first two of these say what machine the attacker is operating from and what role he's operating in
+;;; The first two of these say what computer the attacker is operating from and what role he's operating in
 ;;; at this point of the reasoning.  The last is a list of other footholds that the attacker might hold
-;;; expressed as a list of machine and role pairs.
-;;; The victim-machine is the one you're trying to get execution on (input only)
-;;; The victime-role is the role (i.e. user or process) on the victim machine that you're trying to achieve (input and more commonly output)
+;;; expressed as a list of computer and role pairs.
+;;; The victim-computer is the one you're trying to get execution on (input only)
+;;; The victime-role is the role (i.e. user or process) on the victim computer that you're trying to achieve (input and more commonly output)
 
-(define-goal achieve-remote-execution (victim-machine victim-role) :outputs (victim-role))
+(define-goal achieve-remote-execution (victim-computer victim-role) :outputs (victim-role))
 
 (define-goal achieve-code-injection (process victim-os-instance))
 
@@ -116,18 +116,18 @@
 
 (define-goal decrease-size (thing))
 
-;;; Put the machine into an unusable state that requires sysadmin attention
+;;; Put the computer into an unusable state that requires sysadmin attention
 ;;; 
-(define-goal brick-machine (attacker machine))
+(define-goal brick-computer (attacker computer))
 
-(define-goal install-malware (attacker server-machine victim-machine malware))
+(define-goal install-malware (attacker server-computer victim-computer malware))
 
 (define-goal get-user-to-click-on (attacker user thing result)
   :outputs (thing result))
 
 (define-goal find-easy-login-target (prober-computer prober victim-enclave report-server protocol-name credentials)
   :outputs (credentials))
-(define-goal propagate-easy-login (attacker loader-server vicimt-machine protocol-name credrntials))
+(define-goal propagate-easy-login (attacker loader-server vicimt-computer protocol-name credrntials))
 (define-goal find-another-potential-victim (current-victim protocol-name other-victim)
   :outputs (other-victim))
 (define-goal exfiltrate-data (actor data from-computer to-computer))

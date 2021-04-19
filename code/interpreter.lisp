@@ -22,7 +22,7 @@
   ((footholds-held :accessor footholds-held :initform nil :initarg :footholds-held)
    (places-visited :accessor places-visited :initform nil :initarg :places-visited)
    (attacker :accessor attacker :initarg :attacker)
-   (attacker-machine :accessor attacker-machine :initarg :attacker-machine)
+   (attacker-computer :accessor attacker-computer :initarg :attacker-computer)
    ))
 
 (defclass state (specialized-search-context)
@@ -68,7 +68,7 @@
       (setq prior-state *initial-state*))
     (when prior-state
       (setf (attacker state) (attacker prior-state)
-	    (attacker-machine state) (attacker-machine prior-state)
+	    (attacker-computer state) (attacker-computer prior-state)
 	    (footholds-held state) (footholds-held prior-state)
 	    (places-visited state) (places-visited prior-state)
 	    (predecessor state) prior-state

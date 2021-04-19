@@ -27,8 +27,8 @@
   ((footholds-held :accessor footholds-held :initform nil :initarg :footholds-held)
    (places-visited :accessor places-visited :initform nil :initarg :places-visited)
    (attacker :accessor attacker :initarg :attacker :initform nil)
-   (attacker-machine :accessor attacker-machine :initarg :attacker-machine :initform nil)
-   (attacker-and-machine-pred :accessor attacker-and-machine-pred)
+   (attacker-computer :accessor attacker-computer :initarg :attacker-computer :initform nil)
+   (attacker-and-computer-pred :accessor attacker-and-computer-pred)
    ))
 
 (defclass state (specialized-search-context)

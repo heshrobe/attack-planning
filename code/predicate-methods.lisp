@@ -58,38 +58,38 @@
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;
-;;; Attacker and Machine
+;;; Attacker and Computer
 ;;; Only asserted in the base environment
 ;;; Chases back through predecessor states of the state in the query
 ;;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
-(defmethod ask-in-state ((query attacker-and-machine) truth-value (state state) continuation)
+(defmethod ask-in-state ((query attacker-and-computer) truth-value (state state) continuation)
   (unless (eql truth-value +true+)
     (error 'ji:model-can-only-handle-positive-queries
 	   :query query
 	   :model (type-of query)))
-  (with-statement-destructured (attacker attacker-machine) query
+  (with-statement-destructured (attacker attacker-computer) query
     (loop for this-state = state then next-state
 	while this-state
 	for next-state = (predecessor this-state)
 	for attacker-of-state = (attacker this-state)
-	for machine-of-state = (attacker-machine this-state)
-	when (and (not (null attacker-of-state)) (not (null machine-of-state)))
+	for computer-of-state = (attacker-computer this-state)
+	when (and (not (null attacker-of-state)) (not (null computer-of-state)))
 	do (with-unification 
-	    (unify attacker-machine machine-of-state)
+	    (unify attacker-computer computer-of-state)
 	    (unify attacker attacker-of-state)
-	    (stack-let ((backward-support (list query +true+ (attacker-and-machine-pred this-state) )))
+	    (stack-let ((backward-support (list query +true+ (attacker-and-computer-pred this-state) )))
 	      (funcall continuation backward-support)))
 	   (return))))
 
-(defmethod insert-in-state ((outer stateful-predicate-mixin) (inner attacker-and-machine) (state state))
+(defmethod insert-in-state ((outer stateful-predicate-mixin) (inner attacker-and-computer) (state state))
   (let ((state (intern-state state)))
-    (with-statement-destructured (attacker machine) inner
+    (with-statement-destructured (attacker computer) inner
       (setf (attacker state) attacker
-	    (attacker-machine state) machine
-	    (attacker-and-machine-pred state) `[in-state [attacker-and-machine ,attacker ,machine] ,state])
-      (values (attacker-and-machine-pred state) t))))
+	    (attacker-computer state) computer
+	    (attacker-and-computer-pred state) `[in-state [attacker-and-computer ,attacker ,computer] ,state])
+      (values (attacker-and-computer-pred state) t))))
 
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -102,8 +102,8 @@
 
 
 (defclass foothold-record ()
-    ((victim-machine :accessor victim-machine :initarg :victim-machine :initform nil)
-     (foothold-machine :accessor foothold-machine :initarg :foothold-machine :initform nil)
+    ((victim-computer :accessor victim-computer :initarg :victim-computer :initform nil)
+     (foothold-computer :accessor foothold-computer :initarg :foothold-computer :initform nil)
      (foothold-role :accessor foothold-role :initarg :foothold-role :initform nil)
      (protocol :accessor protocol :initarg :protocol :initform nil)
      (foothold-predication :accessor foothold-predication :initform nil :initarg :foothold-predication)
@@ -115,23 +115,23 @@
 ;;; and a new-p flag
 (defmethod insert-in-state ((outer-predicaton stateful-predicate-mixin) (predication has-foothold) state)
   (let ((state (intern-state state)))
-    (with-statement-destructured (victim-machine foothold-machine foothold-role foothold-protocol) predication
+    (with-statement-destructured (victim-computer foothold-computer foothold-role foothold-protocol) predication
       (let ((existing-statement (loop for foothold-record in (footholds-held state)
-				    for existing-victim = (victim-machine foothold-record)
-				    for existing-foothold-machine = (foothold-machine foothold-record )
+				    for existing-victim = (victim-computer foothold-record)
+				    for existing-foothold-computer = (foothold-computer foothold-record )
 				    for existing-foothold-role = (foothold-role foothold-record)
 				    for existing-foothold-protocol = (protocol foothold-record)
 				    for existing-pred = (foothold-predication foothold-record)
-				    when (and (eql victim-machine existing-victim)
-					      (eql foothold-machine existing-foothold-machine)
+				    when (and (eql victim-computer existing-victim)
+					      (eql foothold-computer existing-foothold-computer)
 					      (eql foothold-role existing-foothold-role)
 					      (eql existing-foothold-protocol foothold-protocol))
 				    return existing-pred)))
 	(cond
 	 (existing-statement (values existing-statement nil))
 	 (t (push (make-instance 'foothold-record
-		    :victim-machine victim-machine
-		    :foothold-machine foothold-machine
+		    :victim-computer victim-computer
+		    :foothold-computer foothold-computer
 		    :foothold-role foothold-role
 		    :protocol foothold-protocol
 		    :foothold-predication predication) 
@@ -143,16 +143,16 @@
     (error 'ji:model-can-only-handle-positive-queries
 	   :query query
 	   :model (type-of query)))
-  (with-statement-destructured (victim-machine foothold-machine foothold-role foothold-protocol) query
+  (with-statement-destructured (victim-computer foothold-computer foothold-role foothold-protocol) query
     (loop for foothold-record in (footholds-held state)
-	for existing-victim = (victim-machine foothold-record)
-	for existing-foothold-machine = (foothold-machine foothold-record )
+	for existing-victim = (victim-computer foothold-record)
+	for existing-foothold-computer = (foothold-computer foothold-record )
 	for existing-foothold-role = (foothold-role foothold-record)
 	for existing-foothold-protocol = (protocol foothold-record)
 	for existing-pred = (foothold-predication foothold-record)			 
 	do (with-unification 
-	    (unify existing-victim victim-machine)
-	    (unify existing-foothold-machine foothold-machine)
+	    (unify existing-victim victim-computer)
+	    (unify existing-foothold-computer foothold-computer)
 	    (unify existing-foothold-role foothold-role)
 	    (unify existing-foothold-protocol foothold-protocol)
 	    (stack-let ((backward-support (list query +true+ existing-pred )))
@@ -173,12 +173,12 @@
     (error 'ji:model-can-only-handle-positive-queries
 	   :query query
 	   :model (type-of query)))
-  (with-statement-destructured (foothold-machine foothold-role) query
+  (with-statement-destructured (foothold-computer foothold-role) query
     (let* ((foothold-record (first (footholds-held state)))
-	   (existing-foothold-machine (foothold-machine foothold-record))
+	   (existing-foothold-computer (foothold-computer foothold-record))
 	   (existing-foothold-role (foothold-role foothold-record)))
       (with-unification 
-       (unify existing-foothold-machine foothold-machine)
+       (unify existing-foothold-computer foothold-computer)
        (unify existing-foothold-role foothold-role)
        (stack-let ((backward-support (list query +true+ '(ask-data current-foothold))))
 	 (funcall continuation backward-support))))))
@@ -192,10 +192,10 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 (defmethod ask-in-state ((query foothold-doesnt-exist) truth-value (state state) continuation)
-  (with-statement-destructured (victim-machine) query
+  (with-statement-destructured (victim-computer) query
     (cond
      ((eql truth-value +true+)
-      (let ((entry (find victim-machine (footholds-held state) :key #'victim-machine)))
+      (let ((entry (find victim-computer (footholds-held state) :key #'victim-computer)))
 	  (unless entry
 	    (stack-let ((backward-support (list query +true+ '(ask-data foothold-exists))))
 	      (funcall continuation backward-support)))))
@@ -213,20 +213,20 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 ;;; If the purpose is remote-execution all we check is that there is a previous
-;;; entry for the same machine.
+;;; entry for the same computer.
 (defmethod ask-in-state ((query place-already-visited?) truth-value (state state) continuation)
-  (with-statement-destructured (machine purpose) query
+  (with-statement-destructured (computer purpose) query
     (let ((it-exists (case purpose
-		       ;; For remote execution, if you got here as a subgoal of getting a foothold for this machine
+		       ;; For remote execution, if you got here as a subgoal of getting a foothold for this computer
 		       ;; you're in a loop.  Obviously if you got here as a subgoal of getting remote execution that's 
 		       ;; a loop as well
-		       (remote-execution (loop for (visited-machine) in (places-visited state)
-					     thereis (eql machine visited-machine)))
+		       (remote-execution (loop for (visited-computer) in (places-visited state)
+					     thereis (eql computer visited-computer)))
 		       ;; For foothold, we might be here as a subgoal of getting remote execution so we only look
 		       ;; at foothold entries.  We consider recursing with a different protocol to also be a loop
 		       ;; so protocol is actually ignored.
-		       (foothold (loop for (visited-machine visited-purpose) in (places-visited state)
-				     thereis (and (eql machine visited-machine) (eql purpose visited-purpose)))))))
+		       (foothold (loop for (visited-computer visited-purpose) in (places-visited state)
+				     thereis (and (eql computer visited-computer) (eql purpose visited-purpose)))))))
       (cond
        ((eql truth-value +true+)
 	(when it-exists
@@ -246,7 +246,7 @@
 ;;;  This is a told in a :note within the attack-method
 ;;;   It's the only thing we use :notes for so far
 ;;;
-;;; The predication includes the machine, the purpose (either remote-execution or foothold) 
+;;; The predication includes the computer, the purpose (either remote-execution or foothold) 
 ;;;
 ;;;
 ;;; We actually do nothing at the insert stage
@@ -262,9 +262,9 @@
     (error 'model-cant-handle-query
 	   :query outer-predication
 	   :model (type-of outer-predication)))
-  (with-statement-destructured (machine purpose) inner-predication 
-    ;; (format *error-output* "~%Noting that ~a was visited for purpose ~a" machine purpose)
-    (pushnew (list machine purpose ) (places-visited state) :test #'equal)))
+  (with-statement-destructured (computer purpose) inner-predication 
+    ;; (format *error-output* "~%Noting that ~a was visited for purpose ~a" computer purpose)
+    (pushnew (list computer purpose ) (places-visited state) :test #'equal)))
 
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;

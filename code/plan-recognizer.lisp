@@ -348,7 +348,7 @@
   (format stream "~%I don't yet know how to dump ~a actions with args ~{~a~^, ~}" type (arguments action))
   start-time)
 
-;;; Connect-via: current-foothold-machine current-foothold-role victim-machine protocol-name)
+;;; Connect-via: current-foothold-computer current-foothold-role victim-computer protocol-name)
 (defmethod dump-action ((type (eql 'connect-via)) (action action) start-time &optional (stream *standard-output*))
   (destructuring-bind (source foothold-role destination protocol) (arguments action)
     (declare (ignore foothold-role))
@@ -362,11 +362,11 @@
       end-time)))
 
 (defmethod dump-action ((type (eql 'guess-password)) (action action) start-time &optional (stream *standard-output*))
-  (destructuring-bind (attacker user victim-machine) (arguments action)
+  (destructuring-bind (attacker user victim-computer) (arguments action)
     (declare (ignore attacker user))
     (let* ((port 0)
 	   (protocol 0)
-	   (srcip (ip-address-string (first (ip-addresses victim-machine))))
+	   (srcip (ip-address-string (first (ip-addresses victim-computer))))
 	   (dstip srcip)
 	   (duration (* 2 60))
 	   (end-time (+ start-time duration))
@@ -375,12 +375,12 @@
       end-time)))
 
 (defmethod dump-action ((type (eql 'login)) (action action) start-time &optional (stream *standard-output*))
-  (destructuring-bind (victim-user victim-os-instance current-foothold-machine current-foothold-role) (arguments action)
-    (declare (ignore current-foothold-role current-foothold-machine))
+  (destructuring-bind (victim-user victim-os-instance current-foothold-computer current-foothold-role) (arguments action)
+    (declare (ignore current-foothold-role current-foothold-computer))
     (let* ((port 0)
 	   (protocol 0)
-	   (victim-machine (machine victim-os-instance))
-	   (srcip (ip-address-string (first (ip-addresses victim-machine))))
+	   (victim-computer (computer victim-os-instance))
+	   (srcip (ip-address-string (first (ip-addresses victim-computer))))
 	   (dstip srcip)
 	   (duration 30)
 	   (end-time (+ start-time duration))
@@ -428,11 +428,11 @@
       end-time)))
 
 (defmethod dump-action ((type (eql 'capture-password-through-keylogger)) (action action) start-time &optional (stream *standard-output*))
-  (destructuring-bind (attacker victim-user victim-machine) (arguments action)
+  (destructuring-bind (attacker victim-user victim-computer) (arguments action)
     (declare (ignore attacker))
     (let* ((port 0)
 	   (protocol 0)
-	   (srcip (ip-address-string (first (ip-addresses victim-machine))))
+	   (srcip (ip-address-string (first (ip-addresses victim-computer))))
 	   (dstip srcip)
 	   (duration (* 10 60))
 	   (end-time (+ start-time duration))
@@ -441,12 +441,12 @@
       end-time)))
 
 (defmethod dump-action ((type (eql 'use-access-right-to-modify)) (action action) start-time &optional (stream *standard-output*))
-  (destructuring-bind (attacker action whose-right foothold-computer victim-object victim-machine) (arguments action)
+  (destructuring-bind (attacker action whose-right foothold-computer victim-object victim-computer) (arguments action)
     (declare (ignore attacker action whose-right victim-object))
     (let* ((port (first (ports-for-protocol 'database-protocol)))
 	   (protocol "database")
 	   (srcip (ip-address-string (first (ip-addresses foothold-computer))))
-	   (dstip (ip-address-string (first (ip-addresses victim-machine))) )
+	   (dstip (ip-address-string (first (ip-addresses victim-computer))) )
 	   (duration (* 10 60))
 	   (end-time (+ start-time duration))
 	   (record (list srcip port dstip port duration protocol start-time end-time 0  "Database-Access" 0 "Write")))
@@ -607,10 +607,10 @@
 (defmethod match-action ((type (eql 'login)) (action action) vector &optional (stream *standard-output*))
   (declare (ignore stream))
   (with-fields (("attack_cat" "attack_subcat" "dstip") :vector vector :all-fields *all-keys*)
-    (destructuring-bind (victim-user victim-os-instance current-foothold-machine current-foothold-role) (arguments action)
-      (declare (ignore current-foothold-machine current-foothold-role))
+    (destructuring-bind (victim-user victim-os-instance current-foothold-computer current-foothold-role) (arguments action)
+      (declare (ignore current-foothold-computer current-foothold-role))
       (when (and attack-cat attack-subcat)
-	(and (computer-matches-ip (machine victim-os-instance) dstip)
+	(and (computer-matches-ip (computer victim-os-instance) dstip)
 	     (string-equal attack-cat "login")
 	     (string-equal attack-subcat (string (name victim-user)))
 	  )))))
@@ -741,16 +741,16 @@
 
 (defmethod tell-actions-story ((type (eql 'login)) (action action) vector &optional (stream *standard-output*))
   (with-fields (("srcip" "stime") :vector vector :all-fields *all-keys*)
-    (destructuring-bind (victim-user victim-os-instance current-foothold-machine current-foothold-role) (arguments action)
-      (declare (ignore current-foothold-machine current-foothold-role))
+    (destructuring-bind (victim-user victim-os-instance current-foothold-computer current-foothold-role) (arguments action)
+      (declare (ignore current-foothold-computer current-foothold-role))
       (format stream "~2%At ~a~% There was a login as ~a on our computer ~a at ~a"
-	      (formatted-unix-time stime) (name victim-user) (role-name (machine victim-os-instance)) srcip))))
+	      (formatted-unix-time stime) (name victim-user) (role-name (computer victim-os-instance)) srcip))))
 
 (defmethod tell-actions-story ((type (eql 'download-software)) (action action) vector &optional (stream *standard-output*))
   (with-fields (("srcip" "dstip" "service" "stime" "ltime") :vector vector :all-fields *all-keys*)
     (destructuring-bind (package source-computer destination-computer role) (arguments action)
       (declare (ignore role source-computer))
-      (format stream "~2%Between ~a and ~a~% The machine ~a at ~a dowloaded software package ~a ~% using ~a from ~a"
+      (format stream "~2%Between ~a and ~a~% The computer ~a at ~a dowloaded software package ~a ~% using ~a from ~a"
 	      (formatted-unix-time stime) (formatted-unix-time ltime)
 	      (role-name destination-computer) dstip package
 	      service srcip
@@ -826,7 +826,7 @@
 (defmethod tell-goals-story ((goal-name (eql 'achieve-remote-shell)) (goal goal) &optional (stream *standard-output*))
   ;;; [ACHIEVE-REMOTE-SHELL
   (destructuring-bind (victim-os-instance victim-user) (arguments goal)
-    (let ((victim-computer (machine victim-os-instance)))
+    (let ((victim-computer (computer victim-os-instance)))
       (format stream "~2%-->This allowed the attacker to get a remote shell on ~a as ~a"
 	      (role-name victim-computer) (name victim-user)))))
 
@@ -836,8 +836,8 @@
     (format stream "~2%-->This allowed ~a to install the ~a malware on ~a"
 	    (role-name attacker) malware (role-name victim-computer))))
 
-(defmethod tell-goals-story ((goal-name (eql 'brick-machine)) (goal goal) &optional (stream *standard-output*))
-  ;;; [brick-machine
+(defmethod tell-goals-story ((goal-name (eql 'brick-computer)) (goal goal) &optional (stream *standard-output*))
+  ;;; [brick-computer
   (destructuring-bind (attacker victim-computer) (arguments goal)
     (format stream "~2%-->This allowed ~a to brick ~a, causing the user to call a sysadmin"
 	    (role-name attacker) (role-name victim-computer))))

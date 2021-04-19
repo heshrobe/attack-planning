@@ -63,24 +63,24 @@
   :greater ())
 
 
-;;; An esemble is a group of machines that are essentially identical from
+;;; An esemble is a group of computers that are essentially identical from
 ;;; our point of view
-(defensemble worker-machines
+(defensemble worker-computers
     :enterprise victim
     :address-range "192.168.0.0/24"
     :size 40)
 
 ;;; The typical worker computer is a "windows" computer
-;;; It is a typical meember of the worker-machines ensemble
+;;; It is a typical meember of the worker-computers ensemble
 (defcomputer typical-worker-computer windows-computer
   :ip-address-string "192.168.0.3"
   :typical t
   :authorization-pool victim-authorization-pool
-  :ensemble worker-machines
+  :ensemble worker-computers
   :superuser ()
   )
 
-(defensemble other-worker-machines
+(defensemble other-worker-computers
     :enterprise victim
     :address-range "192.168.1.0/24"
     :size 40)
@@ -89,19 +89,19 @@
   :ip-address-string "192.168.1.3"
   :typical t
   :authorization-pool victim-authorization-pool
-  :ensemble other-worker-machines
+  :ensemble other-worker-computers
   :superuser ()
   )  
 
 ;;; Typical worker bee is a typical user of a typical
-;;; machine in the worker-machines ensemble
+;;; computer in the worker-computers ensemble
 ;;; This user has "user-write" capabilities
 ;;; meaning they can read-or-write any resource that
 ;;; requires read or write capability
 (defuser typical-worker-bee
     :user-type user
-    :ensemble worker-machines
-    :machines (typical-worker-computer)
+    :ensemble worker-computers
+    :computers (typical-worker-computer)
     :typical t
     :capabilities (user-write)
     :authorization-pools (victim-authorization-pool)
@@ -109,8 +109,8 @@
 
 (defuser other-typical-worker-bee
     :user-type user
-    :ensemble other-worker-machines
-    :machines (other-typical-worker-computer)
+    :ensemble other-worker-computers
+    :computers (other-typical-worker-computer)
     :typical t
     :capabilities (user-write)
     :authorization-pools (victim-authorization-pool)

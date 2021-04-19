@@ -29,16 +29,16 @@
       (destructuring-bind (to-property to-value) to-condition
 	`(progn
 	   (defrule ,rule-1-name (:forward)
-	     if [and [ltms:object-type-of ,from-type-variable ,from-type]
+	     if [and [object-type-of ,from-type-variable ,from-type]
 		     [value-of (,from-type-variable ,from-slot) ,to-type-variable]
-		     [ltms:object-type-of ,to-type-variable ,to-type]
+		     [object-type-of ,to-type-variable ,to-type]
 		     ,@(when from-condition-p `([value-of (,from-type-variable ,from-property) ,from-value]))
 		     ]
 	     then [value-of (,to-type-variable ,to-slot) ,from-type-variable])
 	   (defrule ,rule-2-name (:forward)
-	     if [and [ltms:object-type-of ,to-type-variable ,to-type]
+	     if [and [object-type-of ,to-type-variable ,to-type]
 		     [value-of (,to-type-variable ,to-slot) ,from-type-variable]
-		     [ltms:object-type-of ,from-type-variable ,from-type]
+		     [object-type-of ,from-type-variable ,from-type]
 		     ,@(when to-condition-p `([value-of (,to-type-variable ,to-property) ,to-value]))
 		     ]
 	     then [value-of (,from-type-variable ,from-slot) ,to-type-variable]))))))
@@ -46,7 +46,7 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;
 ;;; Defining the structure of an enterprise
-;;;  its sites and enclaves of machines
+;;;  its sites and enclaves of computers
 ;;; And the external internet
 ;;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -76,7 +76,7 @@
 	(fill-in-subnet-mask net-mask ,address-string ,address-mask)
 	site))))
 
-;;; An ensemble is a collection of machines that are identical from the attackers
+;;; An ensemble is a collection of computers that are identical from the attackers
 ;;; point of view.  Every ensemble has a typical instance which represents
 ;;; all the properties that are shared
 (defmacro defensemble (name &key (enterprise nil enterprise-p)
@@ -213,18 +213,18 @@
       program
       )))
 
-(defmacro defprocess (role-name &key process-type machine program)
+(defmacro defprocess (role-name &key process-type computer program)
   `(with-atomic-action
     (kill-redefined-object ',role-name)
-    (instantiate-a-process ',process-type '(,machine)
+    (instantiate-a-process ',process-type '(,computer)
                            :role-name ',role-name
                            ,@(when program `(:program '(,program))))))
 
 
-(defun instantiate-a-process (process-type machine &key role-name program)
+(defun instantiate-a-process (process-type computer &key role-name program)
   (let* ((process-name (or role-name (gentemp (concatenate 'string (string-upcase (string process-type)) "-"))))
-         (machine (follow-path machine))
-         (os (follow-path (list machine 'os)))
+         (computer (follow-path computer))
+         (os (follow-path (list computer 'os)))
          (process (make-object process-type :name process-name))
          (workload (follow-path (list os 'workload))))
     (when program
@@ -232,13 +232,13 @@
 	(tell `[value-of (,process program) ,program])))
 
     (tell `[value-of (,process host-os) ,os])
-    (tell `[value-of (,process machines) ,machine])
+    (tell `[value-of (,process computers) ,computer])
     (typecase process
       ((or server-process system-process) (tell `[value-of (,workload server-workload processes) ,process]))
       (otherwise (tell `[value-of (,workload user-workload processes) ,process])))
     process))
 
-(defmacro defuser (name &key email-address machines (user-type 'user)
+(defmacro defuser (name &key email-address computers (user-type 'user)
 			     authorization-pools capabilities
 			     positive-address positive-mask
 			     negative-address negative-mask
@@ -253,8 +253,8 @@
        (tell `[value-of (,user name) ,',name])
        ,@(when email-address
           `((tell `[value-of (,user email-address) ,',email-address])))
-       ,@(loop for machine in machines
-               collect `(tell `[uses-machine ,user ,(follow-path '(,machine))]))
+       ,@(loop for computer in computers
+               collect `(tell `[uses-computer ,user ,(follow-path '(,computer))]))
        ,@(loop for pool in authorization-pools
                collect `(tell `[value-of (,user authorization-pool) ,(follow-path '(,pool))]))
        ,@(loop for cap in capabilities
@@ -262,8 +262,8 @@
        (apply-positive-and-negative-masks user ,positive-address ,positive-mask ,negative-address ,negative-mask)
        ,@(when ensemble-p `((tell `[value-of (,user ensemble) ,(object-named ',ensemble)])))
        ,@(when typical-p `((tell `[value-of (,user typical-p) ,,typical])))
-       ,@(when superuser-for (loop for machine in superuser-for
-                                 collect `(tell `[value-of (,user superuser-for) ,(follow-path (list ',machine 'os))])))
+       ,@(when superuser-for (loop for computer in superuser-for
+                                 collect `(tell `[value-of (,user superuser-for) ,(follow-path (list ',computer 'os))])))
        ,@(when role-p 
            (destructuring-bind (role-name object) role
              (unless (listp object) (setq object (list object)))
@@ -283,8 +283,8 @@
           (tell `[value-of (,user location) ,negative-mask])))))
 
 (defmacro defresource (name resource-type &key capability-requirements 
-                                               machines authorization-pool
-                                               (primary-machine nil primary-p)
+                                               computers authorization-pool
+                                               (primary-computer nil primary-p)
                                                (role nil role-p))
   (let ((true-resource-type (if (symbolp resource-type) resource-type (first resource-type)))
         (resource-type-args (if (symbolp resource-type) nil 
@@ -295,9 +295,9 @@
       (kill-redefined-object ',name)
       (let* ((resource (make-object ',true-resource-type :name ',name ,@resource-type-args)))
         ,@(when primary-p
-            `((tell `[value-of (,resource primary-machine) ,(follow-path '(,primary-machine))])))
-        ,@(loop for machine in machines
-              collect `(tell `[value-of (,resource machines) ,(follow-path '(,machine))]))
+            `((tell `[value-of (,resource primary-computer) ,(follow-path '(,primary-computer))])))
+        ,@(loop for computer in computers
+              collect `(tell `[value-of (,resource computers) ,(follow-path '(,computer))]))
         ,@(loop for (operation capability) in capability-requirements
               collect `(tell `[value-of (,resource capability-requirements) (,',operation ,(follow-path '(,capability)))]))
         ,@(when authorization-pool

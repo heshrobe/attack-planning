@@ -84,7 +84,7 @@
 
 (defun get-all-computers ()
   (let ((answers nil))
-    (ask [ltms:object-type-of ?m computer]
+    (ask [object-type-of ?m computer]
          #'(lambda (just)
              (declare (ignore just))
              (pushnew ?m answers)))
@@ -105,7 +105,7 @@
 
 (defun get-all-authorization-pools ()
   (let ((answers nil))
-    (ask [ltms:object-type-of ?m authorization-pool]
+    (ask [object-type-of ?m authorization-pool]
          #'(lambda (just)
              (declare (ignore just))
              (pushnew ?m answers)))))
@@ -153,17 +153,17 @@
 (eval-when (:compile-toplevel :load-toplevel :execute)
   (clim:define-presentation-type computer-resource (computer)))
 
-(defun resources-on-machine (machine)
+(defun resources-on-computer (computer)
   (let ((answers nil))
-    (ask `[value-of (,machine resources) ?resource]
+    (ask `[value-of (,computer resources) ?resource]
          #'(lambda (just)
              (declare (ignore just))
              (pushnew ?resource answers)))
     answers))
 
 (clim:define-presentation-method clim:accept ((type computer-resource) stream (view clim:textual-view) &key)
-  (let ((machine (clim:with-presentation-type-parameters (computer-resource type) (values computer))))
-    (let ((answers (resources-on-machine machine)))
+  (let ((computer (clim:with-presentation-type-parameters (computer-resource type) (values computer))))
+    (let ((answers (resources-on-computer computer)))
       (clim:completing-from-suggestions (stream :partial-completers '(#\-))
         (loop for resource in answers
               do (clim:suggest (string (role-name resource)) resource))))))
@@ -176,7 +176,7 @@
 
 (clim:define-presentation-method clim:accept ((type attacker) stream (view clim:textual-view) &key)
   (let ((answers nil))
-    (ask [ltms:object-type-of ?m attacker]
+    (ask [object-type-of ?m attacker]
          #'(lambda (just)
              (declare (ignore just))
              (pushnew ?m answers)))
@@ -208,7 +208,7 @@
      (property 'desirable-property)
      (resource `(computer-resource ,computer))
      &key (attacker 'attacker :default (follow-path '(attacker))))
-  (multiple-value-bind (answers final-states) (do-it :property property :machine computer :attacker attacker :resource resource)
+  (multiple-value-bind (answers final-states structured-plans) (do-it :property property :computer computer :attacker attacker :resource resource)
     (let ((stream (clim:get-frame-pane clim:*application-frame* 'attack-structure )))
       (clim:with-text-face (stream :bold)
 	(clim:with-text-size (stream :large)
@@ -220,7 +220,8 @@
       (setf (attack-plans collector) answers
 	    (final-states collector) final-states
 	    (initial-state collector) *initial-state*
-	    (merged-attack-plan collector) (merge-attack-plans answers)))))
+            (structured-attack-plans collector) structured-plans
+            (merged-attack-plan collector) (merge-attack-plans answers)))))
 
 (define-aplan-command (com-show-plan :name t :menu t)
     ((plan-number 'integer)
@@ -387,6 +388,17 @@
   (let ((goals (merged-attack-plan (attack-plan-collector clim:*application-frame*))))
     (dump-plan-to-file goals file-name)
     ))
+
+(define-aplan-command (com-dump-plan-to-json :name t :menu t)
+    ((plan-number 'integer)
+     &key (file-name 'clim:pathname)) 
+  (let* ((plan (nth plan-number (attack-plans (attack-plan-collector clim:*application-frame*))))
+         ;; this is a terrible hack, it's because the canonical format of plans is either list structure
+         ;; or a different set of data structures from those used for the merged plan.  This is stupic, but
+         ;; this type of dumping is infrequent.
+         (json-version-of-plan (merge-attack-plans (list plan))))
+    (dump-plan-to-file json-version-of-plan file-name)
+        ))
 
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;

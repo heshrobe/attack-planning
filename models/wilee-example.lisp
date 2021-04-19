@@ -90,33 +90,33 @@
 
 (defsubnet worker-subnet switched-subnet ("192.168.0.0" "255.255.255.0"))
 
-;;; An esemble is a group of machines that are essentially identical from
+;;; An esemble is a group of computers that are essentially identical from
 ;;; our point of view
-(defensemble worker-machines
+(defensemble worker-computers
     :enterprise victim
     :size 40
     :address-range ("192.168.0.0" "255.255.255.0")
     )
 
 ;;; The typical worker computer is a "windows" computer
-;;; It is a typical meember of the worker-machines ensemble
+;;; It is a typical meember of the worker-computers ensemble
 (defcomputer typical-worker-computer windows-computer
   :ip-address-string "192.168.0.3"
   :typical t
   :authorization-pool victim-authorization-pool
-  :ensemble worker-machines
+  :ensemble worker-computers
   :superuser ()
   ) 
 
 ;;; Typical worker bee is a typical user of a typical
-;;; machine in the worker-machines ensemble
+;;; computer in the worker-computers ensemble
 ;;; This user has "user-write" capabilities
 ;;; meaning they can read-or-write any resource that
 ;;; requires read or write capability
 (defuser typical-worker-bee
     :user-type normal-user
-    :ensemble worker-machines
-    :machines (typical-worker-computer)
+    :ensemble worker-computers
+    :computers (typical-worker-computer)
     :typical t
     :capabilities (user-write)
     :authorization-pools (victim-authorization-pool)
@@ -136,7 +136,7 @@
 
 (defsubnet admin-subnet switched-subnet ("192.168.10.0" "255.255.255.0"))
 
-(defensemble admin-machines
+(defensemble admin-computers
     :enterprise victim
     :size 5
     :address-range ("192.168.10.0" "255.255.255.0")
@@ -146,13 +146,13 @@
   :ip-address-string "192.168.10.3"
   :typical t
   :authorization-pool victim-authorization-pool
-  :ensemble admin-machines
+  :ensemble admin-computers
   )
 
 (defuser typical-sysadmin
   :user-type admin-user
-  :ensemble admin-machines
-  :machines (typical-admin-computer typical-worker-computer)
+  :ensemble admin-computers
+  :computers (typical-admin-computer typical-worker-computer)
   :typical t
   :authorization-pools (victim-authorization-pool)
   :capabilities (sysadmin)
@@ -173,7 +173,7 @@
 
 (defsubnet server-subnet switched-subnet ("192.168.20.0" "255.255.255.0"))
 
-(defensemble server-machines
+(defensemble server-computers
   :enterprise victim
   :size 2
   :address-range ("192.168.20.0" "255.255.255.0")
@@ -183,13 +183,13 @@
   :ip-address-string "192.168.20.5"
   :typical nil
   :authorization-pool victim-authorization-pool
-  :ensemble server-machines)
+  :ensemble server-computers)
 
 ;;; Note, check blacklist for email protocol
 ;;; also should really be smtp not email
 (defprocess email-server-process
     :process-type email-server-process
-    :machine email-server
+    :computer email-server
     )
 
 (def-email-clients email-server-process typical-worker-bee typical-sysadmin)
@@ -198,20 +198,20 @@
   :ip-address-string "192.168.20.3"
   :typical nil
   :authorization-pool victim-authorization-pool
-  :ensemble server-machines)
+  :ensemble server-computers)
 
 (defcomputer high-data-server unix-computer
   :ip-address-string "192.168.20.4"
   :typical nil
   :authorization-pool victim-authorization-pool
-  :ensemble server-machines)
+  :ensemble server-computers)
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;
 ;;; The router, switches and "firewall" rules
 ;;; The router is addressable at the 1 position in each subnet
 ;;; The switch is addressable at the 2 position in its subnet
-;;; Vanilla machines start at 3 within their subnet
+;;; Vanilla computers start at 3 within their subnet
 ;;; Anybody coming in would have to pass through the router
 ;;; and through one switch for the subnet they want to penetrate
 ;;; Also each router or switch defines a set of rules for what traffic they will forward
@@ -538,14 +538,14 @@
 ;;; To write it requires data-high-write capability (which isn't the same a normal write capability)
 ;;; similarly for reading.  Sysadmins have this capability
 (defresource high-database database
-  :machines (high-data-server)
+  :computers (high-data-server)
   :capability-requirements ((write data-high-write) (read data-high-read))
   )
 
 ;;; The low database lives on a separate server and requires a different set of capabilities
 ;;; Normal users have these capabilities (as do sysadmins)
 (defresource low-database database
-  :machines (low-data-server)
+  :computers (low-data-server)
   :capability-requirements ((write data-low-write) (read data-low-read))
   )
 
@@ -565,15 +565,15 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 (defun get-variables ()
-  (declare (special worker-machine worker-bee attacker 
+  (declare (special worker-computer worker-bee attacker 
 		    low-server low-server-os 
-		    admin-machine victim-router attacker-machine outside
+		    admin-computer victim-router attacker-computer outside
 		    low-database high-database sysadmin high-server high-server-os
 		    download-server))
-  (setq worker-machine (object-named 'typical-worker-computer)
+  (setq worker-computer (object-named 'typical-worker-computer)
 	worker-bee (object-named 'typical-worker-bee)
 	attacker (object-named 'attacker)
-	attacker-machine (object-named 'attacker-computer)
+	attacker-computer (object-named 'attacker-computer)
 	victim-router (object-named 'victim-router)
 	low-server (object-named 'low-data-server)
 	low-server-os (follow-path `(,low-server os))
@@ -581,7 +581,7 @@
 	high-database (object-named 'high-database)
 	high-server (object-named 'high-data-server)
 	high-server-os (follow-path `(,high-server os))
-	admin-machine (object-named 'typical-admin-computer)
+	admin-computer (object-named 'typical-admin-computer)
 	outside (object-named 'outside)
 	sysadmin (object-named 'typical-sysadmin)
 	download-server (follow-path '(attacker-download-server))
@@ -590,7 +590,7 @@
 (defun test-wilee ()
   (do-it :attacker (follow-path '(attacker))
 	 :property 'data-integrity
-	 :machine (follow-path '(high-server))
+	 :computer (follow-path '(high-server))
 	 :resource (follow-path '(high-database))))
 
 #|
@@ -598,6 +598,6 @@
 (defprogram ie-explorer :generic ie-explorer)
 
 ;; pidl-url-attack process solely for internet explorer
-(defprocess pidl-url-attack :process-type ie-process :machine high-data-server :program ie-explorer)
+(defprocess pidl-url-attack :process-type ie-process :computer high-data-server :program ie-explorer)
 
 |#

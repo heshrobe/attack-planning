@@ -38,15 +38,15 @@
 
 (defattack-method affect-property-by-controlling-impacting-component
     :to-achieve [affect ?desirable-property ?victim]
-    ;; find some component of the OS of a machine that the victim runs on
-    :bindings ((?computer ?victim.machines)
+    ;; find some component of the OS of a computer that the victim runs on
+    :bindings ((?computer ?victim.computers)
                (?os-instance ?computer.os)
 	       ;; The simpler path notation won't work
 	       ;; here because ?computer.os.? is ambiguous
 	       ;; and would give both parts and slot-values
                [part-of ?os-instance ?component]
-	       [current-foothold ?foothold-machine ?foothold-role]
-	       [attacker-and-machine ?attacker ?attacker-machine])
+	       [current-foothold ?foothold-computer ?foothold-role]
+	       [attacker-and-computer ?attacker ?attacker-computer])
     :typing ((?victim computer-resource)
              (?os-instance operating-system)
 	     (?component process))
@@ -65,7 +65,7 @@
 (defattack-method affect-property-by-affecting-input
     :to-achieve [affect ?desirable-property ?victim]
     :prerequisites ([impacts ?resource-property ?resource ?desirable-property ?victim])
-    :bindings ([attacker-and-machine ?attacker ?attacker-machine])
+    :bindings ([attacker-and-computer ?attacker ?attacker-computer])
     :typing ((?resource computer-resource))
     :plan (:goal [affect ?resource-property ?resource])
     )
@@ -93,10 +93,10 @@
     :to-achieve [affect performance ?process]
     :prerequisites ([desirable-property-of ?process performance])
     :bindings ((?os ?process.host-os)
-	       (?computer ?os.machine)
+	       (?computer ?os.computer)
 	       (?workload ?os.workload)
 	       [protocol-is-relevant-for workload-size ?protocol]
-	       [attacker-and-machine ?attacker  ?attacker-machine])
+	       [attacker-and-computer ?attacker  ?attacker-computer])
     :typing ((?process process)
 	     (?os operating-system)
 	     (?workload os-workload))
@@ -109,15 +109,15 @@
     :to-achieve [affect performance ?process]
     :prerequisites ([desirable-property-of ?process performance])
     :bindings ((?os-instance ?process.host-os)
-	       (?computer ?os.machine)
-	       [current-foothold ?foothold-machine ?foothold-role]
-	       [attacker-and-machine ?attacker ?attacker-machine])
+	       (?computer ?os.computer)
+	       [current-foothold ?foothold-computer ?foothold-role]
+	       [attacker-and-computer ?attacker ?attacker-computer])
     :typing ((?process email-server-process)
-	     (?foothold-machine computer))
+	     (?foothold-computer computer))
     :plan (:sequential
 	   (:goal [get-foothold ?computer email])
-	   (:repeated-action [submit-email ?attacker large-email ?process ?foothold-machine ?foothold-role]))
-    :post-conditions ([current-foothold ?foothold-context ?foothold-machine ?foothold-role])
+	   (:repeated-action [submit-email ?attacker large-email ?process ?foothold-computer ?foothold-role]))
+    :post-conditions ([current-foothold ?foothold-context ?foothold-computer ?foothold-role])
     )
 
 ;;; now what we want to say is:
@@ -133,7 +133,7 @@
     :bindings ((?os ?workload.os)
 	       (?queue ?os.job-launch-queue)
 	       (?user-job-launch-queue ?queue.user-job-launch-request-queue)
-	       [current-foothold ?foothold-machine ?foothold-role]
+	       [current-foothold ?foothold-computer ?foothold-role]
 	       )
     :typing ((?workload os-workload)
 	     (?os operating-system)
@@ -176,7 +176,7 @@
 (defattack-method mung-process-output
     :to-achieve [affect data-integrity ?data-set]
     :bindings ([output-of ?process ?data-set]
-	       [attacker-and-machine ?attacker ?attacker-machine])    
+	       [attacker-and-computer ?attacker ?attacker-computer])    
     :typing ((?process process))
     :plan (:sequential
            (:goal [takes-control-of ?attacker data-integrity ?process])
@@ -185,9 +185,9 @@
 
 (defattack-method mung-database
     :to-achieve [affect data-integrity ?database]
-    :bindings ((?database-machine ?database.machines)
-	       (?database-os ?database-machine.os)
-	       [current-foothold ?current-foothold-machine ?current-foothold-role])
+    :bindings ((?database-computer ?database.computers)
+	       (?database-os ?database-computer.os)
+	       [current-foothold ?current-foothold-computer ?current-foothold-role])
     :typing ((?database database)
 	     (?current-foothold-role attacker)
 	     (?database database)
@@ -197,18 +197,18 @@
     :plan (:sequential
 	   ;; Note that get-foothold treats the next-to-last two arguments as things that it binds.
 	   ;; Also note that it might bind these to the same thine as the current foothold
-	   ;; Also note that it returns in a state where you have remote-execution on the new-foothold-machine
-	   ;; And you've opened a connecion to the victim machine
-	   (:goal [get-foothold ?database-machine database-protocol])
-	   (:goal [make-connection ?database-machine database-protocol])
+	   ;; Also note that it returns in a state where you have remote-execution on the new-foothold-computer
+	   ;; And you've opened a connecion to the victim computer
+	   (:goal [get-foothold ?database-computer database-protocol])
+	   (:goal [make-connection ?database-computer database-protocol])
 	   (:goal [modify data-integrity ?database])
 	   )
     )
 
 (defattack-method actually-make-connection
-    :to-achieve [make-connection ?victim-machine ?connection-type]
-    :bindings ([current-foothold ?current-foothold-machine ?current-foothold-role])
-    :plan (:action [connect-via ?current-foothold-machine ?current-foothold-role ?victim-machine ?connection-type])
+    :to-achieve [make-connection ?victim-computer ?connection-type]
+    :bindings ([current-foothold ?current-foothold-computer ?current-foothold-role])
+    :plan (:action [connect-via ?current-foothold-computer ?current-foothold-role ?victim-computer ?connection-type])
 
     )
 
@@ -342,7 +342,7 @@
 ;;; modify a data-set by controlling a process that controls the data-set
 (defattack-method modify-through-controller
     :to-achieve [modify ?victim-property ?victim]
-    :bindings ([attacker-and-machine ?attacker ?attacker-machine])
+    :bindings ([attacker-and-computer ?attacker ?attacker-computer])
     :typing ((?controller process)
              (?victim data-set))
     :prerequisites ([process-controls-data-set ?controller ?victim])
@@ -368,9 +368,9 @@
 ;;; Partially fixed
 (defattack-method modify-through-available-access-rights
     :to-achieve [modify ?object-property ?object]
-    :bindings ((?computer ?object.machines)
-	       [attacker-and-machine ?attacker ?attacker-machine]
-	       [current-foothold ?current-foothold-machine ?current-foothold-role])
+    :bindings ((?computer ?object.computers)
+	       [attacker-and-computer ?attacker ?attacker-computer]
+	       [current-foothold ?current-foothold-computer ?current-foothold-role])
     :typing ((?computer computer))
     ;; Use this only if you don't already have the required capability
     ;; (what if more than one capability implies the right?  Shouldn't
@@ -383,9 +383,9 @@
 
 (defattack-method modify-through-available-access-rights-when-have-then
     :to-achieve [modify ?object-property ?object]
-    :bindings ((?computer ?object.machines)
-	       [current-foothold ?current-foothold-machine ?current-foothold-role]
-	       [attacker-and-machine ?attacker ?attacker-machine])
+    :bindings ((?computer ?object.computers)
+	       [current-foothold ?current-foothold-computer ?current-foothold-role]
+	       [attacker-and-computer ?attacker ?attacker-computer])
     :typing ((?computer computer))
     ;; Use this only if you don't already have the required capability
     ;; (what if more than one capability implies the right?  Shouldn't
@@ -421,17 +421,17 @@
 ;;;
 ;;; Achieve-Remote-Execution is intimately bound up with get-foothold (i.e. lateral-motion)
 ;;; Get-foothold tries to find somebody that can made the desired connection
-;;; and then tries to achieve remote execution of some kind on that machine
-;;; But to achieve remote execution on that machine you need to get another foothold from
+;;; and then tries to achieve remote execution of some kind on that computer
+;;; But to achieve remote execution on that computer you need to get another foothold from
 ;;; which to launch the appropriate attack to get remote execution on the original foothold
 ;;;
 ;;; There are many ways of getting remote execution and so each of these will have a specific
-;;; requirement for what protocol the new foothold machine will require to get to the target
+;;; requirement for what protocol the new foothold computer will require to get to the target
 ;;; foothold i.e. if you're trying to get a remote shell then you'll need a foothold that can
 ;;; reach the target through either ssh or telnet.  If you're trying to take over a web server process
-;;; then you'll need to find a machine that can speak http or https
+;;; then you'll need to find a computer that can speak http or https
 ;;; If there's some type of specific server with its own protocol then you'll need a foothold that 
-;;; can reach the machine via that specific protocol.
+;;; can reach the computer via that specific protocol.
 ;;;
 ;;; Foothold-role here is an output value that achieve-remote-execution is supposed to bind
 ;;; to either a user or a process
@@ -446,74 +446,74 @@
 ;;; we can generate them.
 
 (defattack-method remote-execution-to-remote-shell
-    :to-achieve [achieve-remote-execution ?victim-machine ?victim-user]
-    :guards ([not [place-already-visited? ?victim-machine remote-execution]])
-    :bindings ((?victim-os ?victim-machine.os)
+    :to-achieve [achieve-remote-execution ?victim-computer ?victim-user]
+    :guards ([not [place-already-visited? ?victim-computer remote-execution]])
+    :bindings ((?victim-os ?victim-computer.os)
 	       (?victim-user ?victim-os.users)
 	       )
     :typing ((?victim-os operating-system)
              (?victim-user user)
-	     (?victim-machine computer))
+	     (?victim-computer computer))
     :plan (:sequential
-	   (:note [place-visited ?victim-machine remote-execution])
+	   (:note [place-visited ?victim-computer remote-execution])
 	   (:goal [achieve-remote-shell ?victim-os ?victim-user])))
 
 (defattack-method how-to-logon
     :to-achieve [achieve-remote-shell ?victim-os-instance ?victim-user]
-    :bindings ((?victim-machine ?victim-os-instance.machine)
-	       [current-foothold ?current-foothold-machine ?current-foothold-role]
-	       [attacker-and-machine ?attacker ?attacker-machine]
+    :bindings ((?victim-computer ?victim-os-instance.computer)
+	       [current-foothold ?current-foothold-computer ?current-foothold-role]
+	       [attacker-and-computer ?attacker ?attacker-computer]
 	       [protocol-for remote-execution remote-shell ?protocol])
     :typing ((?victim-os-instance operating-system)
-	     (?victim-machine computer)
+	     (?victim-computer computer)
 	     (?victim-user user))
     :plan (:sequential
-	   (:goal [get-foothold ?victim-machine ?protocol])
+	   (:goal [get-foothold ?victim-computer ?protocol])
 
-           (:goal [achieve-knowledge-of-password ?attacker ?victim-user ?victim-machine])
-           (:action [login ?victim-user ?victim-os-instance ?current-foothold-machine ?current-foothold-role]))
+           (:goal [achieve-knowledge-of-password ?attacker ?victim-user ?victim-computer])
+           (:action [login ?victim-user ?victim-os-instance ?current-foothold-computer ?current-foothold-role]))
     )
 
 ;;; The stuff with noting place visited is there to prevet goal reduction loops
-;;; We note that we've already tried to achieve execution on this machine and this
+;;; We note that we've already tried to achieve execution on this computer and this
 ;;; produces a new context which is the context for achieving the goal
 (defattack-method remote-execution-to-code-injection
-    :to-achieve [achieve-remote-execution ?victim-machine ?victim-process]
-    :guards ([not [place-already-visited? ?victim-machine remote-execution]])
+    :to-achieve [achieve-remote-execution ?victim-computer ?victim-process]
+    :guards ([not [place-already-visited? ?victim-computer remote-execution]])
     :bindings ((?os-instance ?victim-machin.os)
 	       (?victim-process ?os-instance.processes))
     :typing ((?os-instance operating-system)
 	     (?victim-process process))
     :plan (:sequential
-	   (:note [place-visited ?victim-machine remote-execution])
+	   (:note [place-visited ?victim-computer remote-execution])
 	   (:goal [achieve-code-injection ?victim-process ?os-instance])))
 
 (defattack-method code-injection-against-process
     :to-achieve [achieve-code-injection ?process ?os-instance]
     :bindings ((?process ?os-instance.processes)
-	       [current-foothold ?foothold-machine ?foothold-role])
+	       [current-foothold ?foothold-computer ?foothold-role])
     :typing ((?process web-server-process))
     :prerequisites ([vulnerable-to-overflow-attack ?process])
-    :plan (:action [launch-code-injection-attack ?process ?foothold-machine ?foothold-role])
+    :plan (:action [launch-code-injection-attack ?process ?foothold-computer ?foothold-role])
     )
 
 (defattack-method remote-execution-to-code-reuse
-    :to-achieve [achieve-remote-execution ?victim-machine ?victim-process]
-    :guards ([not [place-already-visited? ?victim-machine remote-execution]])
-    :bindings ((?os-instance ?victim-machine.os)
+    :to-achieve [achieve-remote-execution ?victim-computer ?victim-process]
+    :guards ([not [place-already-visited? ?victim-computer remote-execution]])
+    :bindings ((?os-instance ?victim-computer.os)
 	       (?victim-process ?os-instance.processes))
     :typing ((?os-instance operating-system)
 	     (?victim-process process))
     :plan (:sequential
-	   (:note [place-visited ?victim-machine remote-execution]) 
+	   (:note [place-visited ?victim-computer remote-execution]) 
 	   (:goal [achieve-code-reuse ?victim-process ?os-instance])))
 
 (defattack-method code-reuse-against-web-server
     :to-achieve [achieve-code-reuse ?process ?os-instance]
-    :bindings ([current-foothold ?foothold-machine ?foothold-role])
+    :bindings ([current-foothold ?foothold-computer ?foothold-role])
     :typing ((?process web-server-process))
     :prerequisites ([vulnerable-to-overflow-attack ?process])
-    :plan (:action [launch-code-reuse-attack ?process ?foothold-machine ?foothold-role])
+    :plan (:action [launch-code-reuse-attack ?process ?foothold-computer ?foothold-role])
     )
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -541,11 +541,11 @@
     :bindings ((?user-job-launch-queue ?full-job-launch-queue.user-job-launch-request-queue)
                (?os-instance ?full-job-launch-queue.os)
 	       (?full-job-launch-queue ?os-instance.job-launch-queue)
-	       (?attacker-machine ?attacker.machines))
+	       (?attacker-computer ?attacker.computers))
     :typing ((?user-job-launch-queue job-launch-request-queue)
              (?full-job-launch-queue os-job-launch-request-queue)
              (?os-instance operating-system)
-	     (?attacker-machine computer))
+	     (?attacker-computer computer))
     :plan (:sequential
            (:goal [achieve-remote-execution ?os-instance ?entity])
            (:repeated-action [submit-user-jobs ?entity ?user-job-launch-queue])))
@@ -555,9 +555,9 @@
 (defattack-method mung-in-core-data-structures
     :to-achieve [use-control-of-to-affect-resource ?attacker ?process data-integrity ?data-set]
     :bindings ([output-of ?process ?data-set]
-	       [current-foothold ?foothold-machine ?foothold-role])
+	       [current-foothold ?foothold-computer ?foothold-role])
     :typing ((?process process))
-    :plan (:action [modify-in-core-data-structures ?process ?data-set ?foothold-machine ?foothold-role])
+    :plan (:action [modify-in-core-data-structures ?process ?data-set ?foothold-computer ?foothold-role])
     )
 
 
@@ -570,23 +570,23 @@
 ;;; Eventually we need to treat actions as real things that change the state
 (defattack-method how-to-read-a-file
     :to-achieve [achieve-knowledge-of-contents ?file]
-    :bindings ((?machine ?file.machines)
-	       [attacker-and-machine ?attacker ?attacker-machine])
+    :bindings ((?computer ?file.computers)
+	       [attacker-and-computer ?attacker ?attacker-computer])
     :prerequisites ()
     :typing ((?file file))
     :plan (:sequential
-	   (:goal [achieve-remote-execution ?victim-machine ?user])
+	   (:goal [achieve-remote-execution ?victim-computer ?user])
            (:goal [achieve-access-right ?user read ?file ?privileged-user])
            (:action [read-with-rights-of ?attacker ?privileged-user ?file])
-	   (:action [open-ftp-connection ?attacker ?attacker-machine])
-	   (:action [trasmit-data ?attacker ?file ?attacker-machine])
+	   (:action [open-ftp-connection ?attacker ?attacker-computer])
+	   (:action [trasmit-data ?attacker ?file ?attacker-computer])
 	   ))
 
 ;;; If your foothold role already has the access rights
 ;;; do nothing
 (defattack-method achieve-a-right-you-already-have 
     :to-achieve [achieve-access-right ?object ?right ?user]
-    :bindings ([current-foothold ?foothold-machine ?foothold-role]
+    :bindings ([current-foothold ?foothold-computer ?foothold-role]
 	       [unifiable ?user ?foothold-role])
     :prerequisites ([has-permission ?foothold-role ?object ?right])
     :plan ()
@@ -599,24 +599,24 @@
 ;;; Note that this approach would normally be used from a remote foothold
 ;;; That can reach whatever process you want, and such that this process can 
 ;;; then make a contact to the victim object.
-;;; So the strategy would be to identify a process that runs on a machine that can reach the target
+;;; So the strategy would be to identify a process that runs on a computer that can reach the target
 ;;; and that has the accesss rights you need.
-;;; Then figure out how to get to a foothold that can reach the process's machine
+;;; Then figure out how to get to a foothold that can reach the process's computer
 ;;; then do this.
 
 (defattack-method achieve-access-right-by-user-process-subversion
     :to-achieve [achieve-access-right ?right ?object ?user]
     ;; all this is asking is there a process in the workload
     ;; and if so with which user's permissions is it running
-    :bindings ((?machine ?object.machines)
-               (?os-instance ?machine.os)
+    :bindings ((?computer ?object.computers)
+               (?os-instance ?computer.os)
                (?os-workload ?os-instance.workload)
                (?the-process ?os-workload.user-workload.processes)
                [runs-with-permissions-of ?the-process ?user]
-	       [attacker-and-machine ?attacker ?attacker-machine]
-	       [current-foothold ?foothold-machine ?foothold-role])
+	       [attacker-and-computer ?attacker ?attacker-computer]
+	       [current-foothold ?foothold-computer ?foothold-role])
     :typing ((?object computer-resource)
-             (?machine computer)
+             (?computer computer)
              (?os-instance operating-system)
              (?os-workload os-workload)
              (?the-process process))
@@ -624,23 +624,23 @@
     :prerequisites ([has-permission ?the-process ?right ?object])
     :plan (:sequential
 	   (:goal [takes-direct-control-of ?attacker execution ?the-process])
-	   (:action [uses-control-to-achieve-access-right ?attacker ?right ?object ?foothold-machine]))
+	   (:action [uses-control-to-achieve-access-right ?attacker ?right ?object ?foothold-computer]))
     )
 
 (defattack-method achieve-access-right-by-server-process-subversion
     :to-achieve [achieve-access-right ?right ?object ?user]
     ;; all this is asking is there a process in the workload
     ;; and if so with which user's permissions is it running
-    :bindings ((?machine ?object.machines)
-               (?os-instance ?machine.os)
+    :bindings ((?computer ?object.computers)
+               (?os-instance ?computer.os)
                (?os-workload ?os-instance.workload)
                (?the-process ?os-workload.server-workload.processes)
                [runs-with-permissions-of ?the-process ?user]
-	       [attacker-and-machine ?attacker ?attacker-machine]
-	       [current-foothold ?foothold-machine ?foothold-role]
+	       [attacker-and-computer ?attacker ?attacker-computer]
+	       [current-foothold ?foothold-computer ?foothold-role]
                )
     :typing ((?object computer-resource)
-             (?machine computer)
+             (?computer computer)
              (?os-instance operating-system)
              (?os-workload os-workload)
              (?the-process process)           
@@ -649,19 +649,19 @@
     :prerequisites ([has-permission ?the-process ?right ?object])
     :plan (:sequential
 	   (:goal [takes-direct-control-of ?attacker execution ?the-process])
-	   (:action [uses-control-to-achieve-access-right ?attacker ?right ?object ?foothold-machine]))
+	   (:action [uses-control-to-achieve-access-right ?attacker ?right ?object ?foothold-computer]))
     )
 
 (defattack-method how-to-achieve-access-right-by-remote-shell-on-target
     :to-achieve [achieve-access-right ?right ?object ?other-user]
-    :bindings ((?machine ?object.machines)
-               (?os-instance ?machine.os)
+    :bindings ((?computer ?object.computers)
+               (?os-instance ?computer.os)
 	       (?pool ?os-instance.authorization-pool)
-	       [current-foothold ?foothold-machine ?foothold-role]
-	       (?foothold-os ?foothold-machine.os)
+	       [current-foothold ?foothold-computer ?foothold-role]
+	       (?foothold-os ?foothold-computer.os)
 	       (?other-user ?pool.users))
     :typing ((?object computer-resource)
-             (?machine computer)
+             (?computer computer)
              (?os-instance operating-system)
 	     (?pool authorization-pool)
              (?other-user user))
@@ -673,32 +673,32 @@
 ;;;;;; Note & Fix: This calls itself recursively but has no protection against
 ;;;;;; ping-ponging
 ;;;(defattack-method how-to-achieve-access-right-by-remote-shell-indirectly
-;;;    :to-achieve [achieve-access-right ?attacker ?right ?object ?user ?foothold-machine ?foothold-role]
-;;;    :bindings ([ltms:value-of (?object machines) ?machine]
-;;;               [ltms:named-part-of ?machine os ?os-instance]
+;;;    :to-achieve [achieve-access-right ?attacker ?right ?object ?user ?foothold-computer ?foothold-role]
+;;;    :bindings ([ltms:value-of (?object computers) ?computer]
+;;;               [ltms:named-part-of ?computer os ?os-instance]
 ;;;               [requires-access-right ?object ?right ?capability]
 ;;;	       [ltms:value-of (?os-instance authorization-pool) ?pool]
 ;;;	       [ltms:value-of (?pool users) ?user]
-;;;	       ;; all this is about finding another machine in the enclave
-;;;	       [ltms:value-of (?machine site) ?site]
+;;;	       ;; all this is about finding another computer in the enclave
+;;;	       [ltms:value-of (?computer site) ?site]
 ;;;	       [ltms:value-of (?site enterprise) ?enterprise]
 ;;;	       [ltms:value-of (?enterprise sites) ?other-site]
 ;;;	       [ltms:value-of (?other-site subnets) ?other-subnet]
-;;;	       [ltms:value-of (?other-subnet computers) ?other-machines]
-;;;	       [ltms:named-part-of ?other-machine os ?other-os]
+;;;	       [ltms:value-of (?other-subnet computers) ?other-computers]
+;;;	       [ltms:named-part-of ?other-computer os ?other-os]
 ;;;	       )
-;;;    :typing ([ltms:object-type-of ?object computer-resource]
-;;;             [ltms:object-type-of ?machine computer]
-;;;             [ltms:object-type-of ?os-instance operating-system]
-;;;	     [ltms:object-type-of ?pool authorization-pool]
-;;;             [ltms:object-type-of ?user user])
+;;;    :typing ([object-type-of ?object computer-resource]
+;;;             [object-type-of ?computer computer]
+;;;             [object-type-of ?os-instance operating-system]
+;;;	     [object-type-of ?pool authorization-pool]
+;;;             [object-type-of ?user user])
 ;;;    ;; Note: has-capability is a function not an assertion
-;;;    :PREREQUISITES ((not (eql ?other-machines ?machine))
-;;;		    [reachable-from ?machine ?other-machine ?]
-;;;		    [reachable-from ?other-machine ?attacker ?]
+;;;    :PREREQUISITES ((not (eql ?other-computers ?computer))
+;;;		    [reachable-from ?computer ?other-computer ?]
+;;;		    [reachable-from ?other-computer ?attacker ?]
 ;;;		    (has-capability ?user ?capability)
-;;;		    (break "~a ~a ~a" ?user ?other-machine ?other-os))
-;;;    :plan (:goal [achieve-remote-execution ?attacker ?user ?other-os ?foothold-machine ?foothold-role])
+;;;		    (break "~a ~a ~a" ?user ?other-computer ?other-os))
+;;;    :plan (:goal [achieve-remote-execution ?attacker ?user ?other-os ?foothold-computer ?foothold-role])
 ;;;    )
 
 
@@ -725,61 +725,61 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 (defattack-method user-knows-own-password
-    :to-achieve [achieve-knowledge-of-password ?attacker ?user ?victim-machine]
+    :to-achieve [achieve-knowledge-of-password ?attacker ?user ?victim-computer]
     :guards ([unifiable ?attacker ?user])
-    :plan (:action [use-own-password ?user ?victim-machine])
+    :plan (:action [use-own-password ?user ?victim-computer])
     )
             
 (defattack-method how-to-get-password-by-guessing
-    :to-achieve [achieve-knowledge-of-password ?attacker ?user ?victim-machine]
+    :to-achieve [achieve-knowledge-of-password ?attacker ?user ?victim-computer]
     :guards ([not [unifiable ?attacker ?user]])
-    :plan (:goal [guess-password ?attacker ?user ?victim-machine])
+    :plan (:goal [guess-password ?attacker ?user ?victim-computer])
     )
 
 (defattack-method guess-typical-user
-    :to-achieve [guess-password ?attacker ?user ?victim-machine]
+    :to-achieve [guess-password ?attacker ?user ?victim-computer]
     :guards ([is-typical-user ?user])
     :typing ((?user user)
 	     (?attacker attacker))
-    :plan (:action [password-dictionary-lookup-attack ?attacker ?user ?victim-machine])
+    :plan (:action [password-dictionary-lookup-attack ?attacker ?user ?victim-computer])
     )
 
 (defattack-method guess-superuser-passwords
-    :to-achieve [guess-password ?attacker ?user ?victim-machine]
-    :bindings ((?machine ?user.machines)
-	       (?user  ?machine.os.superuser))
+    :to-achieve [guess-password ?attacker ?user ?victim-computer]
+    :bindings ((?computer ?user.computers)
+	       (?user  ?computer.os.superuser))
     :typing ((?user user)
-	     (?machine computer))
-    :plan (:action [password-dictionary-lookup-attack ?attacker ?user ?victim-machine])
+	     (?computer computer))
+    :plan (:action [password-dictionary-lookup-attack ?attacker ?user ?victim-computer])
     )
 
 (defattack-method get-sysadmin-password-by-bricking
-    :to-achieve [achieve-knowledge-of-password ?attacker ?victim-user ?victim-machine]
+    :to-achieve [achieve-knowledge-of-password ?attacker ?victim-user ?victim-computer]
     :guards ([is-superuser ?victim-os ?victim-user])
-    :bindings ((?victim-machine ?victim-user.machines)
-	       (?victim-os ?victim-machine.os)
-	       [current-foothold ?foothold-machine ?foothold-role])
+    :bindings ((?victim-computer ?victim-user.computers)
+	       (?victim-os ?victim-computer.os)
+	       [current-foothold ?foothold-computer ?foothold-role])
     :typing ((?victim-user user)
-	     (?victim-machine computer))
+	     (?victim-computer computer))
     :plan (:sequential
-	    (:goal [install-malware ?attacker ?victim-machine key-logger])
-	    (:goal [brick-machine ?attacker ?victim-machine])
-	    (:action [capture-password-through-keylogger ?attacker ?victim-user ?victim-machine])
+	    (:goal [install-malware ?attacker ?victim-computer key-logger])
+	    (:goal [brick-computer ?attacker ?victim-computer])
+	    (:action [capture-password-through-keylogger ?attacker ?victim-user ?victim-computer])
 	    ))
 
-(defattack-method brick-machine-by-kill-disk
-    :to-achieve [brick-machine ?attacker ?victim-machine]
-    :prerequisites ([has-remote-execution ?attacker ?victim-machine ?role])
+(defattack-method brick-computer-by-kill-disk
+    :to-achieve [brick-computer ?attacker ?victim-computer]
+    :prerequisites ([has-remote-execution ?attacker ?victim-computer ?role])
     :plan (:sequential
-	   (:goal [install-malware ?attacker ?victim-machine kill-disk])
-	   (:action [fill-disk ?attacker ?victim-machine kill-disk])
+	   (:goal [install-malware ?attacker ?victim-computer kill-disk])
+	   (:action [fill-disk ?attacker ?victim-computer kill-disk])
 	   ))
 
 ;;; This is a stub
 (defattack-method how-to-install-malware
-    :to-achieve [install-malware ?attacker ?victim-machine ?malware-type]
+    :to-achieve [install-malware ?attacker ?victim-computer ?malware-type]
     :prerequisites ()
-    :plan (:action [install-malware ?attacker ?malware-type ?victim-machine]))
+    :plan (:action [install-malware ?attacker ?malware-type ?victim-computer]))
 
 
 ;note: need plan for install malware
@@ -789,21 +789,21 @@
 ;;;  The attacker must have a foothold for the email server of the victim-user
 ;;;  
 (defattack-method how-to-get-password-by-phishing
-    :to-achieve [achieve-knowledge-of-password ?attacker ?victim-user ?victim-machine]
+    :to-achieve [achieve-knowledge-of-password ?attacker ?victim-user ?victim-computer]
     :bindings ([email-client-of ?victim-user ?process]
-	       (?attacker-machine ?attacker.machines)
+	       (?attacker-computer ?attacker.computers)
 	       (?os-instance ?process.host-os)
-	       (?email-server-machine ?os-instance.machine)
+	       (?email-server-computer ?os-instance.computer)
 	       )
     :typing ((?victim-user user)
 	     (?process email-server-process)
 	     (?os-instance operating-system)
-             (?email-server-machine computer)
-	     (?attacker-machine computer))
+             (?email-server-computer computer)
+	     (?attacker-computer computer))
     :plan (:sequential
-           (:goal [get-foothold ?email-server-machine smtp])
-           (:action [phishing-attack ?attacker ?email-server-machine ?victim-user ?process]))
-    :post-conditions ([current-foothold ?current-foothold-machine ?current-foothold-role])
+           (:goal [get-foothold ?email-server-computer smtp])
+           (:action [phishing-attack ?attacker ?email-server-computer ?victim-user ?process]))
+    :post-conditions ([current-foothold ?current-foothold-computer ?current-foothold-role])
     )
 
 
@@ -816,11 +816,11 @@
 ; 			     )))))
 
 (defattack-method how-to-get-password-by-sniffing
-    :to-achieve [achieve-knowledge-of-password ?attacker ?user ?victim-machine]
+    :to-achieve [achieve-knowledge-of-password ?attacker ?user ?victim-computer]
     :typing ((?user user)
-             (?victim-machine computer)
+             (?victim-computer computer)
              (?subnet subnet))
-    :bindings ((?subnet ?victim-machine.subnets))
+    :bindings ((?subnet ?victim-computer.subnets))
     :plan (:parallel 
            (:goal [observe-network-traffic ?attacker ?subnet])
            (:action [sniff-a-password ?attacker ?user ?subnet]))
@@ -833,24 +833,24 @@
 ;;; to be filled in: you can get his password by external sniffing of unsecured protocols
 ;;; such as smtp, pop
 
-;;; ((:goal (connect ?machine) :plan ((:action (connect-via ?protocol-name ?machine)))))
+;;; ((:goal (connect ?computer) :plan ((:action (connect-via ?protocol-name ?computer)))))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;
 ;;; Lateral Motion
-;;; If the attacker is trying to achieve a connection to a target machine "A" using some specific protocol
+;;; If the attacker is trying to achieve a connection to a target computer "A" using some specific protocol
 ;;; There are two cases:
 ;;; 1) The attacker can reach A from its current position
 ;;; 2) The attacker can't reach A using that protocol from its current position.
 ;;;    In this case the attacker follows this strategy
-;;;    a) Find a machine B that can make the intended connection 
+;;;    a) Find a computer B that can make the intended connection 
 ;;;    b) Get some form of remote execution on B
 ;;;    c) Have B make the connection to A
 ;;;    Achieving remote execution on B, however, may not be directly achievable
 ;;;    Because that requires connecting to B from the attacker's position using
 ;;;    whatever protocol is relevant for the exploit that allow remote execution
 ;;;    So the operator that achieves remote execution on B may need to get a foothold
-;;;    on some machine C that can reach B, and so on recursively.
+;;;    on some computer C that can reach B, and so on recursively.
 ;;;    
 ;;;    One thing that complicates this reasoning is that when B isn't directly reachable and the attacker tries
 ;;;    to find a foothold to B (which was the foothold to get to A), we might discover that A could serve as the foothold
@@ -867,53 +867,53 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 
-;;; Direct Method, applicable when you can get from your current foothold to the target-machine 
+;;; Direct Method, applicable when you can get from your current foothold to the target-computer 
 ;;; so the foothold is the where this step is taking place from and the role is the attacker
 (defattack-method direct-foothold
-    :to-achieve [get-foothold ?victim-machine ?protocol-name]
-    :guards ([not [place-already-visited? ?victim-machine foothold]])
-    :bindings ((?victim-os ?victim-machine.os)
-	       [current-foothold ?current-foothold-machine ?current-foothold-role])
+    :to-achieve [get-foothold ?victim-computer ?protocol-name]
+    :guards ([not [place-already-visited? ?victim-computer foothold]])
+    :bindings ((?victim-os ?victim-computer.os)
+	       [current-foothold ?current-foothold-computer ?current-foothold-role])
     :typing ((?victim-os operating-system)
-	     (?victim-machine computer)
-	     (?current-foothold-machine computer))
-    :prerequisites ([accepts-connection ?victim-machine ?protocol-name ?current-foothold-machine])
-    :plan (:action [connect-via ?current-foothold-machine ?current-foothold-role ?victim-machine ?protocol-name])
+	     (?victim-computer computer)
+	     (?current-foothold-computer computer))
+    :prerequisites ([accepts-connection ?victim-computer ?protocol-name ?current-foothold-computer])
+    :plan (:action [connect-via ?current-foothold-computer ?current-foothold-role ?victim-computer ?protocol-name])
     )
 
 (defattack-method lateral-motion
-    :to-achieve [get-foothold ?victim-machine ?protocol-name]
-    :guards ([not [place-already-visited? ?victim-machine foothold]]
-	     [not [foothold-exists ?victim-machine]]
+    :to-achieve [get-foothold ?victim-computer ?protocol-name]
+    :guards ([not [place-already-visited? ?victim-computer foothold]]
+	     [not [foothold-exists ?victim-computer]]
 	     ;; Use this method only if you can't get a connection to the victim from where you are
-	     [not [accepts-connection ?victim-machine ?protocol-name ?current-foothold-machine]])
-    :bindings ((?victim-os ?victim-machine.os)
+	     [not [accepts-connection ?victim-computer ?protocol-name ?current-foothold-computer]])
+    :bindings ((?victim-os ?victim-computer.os)
 	       ;; Now find somebody that can make the connection, accepts connection will find one if there is one
-	       [current-foothold ?current-foothold-machine ?current-foothold-role]
-	       [accepts-connection ?victim-machine ?protocol-name ?new-foothold-machine]
+	       [current-foothold ?current-foothold-computer ?current-foothold-role]
+	       [accepts-connection ?victim-computer ?protocol-name ?new-foothold-computer]
 	       )
     :typing ((?victim-os operating-system)
-	     (?victim-machine computer)
-	     (?current-foothold-machine computer)
+	     (?victim-computer computer)
+	     (?current-foothold-computer computer)
 	     )
     :plan (:sequential
 	   ;; Make a note that we've already considered this place as a foothold to
 	   ;; prevent looping back to here while trying to achieve remote execution
-	   (:note [place-visited ?victim-machine foothold])
-	   ;; Now see if the attacker can gain remote execution on the new-foothold-machine and in what role 
+	   (:note [place-visited ?victim-computer foothold])
+	   ;; Now see if the attacker can gain remote execution on the new-foothold-computer and in what role 
 	   ;; (?new-foothold-role is a return value)
-	   (:goal [achieve-remote-execution ?new-foothold-machine ?new-foothold-role])
+	   (:goal [achieve-remote-execution ?new-foothold-computer ?new-foothold-role])
 	   ;;If so then actually make the connection to the victim from the new foothold
 	   ;; (:goal [make-connection ?victim-os-instance ?protocol-name ?remote-execution-state ?output-contet])
 	   )
-    :post-conditions ([has-foothold ?new-foothold-machine ?new-foothold-role foothold]))
+    :post-conditions ([has-foothold ?new-foothold-computer ?new-foothold-role foothold]))
 
 
 
 
 ;;; to be filled in:
 ;;; if a remote request for a service arrives
-;;; and the machine runs that service
+;;; and the computer runs that service
 ;;; and the server admittance policy allows it
 ;;; then an instance of that server process is created
 ;;; this instance is part of the server workload
@@ -939,14 +939,14 @@
     :to-achieve [takes-direct-control-of ?attacker ?stack-property ?network-stack]
     :bindings ((?network-stack ?os-instance.network-monitor)
                (?superuser ?os-instance.superuser)
-	       (?attacker-machine ?attacker.machines))
+	       (?attacker-computer ?attacker.computers))
     :typing ((?network-stack network-stack)
              (?os-instance operating-system)
-	     (?attacker-machine computer)
+	     (?attacker-computer computer)
              (?superuser user))
     :plan (:sequential 
            (:goal [achieve-remote-shell ?os-instance ?superuser])
-           (:action [control ?attacker ?network-stack ?attacker-machine]))
+           (:action [control ?attacker ?network-stack ?attacker-computer]))
     )
 
 (defattack-method read-network-traffic
@@ -985,10 +985,10 @@ This is redundant
                                                  :plan ?composite-plan))]
   ;; assumption is that we know the object
   if [and [ltms…:object-type-of ?object computer-resource]
-	  [ltms:value-of (?object machines) ?computer]
-          [ltms:object-type-of ?computer computer]
+	  [ltms:value-of (?object computers) ?computer]
+          [object-type-of ?computer computer]
           [part-of (?computer os) ?os-instance]
-          [ltms:object-type-of ?os-instance operating-system]
+          [object-type-of ?os-instance operating-system]
           [requires-access-right ?object read ?capability]
 	  [achieve-access-right ?attacker read ?object ?vehicle ?access-plan]
 	  (unify ?composite-plan 
@@ -1033,31 +1033,31 @@ Transformations: compilation jarification loading
 
 (defattack-method fake-sensor-data
     :to-achieve [affect accuracy ?controller-process]
-    :bindings ((?controller-machine ?controller-process.machines)
-	       ;; does that machine play the part of a controller in some control system
-	       [system-role ?system controller ?controller-machine]
+    :bindings ((?controller-computer ?controller-process.computers)
+	       ;; does that computer play the part of a controller in some control system
+	       [system-role ?system controller ?controller-computer]
 	       ;; if so find a sensor in that same system
-	       [system-role ?system sensor ?sensor-machine]
+	       [system-role ?system sensor ?sensor-computer]
 	       ;; and a bus that both the sensor and the controller are on
-	       [connected-to ?sensor-machine ? ?bus ?]
-	       [connected-to ?controller-machine ? ?bus ?]
-	       ;; now find a another (or the same) machine that's on that bus
-	       [connected-to ?victim-machine ? ?bus ?]
-	       ;; then find a process runnning on that machine
-	       (?victim-os ?victim-machine.os)
+	       [connected-to ?sensor-computer ? ?bus ?]
+	       [connected-to ?controller-computer ? ?bus ?]
+	       ;; now find a another (or the same) computer that's on that bus
+	       [connected-to ?victim-computer ? ?bus ?]
+	       ;; then find a process runnning on that computer
+	       (?victim-os ?victim-computer.os)
 	       )
-    :prerequisites ([output-of ?sensor-machine ?signal]
+    :prerequisites ([output-of ?sensor-computer ?signal]
 		    ;; the output of the sensor must be an input to 
 		    ;; the controller process
 		    [input-of ?controller-process ?signal]
-		    [or [can-be-mastered-by ?controller-machine ?victim-machine ?bus]
-			(equal ?controller-machine ?victim-machine)]
+		    [or [can-be-mastered-by ?controller-computer ?victim-computer ?bus]
+			(equal ?controller-computer ?victim-computer)]
 		    )
-    :typing ((?controller-machine computer)
-	     (?victim-machine computer)
+    :typing ((?controller-computer computer)
+	     (?victim-computer computer)
 	     (?controller-process control-system-process)
 	     (?system system)
-	     (?sensor-machine computer)
+	     (?sensor-computer computer)
 	     (?signal sensor-signal)
 	     (?bus unmastered-medium)
 	     (?victim-os operating-system)
@@ -1066,39 +1066,39 @@ Transformations: compilation jarification loading
 	   ;; You have to specify what the entity here is
 	   ;; it can either be a user or a process
 	   ;; shouldn't really be in the operators that detemine how to do the remote execution
-	   (:goal [achieve-remote-execution ?victim-machine ?entity])
-	   ;; issue a false sensor data report to the controller from the attacker machine over the bus
+	   (:goal [achieve-remote-execution ?victim-computer ?entity])
+	   ;; issue a false sensor data report to the controller from the attacker computer over the bus
 	   ;; of the sensor type 
-	   (:action [issue-false-sensor-data-report ?controller-machine ?victim-machine ?bus ?signal]))
+	   (:action [issue-false-sensor-data-report ?controller-computer ?victim-computer ?bus ?signal]))
     )
 
 ; (defattack-method fake-command-data
 ;     :to-achieve [affect ?attacker accuracy ?controller-process]
-;     :bindings ([ltms:value-of (?controller-process machines) ?machine]
-; 	       [connected-to-bus ?machine ?interface ?bus ?slot]
-; 	       [connected-to-bus ?other-machine ?other-interface ?bus ?other-slot]
-; 	       [ltms:named-part-of ?other-machine os ?os])
-;     :prerequisites ((not (eql ?machine ?other-machine))
-; 		    [can-be-mastered-by ?machine ?other-machine ?bus])
-;     :typing ([ltms:object-type-of ?machine computer]
-; 	     [ltms:object-type-of ?other-machine computer]
-; 	     [ltms:object-type-of ?os operating-system]
-; 	     [ltms:object-type-of ?bus bus])
+;     :bindings ([ltms:value-of (?controller-process computers) ?computer]
+; 	       [connected-to-bus ?computer ?interface ?bus ?slot]
+; 	       [connected-to-bus ?other-computer ?other-interface ?bus ?other-slot]
+; 	       [ltms:named-part-of ?other-computer os ?os])
+;     :prerequisites ((not (eql ?computer ?other-computer))
+; 		    [can-be-mastered-by ?computer ?other-computer ?bus])
+;     :typing ([object-type-of ?computer computer]
+; 	     [object-type-of ?other-computer computer]
+; 	     [object-type-of ?os operating-system]
+; 	     [object-type-of ?bus bus])
 ;     :plan (:sequential
 ; 	   (:goal [remote-execution ?attacker ?entity ?os])
-; 	   (:action [issue-incorrect-setpoint ?attacker ?machine ?other-machine ?bus]))
+; 	   (:action [issue-incorrect-setpoint ?attacker ?computer ?other-computer ?bus]))
 ;     )
  
 (defattack-method sensor-injection-attack
     :to-achieve [affect data-integrity ?signal]
-    :bindings ((?machine ?signal.machines)
-	       [attacker-and-machine ?attacker ?attacker-macine])
-    :prerequisites ([system-role ?system sensor ?machine]
+    :bindings ((?computer ?signal.computers)
+	       [attacker-and-computer ?attacker ?attacker-macine])
+    :prerequisites ([system-role ?system sensor ?computer]
 		    [is-proximate-to ?attacker ?victim radio])
-    :typing ((?machine computer)
+    :typing ((?computer computer)
 	     (?signal sensor-signal)
 	     (?system system))
-    :plan (:action [signal-noise-injection ?attacker ?machine ?signal])
+    :plan (:action [signal-noise-injection ?attacker ?computer ?signal])
     )
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -1109,14 +1109,14 @@ Transformations: compilation jarification loading
 
 (defattack-method recruit-to-mirai-botnet
     :to-achieve [affect independence ?cycle-pool]
-    :bindings ((?victim-machine ?cycle-pool.machines)
+    :bindings ((?victim-computer ?cycle-pool.computers)
 	       (?victim-os ?cycle-pool.os)
-	       [attacker-and-machine ?attacker ?attacker-macine]
+	       [attacker-and-computer ?attacker ?attacker-macine]
 	       )
     :plan (:sequential
-	   (:action [port-scan ?attacker ?victim-machine ?attacker-machine telnet-ports])
-	   (:goal [get-foothold ?victim-machine telnet ?input-context ?foothold-context])
-	   (:action [login ?attacker white-list-member ?victim-os ?foothold-machine])
-	   (:action [download-malware-from-source ?attacker ?foothold-machine ?victim-machine mirai-client]))
+	   (:action [port-scan ?attacker ?victim-computer ?attacker-computer telnet-ports])
+	   (:goal [get-foothold ?victim-computer telnet ?input-context ?foothold-context])
+	   (:action [login ?attacker white-list-member ?victim-os ?foothold-computer])
+	   (:action [download-malware-from-source ?attacker ?foothold-computer ?victim-computer mirai-client]))
     )
 		    

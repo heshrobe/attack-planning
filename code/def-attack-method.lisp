@@ -293,7 +293,7 @@
          collect `(break ,@(rest form))
       else if (and (listp form) (= (length form) 2))
       collect (destructuring-bind (thing type) form
-                (ji:make-predication-maker `(ltms:object-type-of ,thing ,type)))
+                (ji:make-predication-maker `(object-type-of ,thing ,type)))
       else collect form))
 
 (defun mentioned-in? (lv-maker set-of-forms)
@@ -628,7 +628,7 @@
 (defun perform-usage-checks (alist method)
   (let* ((head (second (assoc 'head alist)))
          (bindings (second (assoc 'bindings alist)))
-         ;; (typing (second (assoc 'typing alist)))
+         (typing (second (assoc 'typing alist)))
          (plan (second (assoc 'plan alist)))
          (guards (second (assoc 'guards alist)))
          (prerequisites (second (assoc 'prerequisites alist)))
@@ -647,7 +647,7 @@
                                 (ref (unless (or def (check-for-over-sets var (list ,@after) 'def))
                                        (compiler::warn "In ~a, Variable ~a is referenced in the head but is not defined after"
                                                        method var)))
-                                (def (unless (or ref (check-for-over-sets var (list ,@after) 'ref))
+                                (def (unless (or ref (check-for-over-sets var (list typing ,@after) 'ref))
                                        (compiler::warn "In ~a, Varable ~a is defined in the head but is not referenced after"
                                                        method var)))))
                              (t `(cond
@@ -683,7 +683,7 @@
 (defun build-usage-map (head bindings typing guards prerequisites post-conditions plan output-variables)
   ;; Do we really want to ignore the typing
   ;; or do we want to treat it as a usage
-  (declare (ignore typing))
+  ;; (declare (ignore typing))
   (let ((alist nil) (all-refs nil))
     (macrolet ((do-one (name)
                  `(multiple-value-bind (entry updated-all-ref)
@@ -694,7 +694,7 @@
       (do-one bindings)
       (do-one guards)
       (do-one prerequisites)
-      ;; (do-one typing)
+      (do-one typing)
       (do-one plan)
       (do-one post-conditions))    
   alist))
@@ -930,7 +930,8 @@
                              ,@(process-new-outputs outputs)
                              ,@(let* ((mnemonic (intern (string-upcase (format nil "action-taken-~A" name))))
                                       (justification-2 `(list ',mnemonic (list action-taken-pred))))
-                                 (merge-and-substitute-hidden-bindings (process-post-conditions post-conditions output-state-variable justification-2) all-refs hidden-bindings-alist 'post-conditions))))
+                                 (merge-and-substitute-hidden-bindings (process-post-conditions post-conditions output-state-variable justification-2) 
+                                                                       all-refs hidden-bindings-alist 'post-conditions))))
                          (unify ,action-variable (link-action ',name (list,@logic-variables) ,input-state-variable ,output-state-variable))
                          ]))))))))
 
@@ -945,7 +946,7 @@
   (labels ((make-goal (goal-element &optional parent)
 	     (let ((goal-statement (getf goal-element :goal))
 		   (sub-plan (getf goal-element :plan)))
-	       ;; (format t "~%Working on goal ~a" goal-statement)
+               ;; (format t "~%Working on goal ~a" goal-statement)
 	       (destructuring-bind (goal-name . arguments) goal-statement
 		 (let* ((goal-object (make-instance 'goal :goal-name goal-name :arguments arguments :parent parent))
 			(plan-object (make-plan sub-plan goal-object)))
@@ -954,18 +955,18 @@
 	   (make-plan (plan-element parent)
 	     (let ((connective (first plan-element))
 		   (steps (rest plan-element)))
-	       ;; (format t "~%For goal ~a with connective ~a there are ~a steps" parent connective (length steps))
+               ;; (format t "~%For goal ~a with connective ~a there are ~a steps" parent connective (length steps))
 	       (let* ((plan-object (make-instance 'plan
-				  :connective connective
-				  :parent parent))
+                                     :connective connective
+                                     :parent parent))
 		      (the-steps (loop for step in steps
 				     for type = (first step)
 				     for step-object = (case type
 							 (:goal (make-goal step plan-object))
 							 (:action (make-action step plan-object)))
-				     ;; do (format t "~%For type ~a step ~a" type step-object)
+                                                       ;; do (format t "~%For type ~a step ~a" type step-object)
 				     collect step-object)))
-		 ;; (format t "~%Steps for plan ~a ~{~a~^, ~}" plan-object the-steps)
+                 ;; (format t "~%Steps for plan ~a ~{~a~^, ~}" plan-object the-steps)
 		 (setf (steps plan-object) the-steps)
 		 plan-object)))
 	   (make-action (step parent)

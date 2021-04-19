@@ -2,7 +2,7 @@
 
 (in-package :aplan)
 
-;;; Notes: virtual machines
+;;; Notes: virtual computers
 
 
 (define-object-type print-nicely-mixin)
@@ -51,8 +51,8 @@
 
 (define-aplan-object computer-resource
     :super-types (has-owner-mixin in-authorization-pool can-be-typical-mixin print-nicely-mixin)
-    :slots ((machines :set-valued t)
-            (primary-machine)
+    :slots ((computers :set-valued t)
+            (primary-computer)
 	    (capability-requirements :set-valued t)))
 
 (define-aplan-object code-in-memory
@@ -326,8 +326,8 @@
 (define-aplan-object asic
   :super-types (processing-unit))
 
-;;; Note: actually the machines are os's
-;;; authorization pools are groups of machines that log in 
+;;; Note: actually the computers are os's
+;;; authorization pools are groups of computers that log in 
 ;;; the same users with the same passwords together
 
 ;;; Note: Later on we talk about passwords, but that should really
@@ -378,7 +378,7 @@
     :slots ((resources :set-valued t )))
 
 (define-aplan-object authorization-pool
-  :slots ((machines :set-valued t )
+  :slots ((computers :set-valued t )
           (capabilities :set-valued t )
           (users :set-valued t ))
   :super-types (has-resources-mixin print-nicely-mixin))
@@ -406,7 +406,7 @@
 	    (name )
 	    (email-address )
 	    (capabilities :set-valued t )
-	    (machines :set-valued t )
+	    (computers :set-valued t )
 	    (ensemble  :initarg :ensemble)
 	    (superuser-for :set-valued t)
             (credentials :initform (make-credentials-for-user self))
@@ -430,7 +430,7 @@
     :slots ((world )
 	    ;; location is a subnet that the
 	    ;; user might be on.  It's purpose is to provide an "IP address" for
-	    ;; the attacker, who isn't at some specific machine but is somewhere
+	    ;; the attacker, who isn't at some specific computer but is somewhere
 	    ;; in the external internet.
 	    (location  :set-valued t)
 	    )
@@ -452,9 +452,9 @@
     :slots ((files :set-valued t ))
     )
 
-;;; An ensemble is a collection of machines
+;;; An ensemble is a collection of computers
 ;;; There are essentially the same from the attacker's perspective
-;;; For each ensemble we specify a "typical" machine and a
+;;; For each ensemble we specify a "typical" computer and a
 ;;; typical "user". The access rights for these typical elements
 ;;; apply to all members of the ensemble
 
@@ -538,7 +538,7 @@
         )))
 
 ;;; Note:  This organization is probably wrong
-;;; We probably want to characterize machines by their make and model number
+;;; We probably want to characterize computers by their make and model number
 ;;; with the classes only reflecting just the broad family and slots
 ;;; reflecting the details
 ;;;  and possibly the configuration of components
@@ -550,7 +550,7 @@
     :slots ((workload )
 	    (user-set )
 	    (superuser :set-valued t :Initform nil)
-	    (machine )
+	    (computer )
 	    (users :set-valued t :Initform nil)
 	    (job-launch-queue ) 
 	    (processes :set-valued t ))
@@ -575,7 +575,7 @@
 	   (ask [part-of ?part ?his-part]
 		#'(lambda (just)
 		    (declare (ignore just))
-		    (ask [ltms:object-type-of ?his-part system-process]
+		    (ask [object-type-of ?his-part system-process]
 			 #'(lambda (just)
 			     (declare (ignore just))
 			     (tell `[value-of (?his-part host-os) ,os]))))))))
@@ -656,7 +656,7 @@
 (define-aplan-object cisco-ios
   :super-types (operating-system))
 
-(defgeneric operating-system-for-machine (machine-type))
+(defgeneric operating-system-for-computer (computer-type))
 
 (define-aplan-object has-policy-mixin
     :other-instance-variables ((positive-policies :accessor positive-policies :initform nil)
@@ -674,7 +674,7 @@
     )
 
 (define-aplan-object computer
-    :parts ((os (operating-system-for-machine self))
+    :parts ((os (operating-system-for-computer self))
 	    (cycle-pool 'cycle-pool))
     :slots ((ip-addresses :set-valued t )
 	    (subnets :set-valued t )
@@ -690,11 +690,11 @@
 (define-aplan-object attacker-computer
     :super-types (computer))
 
-;;; Note: These are machines that are always on all of its subnets
+;;; Note: These are computers that are always on all of its subnets
 (define-aplan-object fixed-computer
     :super-types (computer))
 
-;;; Note: These are machines that are sometimes on some of its subnets
+;;; Note: These are computers that are sometimes on some of its subnets
 ;;; and sometimes on others
 ;;; Probably need a notion of CONNECTION-EPISODE, i.e. time when its
 ;;; on a particular network
@@ -703,7 +703,7 @@
 (define-aplan-object mobile-computer
     :super-types (computer))
 
-(defmethod operating-system-for-machine ((self computer)) 'operating-system)
+(defmethod operating-system-for-computer ((self computer)) 'operating-system)
 
 (define-aplan-object mac-computer
   :super-types (computer))
@@ -717,68 +717,68 @@
 (define-aplan-object windows-95-computer
   :super-types (windows-computer))
 
-(defmethod operating-system-for-machine ((self windows-95-computer)) 'windows-95)
+(defmethod operating-system-for-computer ((self windows-95-computer)) 'windows-95)
 
 (define-aplan-object windows-98-computer
   :super-types (windows-computer))
 
-(defmethod operating-system-for-machine ((self windows-98-computer)) 'windows-98)
+(defmethod operating-system-for-computer ((self windows-98-computer)) 'windows-98)
 
 (define-aplan-object windows-nt-computer
   :super-types (windows-computer))
 
-(defmethod operating-system-for-machine ((self windows-nt-computer)) 'windows-nt)
+(defmethod operating-system-for-computer ((self windows-nt-computer)) 'windows-nt)
 
 (define-aplan-object windows-2000-computer
   :super-types (windows-computer))
 
-(defmethod operating-system-for-machine ((self windows-2000-computer)) 'windows-2000)
+(defmethod operating-system-for-computer ((self windows-2000-computer)) 'windows-2000)
 
 (define-aplan-object windows-xp-computer
   :super-types (windows-computer))
 
-(defmethod operating-system-for-machine ((self windows-xp-computer)) 'windows-xp)
+(defmethod operating-system-for-computer ((self windows-xp-computer)) 'windows-xp)
 
 (define-aplan-object windows-7-computer
   :super-types (windows-computer))
 
-(defmethod operating-system-for-machine ((self windows-7-computer)) 'windows-7)
+(defmethod operating-system-for-computer ((self windows-7-computer)) 'windows-7)
 
 (define-aplan-object windows-8-computer
   :super-types (windows-computer))
 
-(defmethod operating-system-for-machine ((self windows-8-computer)) 'windows-8)
+(defmethod operating-system-for-computer ((self windows-8-computer)) 'windows-8)
 
 (define-aplan-object mac-os-computer
   :super-types (mac-computer))
 
 ;;; Might also want to elaborate all the variants of OSX and Linux
-(defmethod operating-system-for-machine ((self mac-os-computer)) 'mac-os)
+(defmethod operating-system-for-computer ((self mac-os-computer)) 'mac-os)
 
 (define-aplan-object os-x-computer
   :super-types (mac-computer))
 
-(defmethod operating-system-for-machine ((self os-x-computer)) 'mac-os-x)
+(defmethod operating-system-for-computer ((self os-x-computer)) 'mac-os-x)
 
 (define-aplan-object linux-computer
   :super-types (unix-computer))
 
-(defmethod operating-system-for-machine ((self linux-computer)) 'linux)
+(defmethod operating-system-for-computer ((self linux-computer)) 'linux)
 
 (define-aplan-object embedded-linux-computer
   :super-types (unix-computer))
 
-(defmethod operating-system-for-machine ((self embedded-linux-computer)) 'embedded-linux)
+(defmethod operating-system-for-computer ((self embedded-linux-computer)) 'embedded-linux)
 
 (define-aplan-object solaris-computer
   :super-types (unix-computer))
 
-(defmethod operating-system-for-machine ((self solaris-computer)) 'solaris)
+(defmethod operating-system-for-computer ((self solaris-computer)) 'solaris)
   
 (define-aplan-object lispm-computer
   :super-types (computer))
 
-(defmethod operating-system-for-machine ((self lispm-computer)) 'genera)
+(defmethod operating-system-for-computer ((self lispm-computer)) 'genera)
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;
@@ -1083,7 +1083,7 @@
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;
-;;; Buses that machines plug into
+;;; Buses that computers plug into
 ;;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 

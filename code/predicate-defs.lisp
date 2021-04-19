@@ -110,7 +110,7 @@
 ;;; By keepin track of what footholds the attacker has already achieved 
 ;;;  the planner can avoid trying to get the same foothold twice
 ;;;
-;;; Footholds are machines that are capable of reaching a target machine using a specific protocol
+;;; Footholds are computers that are capable of reaching a target computer using a specific protocol
 ;;;  I.e. if you want to attack Foo you can try to get a foothold on Bar if Bar can talk to Foo 
 ;;;       using a specific protocol.
 ;;;  So getting a foothold to Foo may involve getting remote execution on Bar
@@ -121,27 +121,27 @@
 ;;;  currently has (these are facts about the world)
 ;;;
 ;;; In addition we need to keep track of the state of the planner itself
-;;;  In particular, what machines has it already considered in the sub-goaling
+;;;  In particular, what computers has it already considered in the sub-goaling
 ;;;  described above.
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
-;;; A predicate that is handled in a special way by the in-state machinery
+;;; A predicate that is handled in a special way by the in-state computerry
 ;;; Typically it has an Ask-data method and doesn't have an actual interned predication
 (define-predicate-model special-stateful-predicate-model () (ltms:ltms-predicate-model))
 
 ;;; Current-foothold always occurs within the :bindings clause which wraps it inside an [in-state ... ]
 ;;; It's only asked
 
-(define-aplan-predicate current-foothold (foothold-machine foothold-role) (special-stateful-predicate-model)
-                        :outputs (foothold-machine foothold-role))
+(define-aplan-predicate current-foothold (foothold-computer foothold-role) (special-stateful-predicate-model)
+                        :outputs (foothold-computer foothold-role))
 
 ;;; Foothold-exists always occurs within the :guards clause which wraps it inside an [in-state ... ]
 ;;; so this is always asked
-(define-predicate foothold-doesnt-exist (victim-machine) (special-stateful-predicate-model))
+(define-predicate foothold-doesnt-exist (victim-computer) (special-stateful-predicate-model))
 
 ;;; Has-Foothold will appear in a post-conditions clause which wraps it in an [in-state .... ]
 ;;; It can be both asserted and queried.
-(define-predicate has-foothold (victim-machine foothold-machine foothold-role protocol-name) (special-stateful-predicate-model))
+(define-predicate has-foothold (victim-computer foothold-computer foothold-role protocol-name) (special-stateful-predicate-model))
 
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -155,11 +155,11 @@
 ;;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
-(define-predicate place-already-visited? (machine purpose) (tell-error-model special-stateful-predicate-model))
+(define-predicate place-already-visited? (computer purpose) (tell-error-model special-stateful-predicate-model))
 
 ;;; Place-visited always occurs as a note within the :plan structure and the macro expansion
 ;;; puts the input and output states into the predication.
-(define-predicate place-visited (machine purpose) (special-stateful-predicate-model))
+(define-predicate place-visited (computer purpose) (special-stateful-predicate-model))
 
 
 
@@ -170,14 +170,13 @@
 ;;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
-(define-aplan-predicate named-component (superpart-object name subpart-object) (ji::named-part-of-mixin)
-                        :outputs (subpart-object))
+(define-aplan-predicate named-component (superpart-object name subpart-object) (ji::named-part-of-mixin))
 
-(define-aplan-predicate component (superpart-object subpart-object) (ji::part-of-mixin)
-                        :outputs (subpart-object))
+(define-aplan-predicate component (superpart-object subpart-object) (ji::part-of-mixin))
 
-(define-aplan-predicate value-of (path variable) (ji::slot-value-mixin)
-                        :outputs (variable))
+(define-aplan-predicate value-of (path variable) (ji::slot-value-mixin))
+
+(define-aplan-predicate object-type-of (thing type) (non-stateful-predicate-model type-of-mixin))
 
 
 
@@ -187,21 +186,21 @@
 ;;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
-;;; This just retrieves who the attacker is and what the attacker's home machine is
-(define-aplan-predicate attacker-and-machine (attacker attacker-machine) (special-stateful-predicate-model)
-                        :outputs (attacker attacker-machine))
+;;; This just retrieves who the attacker is and what the attacker's home computer is
+(define-aplan-predicate attacker-and-computer (attacker attacker-computer) (special-stateful-predicate-model)
+                        :outputs (attacker attacker-computer))
 
 ;;; There might be more like these, they retrieve systems under the attacker's control for some purpose
 ;;; It might be better to have a more general predicate that lists the role, rather than several separate
 ;;; predicates (e.g. there might be a soft-update-server under the attacker's control)
-(define-aplan-predicate attacker-download-server (attacker attacker-server-machine) (non-stateful-predicate-model)
-                        :outputs (attqacker-server-machine))
-(define-aplan-predicate attacker-adware-server (attacker attacker-server-machine) (non-stateful-predicate-model)
-                        :outputs (attqacker-server-machine))
-(define-aplan-predicate attacker-command-and-control-server (attacker attacker-server-machine) (non-stateful-predicate-model)
-                        :outputs (attqacker-server-machine))
-(define-aplan-predicate attacker-computer-with-role (attacker role machine) (non-stateful-predicate-model)
-                        :outputs (machine))
+(define-aplan-predicate attacker-download-server (attacker attacker-server-computer) (non-stateful-predicate-model)
+                        :outputs (attqacker-server-computer))
+(define-aplan-predicate attacker-adware-server (attacker attacker-server-computer) (non-stateful-predicate-model)
+                        :outputs (attqacker-server-computer))
+(define-aplan-predicate attacker-command-and-control-server (attacker attacker-server-computer) (non-stateful-predicate-model)
+                        :outputs (attqacker-server-computer))
+(define-aplan-predicate attacker-computer-with-role (attacker role computer) (non-stateful-predicate-model)
+                        :outputs (computer))
 
 (define-aplan-predicate desirable-property-of (system property) (non-stateful-predicate-model))
 
@@ -264,7 +263,7 @@
 ;;; temporally contingent predicate just below runs-with-permission-of
 ;;; that says someone is running with superuser privilege,
 
-(define-aplan-predicate is-superuser (user machine) (non-stateful-predicate-model))
+(define-aplan-predicate is-superuser (user computer) (non-stateful-predicate-model))
 
 ;;; These could change over time (I think)
 
@@ -276,24 +275,24 @@
 
 (define-aplan-predicate knows-credentials (attacker user) ())
 
-(define-aplan-predicate is-logged-in (attacker victim-user victim-os victim-machine) ())
+(define-aplan-predicate is-logged-in (attacker victim-user victim-os victim-computer) ())
 
-(define-aplan-predicate has-remote-shell (attacker victime-machine role) ())
+(define-aplan-predicate has-remote-shell (attacker victime-computer role) ())
 
 (define-aplan-predicate has-control-of (attacker property process) ())
 
 (define-aplan-predicate controls-process (attacker victim-process how) ())
 
-(define-aplan-predicate has-remote-execution (attacker victim-machine role) ())
+(define-aplan-predicate has-remote-execution (attacker victim-computer role) ())
 
-(define-aplan-predicate user-forced-to-login (user machine) ())
+(define-aplan-predicate user-forced-to-login (user computer) ())
 
 (define-aplan-predicate modified-by (attacker object) ())
 (define-aplan-predicate read-by (attacker object) ())
 
-(define-aplan-predicate malware-installed-on-machine (attacker machine malware) ())
+(define-aplan-predicate malware-installed-on-computer (attacker computer malware) ())
 
-(define-aplan-predicate disk-filled (machine) ())
+(define-aplan-predicate disk-filled (computer) ())
 
 (define-aplan-predicate unifiable (thing1 thing2) (ji:unification-model non-stateful-predicate-model))
 
@@ -302,28 +301,28 @@
 ;; (define-aplan-predicate has-relevant-capability (user action thing) (non-stateful-predicate-model))
 
 ;;; This used to include the path, but no caller actually cared, so I've removed that
-(define-aplan-predicate accepts-connection (victim-machine type source-user-or-machine) (non-stateful-predicate-model))
+(define-aplan-predicate accepts-connection (victim-computer type source-user-or-computer) (non-stateful-predicate-model))
 
 ;;; This changes over time
-(define-aplan-predicate connection-established (source-machine victim-machine type) ())
-(define-aplan-predicate data-exfiltrated (data actor source-machine victim-machine) ())
+(define-aplan-predicate connection-established (source-computer victim-computer type) ())
+(define-aplan-predicate data-exfiltrated (data actor source-computer victim-computer) ())
 
-(define-aplan-predicate uses-machine (machine user) (non-stateful-predicate-model))
+(define-aplan-predicate uses-computer (computer user) (non-stateful-predicate-model))
 
 (define-aplan-predicate email-client-of (user email-server-process) (non-stateful-predicate-model)
                         :outputs (email-server-process))
 
-(define-aplan-predicate email-sent-to (user attacker foothold-machine foothold-role email-server) ())
+(define-aplan-predicate email-sent-to (user attacker foothold-computer foothold-role email-server) ())
 
-(define-aplan-predicate email-received (user email victim-machine) ())
+(define-aplan-predicate email-received (user email victim-computer) ())
 
 (define-aplan-predicate file-clicked-on (user file application-type) ())
 
-;;; A process is launched on the machine/os running as user launching-source
-(define-aplan-predicate process-launched (process machine os user file) ())
+;;; A process is launched on the computer/os running as user launching-source
+(define-aplan-predicate process-launched (process computer os user file) ())
 
 ;;; This changes over time
-(define-aplan-predicate email-submitted (victim-machine kind-of-mail source-machine) ())
+(define-aplan-predicate email-submitted (victim-computer kind-of-mail source-computer) ())
 (define-aplan-predicate knows-password (attacker victim-user) ())
 (define-aplan-predicate knows-key (attacker thing) ())
 ;;; A generic knows predicate in the form "the attacker knows that the domain passwordd of the domain is <foo>"
@@ -341,7 +340,7 @@
  
 (define-aplan-predicate reachable-from (computer1 computer2 router) (non-stateful-predicate-model))
 
-(define-aplan-predicate reachable-for-remote-execution (victim-machine attacker protocol) (non-stateful-predicate-model))
+(define-aplan-predicate reachable-for-remote-execution (victim-computer attacker protocol) (non-stateful-predicate-model))
 
 (define-aplan-predicate policy-for-bridge (bridge connection-type location-mask) (non-stateful-predicate-model))
 

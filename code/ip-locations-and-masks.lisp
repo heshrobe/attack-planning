@@ -39,14 +39,14 @@
 ;;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
-(defrule path-allows-connection-from-normal-machine (:backward)
-  then [accepts-connection ?victim-machine ?connection-type ?attacker-machine]
-  if [and [ltms:object-type-of ?victim-machine computer]
-	  [ltms:object-type-of ?attacker-machine computer]
-	  (not (eql ?victim-machine ?attacker-machine))
-	  [reachable-from ?victim-machine ?attacker-machine ?path]
-	  [value-of (?attacker-machine ip-addresses) ?attacker-ip-address]
-	  (host-allows-connection-type ?victim-machine ?attacker-ip-address ?connection-type)
+(defrule path-allows-connection-from-normal-computer (:backward)
+  then [accepts-connection ?victim-computer ?connection-type ?attacker-computer]
+  if [and [object-type-of ?victim-computer computer]
+	  [object-type-of ?attacker-computer computer]
+	  (not (eql ?victim-computer ?attacker-computer))
+	  [reachable-from ?victim-computer ?attacker-computer ?path]
+	  [value-of (?attacker-computer ip-addresses) ?attacker-ip-address]
+	  (host-allows-connection-type ?victim-computer ?attacker-ip-address ?connection-type)
           (path-is-acceptable-for-connection-type (copy-object-if-necessary ?path)
                                                   ?attacker-ip-address ?connection-type)
           ]
@@ -54,53 +54,53 @@
 
 ;;; Note, this rule is really here only for reasoning about what the attacker can 
 ;;; do.  The "Location" slot is unique to attacker.  Normally, we'll make queries 
-;;; about machine to machine connections as in the next rule.
+;;; about computer to computer connections as in the next rule.
 (defrule path-allows-connection-from-attacker (:backward)
-  then [accepts-connection ?victim-machine ?connection-type ?attacker] 
-  if [and [ltms:object-type-of ?victim-machine computer]
-	  [ltms:object-type-of ?attacker attacker]
-	  [reachable-from ?victim-machine ?attacker ?path]
+  then [accepts-connection ?victim-computer ?connection-type ?attacker] 
+  if [and [object-type-of ?victim-computer computer]
+	  [object-type-of ?attacker attacker]
+	  [reachable-from ?victim-computer ?attacker ?path]
 	  [value-of (?attacker location) ?location]
 	  ;;; location could be a subnet.  This is a temporary fix
 	  ;;; until I add a host-allows-connection-type method
 	  ;;; for subnets
-	  [ltms:object-type-of ?location external-internet]
+	  [object-type-of ?location external-internet]
 	  ;; Does the host block it on its own
-	  (host-allows-connection-type ?victim-machine ?location ?connection-type)
+	  (host-allows-connection-type ?victim-computer ?location ?connection-type)
 	  ;; Do any of the routers on the path block it
           (path-is-acceptable-for-connection-type (copy-object-if-necessary ?path)
                                                   ?location ?connection-type)
           ])
 
-;;; This one is here specifically for the attacker machine
+;;; This one is here specifically for the attacker computer
 ;;; and just passes through to the rule above
-(defrule path-allows-connection-from-attacker-machine (:backward)
-  then [accepts-connection ?machine ?connection-type ?attacker-machine] 
-  if [and [ltms:object-type-of ?attacker-machine attacker-computer]
-	  [value-of (?attacker-machine users) ?attacker]
-          [accepts-connection ?machine ?connection-type ?attacker]
+(defrule path-allows-connection-from-attacker-computer (:backward)
+  then [accepts-connection ?computer ?connection-type ?attacker-computer] 
+  if [and [object-type-of ?attacker-computer attacker-computer]
+	  [value-of (?attacker-computer users) ?attacker]
+          [accepts-connection ?computer ?connection-type ?attacker]
 	  ])
 
 ;;; We also need a set of rules for the negated case.  
 
 
-;;; The first two are normal machine to normal machine
-;;; Case one: The victim machine isn't even reachable
-(defrule path-does-not-allow-connection-from-machine-1 (:backward)
-  then [not [accepts-connection ?victim-machine ?connection-type ?attacker-machine]]
-  if [and [ltms:object-type-of ?victim-machine computer]
-	  [ltms:object-type-of ?attacker-machine computer]
-	  [not [reachable-from ?victim-machine ?attacker-machine ?path]]]
+;;; The first two are normal computer to normal computer
+;;; Case one: The victim computer isn't even reachable
+(defrule path-does-not-allow-connection-from-computer-1 (:backward)
+  then [not [accepts-connection ?victim-computer ?connection-type ?attacker-computer]]
+  if [and [object-type-of ?victim-computer computer]
+	  [object-type-of ?attacker-computer computer]
+	  [not [reachable-from ?victim-computer ?attacker-computer ?path]]]
   )
 
 ;;; Case two: It is reachable but either the host or a router on the path blocks it
-(defrule path-does-not-allow-connection-from-machine-2 (:backward)
-  then [not [accepts-connection ?victim-machine ?connection-type ?attacker-machine]]
-  if [and [ltms:object-type-of ?victim-machine computer]
-	  [ltms:object-type-of ?attacker-machine computer]
-	  [reachable-from ?victim-machine ?attacker-machine ?path]
-	  [value-of (?attacker-machine ip-addresses) ?attacker-ip-address]
-	  (or (not (host-allows-connection-type ?victim-machine ?attacker-ip-address  ?connection-type))
+(defrule path-does-not-allow-connection-from-computer-2 (:backward)
+  then [not [accepts-connection ?victim-computer ?connection-type ?attacker-computer]]
+  if [and [object-type-of ?victim-computer computer]
+	  [object-type-of ?attacker-computer computer]
+	  [reachable-from ?victim-computer ?attacker-computer ?path]
+	  [value-of (?attacker-computer ip-addresses) ?attacker-ip-address]
+	  (or (not (host-allows-connection-type ?victim-computer ?attacker-ip-address  ?connection-type))
 	      (not (path-is-acceptable-for-connection-type (copy-object-if-necessary ?path)
 							   ?attacker-ip-address ?connection-type)))
 	  ]	  
@@ -109,25 +109,25 @@
 ;;; This one is here specifically for the attacker.
 ;;; This is the only case where you can call this with a user as the attacker
 (defrule path-does-not-allow-connection-from-attacker (:backward)
-  then [not [accepts-connection ?victim-machine ?connection-type ?attacker]]
-  if [and [ltms:object-type-of ?victim-machine computer]
-	  [ltms:object-type-of ?attacker attacker]
-	  [reachable-from ?victim-machine ?attacker ?path]
+  then [not [accepts-connection ?victim-computer ?connection-type ?attacker]]
+  if [and [object-type-of ?victim-computer computer]
+	  [object-type-of ?attacker attacker]
+	  [reachable-from ?victim-computer ?attacker ?path]
 	  [value-of (?attacker location) ?location]
 	  ;; Does the host block it on its own
-	  (or (not (host-allows-connection-type ?victim-machine ?location ?connection-type))
+	  (or (not (host-allows-connection-type ?victim-computer ?location ?connection-type))
 	      ;; Do any of the routers on the path block it
 	      (not (path-is-acceptable-for-connection-type (copy-object-if-necessary ?path)
 							   ?location ?connection-type)))
           ])
 
-;;; This one is here specifically for the attacker machine
+;;; This one is here specifically for the attacker computer
 ;;; and just passes through to the rule above
-(defrule path-does-not-allow-connection-from-attacker-machine (:backward)
-  then [not [accepts-connection ?machine ?connection-type ?attacker-machine]]
-  if [and [ltms:object-type-of ?attacker-machine attacker-computer]
-	  [value-of (?attacker-machine users) ?attacker]
-          [not [accepts-connection ?machine ?connection-type ?attacker]]
+(defrule path-does-not-allow-connection-from-attacker-computer (:backward)
+  then [not [accepts-connection ?computer ?connection-type ?attacker-computer]]
+  if [and [object-type-of ?attacker-computer attacker-computer]
+	  [value-of (?attacker-computer users) ?attacker]
+          [not [accepts-connection ?computer ?connection-type ?attacker]]
 	  ])
 
 
@@ -141,10 +141,10 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 ;;; If both things are computers just reduce to a call to connected
-(defrule reachable-machine-to-machine (:backward)
+(defrule reachable-computer-to-computer (:backward)
   then [reachable-from ?target-computer ?source-computer ?path]
-  if [and [ltms:object-type-of ?target-computer computer]
-	  [ltms:object-type-of ?source-computer computer]
+  if [and [object-type-of ?target-computer computer]
+	  [object-type-of ?source-computer computer]
 	  [path-between ?target-computer ?source-computer ?path]
 	  ]
   )
@@ -154,28 +154,28 @@
 ;;; the user computer and the target computer
 (defrule bridges-on-pathway (:backward)
   then [reachable-from ?target-computer ?user ?path]
-  if [and [ltms:object-type-of ?user user]
-          [ltms:object-type-of ?target-computer computer]
-	  [uses-machine ?user ?user-computer]
-	  [ltms:object-type-of ?user-computer computer]
+  if [and [object-type-of ?user user]
+          [object-type-of ?target-computer computer]
+	  [uses-computer ?user ?user-computer]
+	  [object-type-of ?user-computer computer]
           [path-between ?target-computer ?user-computer ?path]
 	  ]
   )
 
 ;;; We can also affirm that they aren't reachable 
-(defrule machine-cant-reach-machine (:backward)
+(defrule computer-cant-reach-computer (:backward)
   then [not [reachable-from ?target-computer ?source-computer ?path]]
-  if [and [ltms:object-type-of ?target-computer computer]
-	  [ltms:object-type-of ?source-computer computer]
+  if [and [object-type-of ?target-computer computer]
+	  [object-type-of ?source-computer computer]
 	  [not [path-between ?target-computer ?source-computer ?path]]
 	  ])
 
-(defrule user-cant-reach-machine (:backward)
+(defrule user-cant-reach-computer (:backward)
   then [not [reachable-from ?target-computer ?user ?path]]
-  if [and [ltms:object-type-of ?user user]
-          [ltms:object-type-of ?target-computer computer]
-	  [uses-machine ?user ?user-computer]
-	  [ltms:object-type-of ?user-computer computer]
+  if [and [object-type-of ?user user]
+          [object-type-of ?target-computer computer]
+	  [uses-computer ?user ?user-computer]
+	  [object-type-of ?user-computer computer]
           [not [path-between ?target-computer ?user-computer ?path]]
 	  ]
   )
@@ -196,10 +196,10 @@
 ;;; A subnet and a subnet
 ;;;
 ;;; How this all stacks up:
-;;; The top-level functionality is the predicate Accepts-Connection which takes 2 machines (or a machine and a user) and a connection-type
+;;; The top-level functionality is the predicate Accepts-Connection which takes 2 computers (or a computer and a user) and a connection-type
 ;;;          and binds the path by which they are connected (does anybody care)
-;;;   Accepts-Connection invokes Reachable-From which takes 2 machines (or a machine and a user) and binds the path but ignores the connection-type
-;;;     Reachable-From invokes Connected it takes 2 machines (or a machine and a user) and binds the path
+;;;   Accepts-Connection invokes Reachable-From which takes 2 computers (or a computer and a user) and binds the path but ignores the connection-type
+;;;     Reachable-From invokes Connected it takes 2 computers (or a computer and a user) and binds the path
 ;;; Connected calls find-paths-between
 ;;; 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -251,8 +251,8 @@
         answers))))
 
 (defmethod find-paths-between ((thing1 user) (thing2 computer))
-  (loop for machine in (machines thing1)
-      append (find-paths-between machine thing2)))
+  (loop for computer in (computers thing1)
+      append (find-paths-between computer thing2)))
 
 (defmethod find-paths-between ((thing1 computer) (thing2 computer))
   (cond 
@@ -774,18 +774,18 @@
 
 
 ;;; this handles the case for a user whose "location" in ip-space
-;;; is known (by a mask) but for which we don't know a specific machine.
+;;; is known (by a mask) but for which we don't know a specific computer.
 ;;; At the moment, the only such user is the attacker.
 ;;; Stragey: Find a router that has an IP address that is in the range
 ;;; of the user's location.  Then find a path (using connected) between
-;;; that router and the target-computer. But the attacker does have a machine
+;;; that router and the target-computer. But the attacker does have a computer
 ;;; and given that bridges-on-pathway is all we need
 
 ;;;(defrule bridges-on-pathway-2 (:backward)
 ;;;  then [reachable-from ?computer ?user (?router . ?path)]
-;;;  if [and [ltms:object-type-of ?user attacker]
+;;;  if [and [object-type-of ?user attacker]
 ;;;	  [value-of (?user location) ?location]
-;;;	  [ltms:object-type-of ?router router]
+;;;	  [object-type-of ?router router]
 ;;;	  [value-of (?router ip-addresses) ?ip-address]
 ;;;	  (ip-address-is-within-location ?ip-address ?location)
 ;;;	  (break)
@@ -795,12 +795,12 @@
 
 ;;;(defrule bridges-on-pathway-2 (:backward)
 ;;;  then [reachable-from ?computer ?user (?router . ?path)]
-;;;  if [and [ltms:object-type-of ?user attacker]
+;;;  if [and [object-type-of ?user attacker]
 ;;;	  ;; is the computer at some site in common with the router
-;;;	  [ltms:object-type-of ?router router]
+;;;	  [object-type-of ?router router]
 ;;;          [value-of (?router site) ?site]
-;;;	  [ltms:object-type-of ?site site]
-;;;          [ltms:object-type-of ?computer computer]
+;;;	  [object-type-of ?site site]
+;;;          [object-type-of ?computer computer]
 ;;;          [value-of (?computer site) ?site]
 ;;;	  ;; so now we know that the computer can talk
 ;;;	  ;; to the router.  Next, can the user talk to
@@ -809,7 +809,7 @@
 ;;;	  ;; (at the moment)
 ;;;          [value-of (?user location) ?location]
 ;;;	  [value-of (?router ip-addresses) ?ip-address)
-;;;	  [ltms:object-type-of ?ip-address ip-address]
+;;;	  [object-type-of ?ip-address ip-address]
 ;;;          (not (location-is-in-net-segment ?site ?location))
 ;;;          ;; should really check for being the router to the outside
 ;;;          [connected ?computer ?router ?path]])

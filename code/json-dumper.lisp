@@ -226,11 +226,11 @@
 ;;;
 ;;; For each computer we dump its name as used in the plan
 ;;; For each computer we dump whether it's a typical instance (standin true) of some ensemble
-;;; and also whether it's an attacker machine (attacker true)
-;;; If it's an attacker machine then we assume it's in the outside internet
+;;; and also whether it's an attacker computer (attacker true)
+;;; If it's an attacker computer then we assume it's in the outside internet
 ;;;   and we dump the range of that outside (typicall 0.0.0.0 255.255.255.255)
 ;;;   together with a set of holes in that area
-;;; If it's a typical machine then we dump the size of the ensemble
+;;; If it's a typical computer then we dump the size of the ensemble
 ;;;    and the range and mask for the ensemble's IP addresses
 ;;;
 ;;; Things to add what hardware/os/application suite...
@@ -255,8 +255,8 @@
     (dump-subnet-data computer stream)
     (terpri stream)))  
 
-(defmethod dump-subnet-data ((machine attacker-computer) &optional (stream *standard-output*))
-  (let* ((subnet (first (subnets machine)))
+(defmethod dump-subnet-data ((computer attacker-computer) &optional (stream *standard-output*))
+  (let* ((subnet (first (subnets computer)))
 	 ;; Subnet is the external-internet
 	 ;; and its subnets is the included region
 	 (inclusion-mask (first (subnets subnet)))
@@ -280,10 +280,10 @@
 	(dump-mask range stream))))
 
 ;;; Fix: Needs to actually dump stuff
-(defmethod dump-subnet-data ((machine computer) &optional (stream *standard-output*))
-  (if (typical-p machine)
-      (dump-subnet-data (ensemble machine) stream)
-    (list :addresses (loop for address in (ip-addresses machine) collect (ip-address-string address)))))
+(defmethod dump-subnet-data ((computer computer) &optional (stream *standard-output*))
+  (if (typical-p computer)
+      (dump-subnet-data (ensemble computer) stream)
+    (list :addresses (loop for address in (ip-addresses computer) collect (ip-address-string address)))))
 
 (defmethod dump-mask ((mask subnet-mask) &optional (stream *standard-output*))
   (let ((address (ip-address-string (follow-path (list mask 'ip-address))))
@@ -301,7 +301,7 @@
 ;;; For each user we dump its name as used in the plan
 ;;; For each user we indicate whether it's a typical member of some set of users (standin = true)
 ;;; For each user we indicate whether it's an attacker (attacker = true)
-;;; We dump the set of machines that this user can access
+;;; We dump the set of computers that this user can access
 ;;;
 ;;; Other things: privilege level (admin or not)
 ;;;
@@ -329,7 +329,7 @@
     (terpri stream)
     (json:as-object-member ('computers stream)
 	(json:with-array (stream)
-	  (Loop for computer in (machines user) 
+	  (Loop for computer in (computers user) 
 		do (json:as-array-member (stream)
 		     (json:with-object (stream)
 		       (json:encode-object-member 'name (role-name computer) stream))))))

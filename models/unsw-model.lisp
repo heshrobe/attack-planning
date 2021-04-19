@@ -184,17 +184,17 @@
   ) 
 
 ;;; This defines a process that runs on
-;;; all worker machines (it says that the typical one has it)
+;;; all worker computers (it says that the typical one has it)
 (defprocess worker-web-server-process
     :process-type web-server-process
-    :machine typical-worker-computer
+    :computer typical-worker-computer
     )
 
 ;;; The typical workstation user
 (defuser typical-worker
     :user-type user
     :ensemble worker-computers
-    :machines (typical-worker-computer)
+    :computers (typical-worker-computer)
     :typical t
     :capabilities (user-write)
     :authorization-pools (victim-authorization-pool)
@@ -233,7 +233,7 @@
 (defuser typical-sysadmin
   :user-type user
   :ensemble server-computers
-  :machines (typical-server-computer typical-worker-computer)
+  :computers (typical-server-computer typical-worker-computer)
   :typical t
   :authorization-pools (victim-authorization-pool)
   :capabilities (sysadmin)
@@ -250,7 +250,7 @@
 ;;; also should really be smtp not email
 (defprocess email-server-process
     :process-type email-server-process
-    :machine email-server
+    :computer email-server
     )
 
 ;;; Define who this email server receives email for
@@ -270,7 +270,7 @@
 ;;; and data-high-read to read it.
 ;;; Sysadmins have these capabilities
 (defresource database database
-  :machines (database-server)
+  :computers (database-server)
   :capability-requirements ((write data-high-write) (read data-high-read))
   )
 
@@ -331,7 +331,7 @@
     )
 ;;;
 ;;; SSH: allowed to workers but not the routers
-;;; switches or server machines
+;;; switches or server computers
 ;;; 
 
 (defblacklist (ssh victim-router)
@@ -447,7 +447,7 @@
 (defun test-unsw ()
   (do-it :attacker (Follow-path '(attacker))
 	 :property 'data-integrity
-	 :machine (Follow-path '(database-server))
+	 :computer (Follow-path '(database-server))
 	 :resource (Follow-path '(database))))
 
 

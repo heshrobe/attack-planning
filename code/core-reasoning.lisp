@@ -14,6 +14,7 @@
 (defclass attack-plan-collector ()
   ((attack-plans :initform nil :accessor attack-plans)
    (merged-attack-plan :initform nil :accessor merged-attack-plan)
+   (structured-attack-plans :initform nil :accessor structured-attack-plans)
    (final-states :accessor final-states :initform nil :initarg :final-states)
    (Initial-state :accessor Initial-state :initform nil :initarg :Initial-state)
    )
@@ -23,20 +24,20 @@
   (loop for s in (final-states collector)
       collect (action-sequence s)))
 
-(defun do-it (&key (attacker (follow-path '(attacker)))
+(defun do-It (&key (attacker (follow-path '(attacker)))
                    (property 'performance) 
-		   machine 
+		   computer 
                    resource)
   (clear-all-states)
   (let ((plans nil)
 	(final-states nil))
-    ;; (os (follow-path `(,machine os)))
+    ;; (os (follow-path `(,computer os)))
     (unwind-protect
 	(ask `[achieve-goal [affect ,property ,resource] ,(intern-state 'initial) ?output-context ?plan]
 	     #'(lambda (just)
 		 (declare (ignore just))
 		 (let* ((plan (copy-object-if-necessary ?plan))
-			(final-structure (list :goal (list 'affect attacker property resource machine)
+			(final-structure (list :goal (list 'affect attacker property resource computer)
 					       :plan plan)))
 		   (unless (member final-structure plans :test #'plan-equal)
 		     (mark-state-useful ?output-context)
@@ -46,8 +47,8 @@
     ;; This links the objects to a tree-structured set
     ;; of objects representing the plan with the 
     ;; actions at the leaves
-    (loop for plan in plans do (structure-attack-plan plan))
-    (values plans final-states)))
+    (values plans final-states (loop for plan in plans collect (structure-attack-plan plan))
+            )))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;
@@ -113,9 +114,9 @@
   (let ((his-computer (make-object 'attacker-computer
 			       :name name
 			       :typical-p typical?)))
-    (tell `[value-of (,attacker machines) ,his-computer])
+    (tell `[value-of (,attacker computers) ,his-computer])
     (unless server?
-      (tell `[uses-machine ,attacker ,his-computer]))
+      (tell `[uses-computer ,attacker ,his-computer]))
     (when location
       (tell `[value-of (,location computers) ,his-computer]) 
       (tell `[value-of (,his-computer subnets) ,location]))
@@ -165,18 +166,18 @@
 						      :location location))))
        (tell `[value-of (,attacker location) ,location])
        (loop for computer in other-computers
-	   do (tell `[uses-machine ,attacker ,computer]))
+	   do (tell `[uses-computer ,attacker ,computer]))
        (if (symbolp download-servers)
 	   (let ((attacker-computer (make-attacker-computer download-servers attacker :location location)))
 	     (tell `[attacker-download-server ,attacker ,attacker-computer]))
 	 (loop for computer in download-servers
 	     do (tell `[attacker-download-server ,attacker ,computer])))
-       (if (symbolp command-and-control-servers)
+       (if (and command-and-control-servers (symbolp command-and-control-servers))
 	   (let ((attacker-computer (make-attacker-computer command-and-control-servers attacker :location location)))
 	     (tell `[attacker-command-and-control-server ,attacker ,attacker-computer]))
 	 (loop for computer in command-and-control-servers
 	     do (tell `[attacker-command-and-control-server ,attacker ,computer])))
-       (if (symbolp adware-servers)
+       (if (and adware-servers (symbolp adware-servers))
 	   (let ((attacker-computer (make-attacker-computer adware-servers attacker :location location)))
 	     (tell `[attacker-adware-server ,attacker ,attacker-computer]))
 	 (loop for computer in adware-servers
@@ -186,24 +187,24 @@
            do (tell `[attacker-computer-with-role ,attacker ,role ,attacker-computer]))  
        ;; there isn't one.  It's just a starting point.
        (tell `[in-state [has-foothold nil ,his-computer ,attacker foothold] initial])
-       (tell `[in-state [attacker-and-machine ,attacker ,his-computer] initial])
+       (tell `[in-state [attacker-and-computer ,attacker ,his-computer] initial])
        attacker))))
 
 (defun do-a-case (environment-pathname  &key attacker 
 					     property 
-					     machine 
+					     computer 
 					     resource)
   (clear)
   (load environment-pathname)
   (let* ((attacker (follow-path (list attacker)))
-	 ;; (attacker-machine (first (follow-path (list attacker 'machines))))
-	 (machine (follow-path (list machine)))
+	 ;; (attacker-computer (first (follow-path (list attacker 'computers))))
+	 (computer (follow-path (list computer)))
 	 (resource (follow-path (list resource))))
     (multiple-value-bind (answers final-states)
 	(do-it :attacker attacker
-	       ;; :attacker-machine attacker-machine
+	       ;; :attacker-computer attacker-computer
 	       :Property property
-	       :machine machine
+	       :computer computer
 	       :resource resource)
       (let ((collector (make-instance 'attack-plan-collector)))
 	(setf (attack-plans collector) answers
@@ -261,7 +262,7 @@
 (defmethod print-object ((object repeated-attack-action) stream)
   (format stream "#<Repeated-Action ~a>" (action-name object)))
 
-(defclass attack-plan (json-id-mixin)
+(defclass attack-plan (json-id-mixin)1
   ((supergoal :initform nil :accessor supergoal :initarg :supergoal)
    (combinator :initform nil :accessor combinator :initarg :combinator)
    (steps :initform nil :accessor steps :initarg :steps)
