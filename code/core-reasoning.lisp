@@ -262,7 +262,7 @@
 (defmethod print-object ((object repeated-attack-action) stream)
   (format stream "#<Repeated-Action ~a>" (action-name object)))
 
-(defclass attack-plan (json-id-mixin)1
+(defclass attack-plan (json-id-mixin)
   ((supergoal :initform nil :accessor supergoal :initarg :supergoal)
    (combinator :initform nil :accessor combinator :initarg :combinator)
    (steps :initform nil :accessor steps :initarg :steps)
