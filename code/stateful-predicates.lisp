@@ -370,13 +370,25 @@
 
 (defmacro define-fwrd-stateful-rule (name if if-part then then-part)
   (when (eql if 'then) (rotatef if-part then-part) (rotatef if then))
-  (unless (and (eql if 'if) (eql then 'then)) (error "Must have if and then"))
+  (unless (and (or (eql if 'if) (eql if :if))
+               (or (eql then 'then) (eql then :then)))
+    (error "Must have if and then"))
   (destructuring-bind (pred . triggers) (predication-maker-statement if-part)
     (unless (eql pred 'and) (error "Must have and for trigger"))
     (loop for trigger in triggers
+        for trigger-pred = (predication-maker-predicate trigger)
+        for trigger-is-negated = (eql trigger-pred 'not)
+        for real-trigger-pred = (if trigger-is-negated (predication-maker-predicate (second (predication-maker-statement trigger)))
+                                  trigger-pred)
+        for is-non-stateful = (subtypep real-trigger-pred 'non-stateful-predicate-model)
 	for state-variable = `(logic-variable-maker ,(gentemp "?STATE-"))
-	for real-trigger = `(predication-maker '(in-state ,trigger ,state-variable))
+	for real-trigger = (cond (is-non-stateful trigger)
+                                 ((and (not is-non-stateful) trigger-is-negated)
+                                  `(predication-maker '(not (predication-maker '
+                                                             (in-state ,(second (predication-maker-statement trigger)) ,state-variable)))))
+                                 (t `(predication-maker '(in-state ,trigger ,state-variable))))
 	collect real-trigger into real-triggers
+        when (not is-non-stateful)
 	collect state-variable into state-variables
 	finally ;; (break "~a ~a" real-triggers state-variables)
 	  (let* ((final-state-variable `(logic-variable-maker ,(gentemp "?FINAL-STATE-")))

@@ -3,7 +3,7 @@
 (in-package :cl-user)
 
 (defpackage aplan
-  (:shadow "DIRECTORY" "VALUE-OF" object-type-of)
+  (:shadow "DIRECTORY" "VALUE-OF" "OBJECT-TYPE-OF")
   (:shadowing-import-from "CL-USER" "THROW")
   (:import-from ltms "ASSUME")
   (:export "DO-IT"

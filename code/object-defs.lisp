@@ -37,6 +37,7 @@
     `(define-object-type ,name ,@plist)))
 
 (defmethod ji::part-of-predicate-for-object-type ((thing aplan-object)) 'named-component)
+(defmethod ji::type-of-predicate-for-object-type ((thing aplan-object)) 'object-type-of)
 
 (define-aplan-object system-entity
     :super-types (can-be-typical-mixin print-nicely-mixin)

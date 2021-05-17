@@ -16,9 +16,9 @@
 ;;; The plan field is a nested set of :sequential :parallel constructions
 ;;; each one taking a list of (:goal :plan) pairs
 ;;; The macro rebuilds the predication-makers into ones with the last variable
-;;; 
+;;;
 ;;; In the :plan section, it traverses the structure, builds a bunch of predication-makers
-;;; for the sub-goal part of the rule and also builds up the plan list structure that 
+;;; for the sub-goal part of the rule and also builds up the plan list structure that
 ;;; is unified with the plan logic-variable
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
@@ -34,7 +34,7 @@
   (let ((strings (loop for (name . rest) on names
                      for string = (string name)
                      collect string
-                     when rest 
+                     when rest
                           collect "-")))
     (intern (string-upcase (apply #'concatenate 'string strings)))))
 
@@ -97,7 +97,7 @@
 		      for (his-stuff his-plan-structure) = (do-next-level thing key input-state output-state)
 		      append his-stuff into stuff
 		      when his-plan-structure ;; a note provides no plan structure
-		      collect his-plan-structure into plan-structure 
+		      collect his-plan-structure into plan-structure
 		      finally (return (list stuff `(list ,key ,@plan-structure) nil))))
 		 (:bind
 		  (let* ((the-binding (first stuff))
@@ -157,7 +157,7 @@
 			 (rebuilt-statement `(predication-maker '(take-action ,statement ,input-state ,output-state ,action-variable)))
 			 )
 		    ;; (break "Action ~a ~a ~a ~a" statement input-state output-state rebuilt-statement)
-		    (list 
+		    (list
 		     ;; The action requires no further sub-goaling
 		     (list rebuilt-statement)
 		   ;;; rebuilt action statement
@@ -187,10 +187,10 @@
                                  `(:justification ,support))))
     `((prog1 t
 	,@(loop for assertion in assertions collect `(tell [in-state ,assertion ,output-state])))))))
-						
+
 (defun process-assertions (assertions input-state)
   (labels ((do-one (assertion)
-	     (cond 
+	     (cond
 	      ;; special case for debugging
 	      ((and (listp assertion) (not (predication-maker-p assertion)))
 	       (if (eql (first assertion) 'break)
@@ -198,7 +198,7 @@
 		 assertion))
 	      ((eql (predication-maker-predicate assertion) 'or)
 	       (with-predication-maker-destructured (&rest assertions) assertion
-		 (loop for assertion in assertions 
+		 (loop for assertion in assertions
 		     collect (do-one assertion) into processed-assertions
 		     finally (return `(predication-maker '(or ,@processed-assertions))))))
 	      ((and (listp assertion) (not (predication-maker-p assertion))) assertion)
@@ -212,7 +212,7 @@
 
 
 (defun is-pretty-binding (assertion)
-  (cond 
+  (cond
    ((and (predication-maker-p assertion)
      (eql (predication-maker-predicate assertion) 'value-of)
          (with-predication-maker-destructured (path value) assertion
@@ -309,7 +309,7 @@
                      do (in? term)))
                 ((listp form)
                  (loop for term in form do (in? term)))
-                ((eql name form) 
+                ((eql name form)
                  (return-from mentioned-in? t))
                 (t nil))))
       (in? set-of-forms))))
@@ -331,13 +331,13 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;
 ;;; defattach-method: The Macro for defining attack planning methods
-;;; 
+;;;
 ;;; This takes the declarative PDDL style definition of a HTM planning method
 ;;; and translates it into a Joshua backward chaining rule
 ;;;
 ;;; Does a modest amount of analysis to figure out where the type
 ;;; constraints can be placed
-;;; 
+;;;
 ;;; Allows one to refer to parts of data-structures through use of "dotted-path" notation
 ;;;  e.g.  ?foo.bar.baz.  Whenever one of these is found a binding of the form [value-of (?foo bar bar) ?lv-xxx]
 ;;; is generated and all references to ?foo.bar.baz are replaced by ?lv-xxx.  This is just a notational convenience.
@@ -346,7 +346,7 @@
 ;;;
 ;;; The order of the generated code:
 ;;; Early typing: typing that only references the inputs
-;;; Bindings: 
+;;; Bindings:
 ;;;   Implicit bindings in the bindings code
 ;;;   Implicit bindings in the typing code
 ;;;   The rest of the explicit bindings
@@ -372,10 +372,10 @@
 
 (defparameter *all-attack-methods* nil)
 
-(defmacro defattack-method (method-name &key to-achieve 
+(defmacro defattack-method (method-name &key to-achieve
 					     (input-state `(logic-variable-maker ,(intern (string-upcase "?input-state"))))
 					     (output-state `(logic-variable-maker ,(intern (string-upcase "?output-state"))))
-					     bindings 
+					     bindings
 					     guards
 					     typing
 					     prerequisites
@@ -387,7 +387,7 @@
          (real-head `(predication-maker '(achieve-goal ,to-achieve ,input-state  ,output-state ,plan-variable)))
          (rebuilt-plan-structure (rebuild-plan-structure plan input-state output-state))
          )
-    ;; Pull out all typing that refers only to the inputs 
+    ;; Pull out all typing that refers only to the inputs
     ;; And then leave the rest as late-typing.
     ;; This makes the first category act as prerequisites because they will be the first thing checked.
     ;; The reason for constraining them to only refer to inputs is that the generate code is an [objec-type-of xxx yyy]
@@ -397,8 +397,8 @@
     (let ((usage-map (build-usage-map to-achieve bindings typing guards prerequisites post-conditions plan output-variables)))
       (perform-usage-checks usage-map method-name))
     (multiple-value-bind (early-typing late-typing)
-        (loop for type in typing 
-            for variable = (first type) 
+        (loop for type in typing
+            for variable = (first type)
             if (and (eql variable :break) (loop for var in (rest (rest type)) thereis (mentioned-in? var real-head)))
             collect type into early
             else when (and (mentioned-in? variable real-head) (not (member (logic-variable-maker-name variable) output-variables :key #'logic-variable-maker-name)))
@@ -419,7 +419,7 @@
              ;; will have been removed so the process-bindings code can be simplified.
              (defrule ,method-name (:backward)
                then ,real-head
-               if [and 
+               if [and
                    ,@(process-typing early-typing)
                    ,@(process-assertions (merge-and-substitute-hidden-bindings bindings all-refs hidden-bindings-alist 'bindings) input-state)
                    ,@(merge-and-substitute-hidden-bindings (process-guards guards input-state) all-refs hidden-bindings-alist 'guards)
@@ -439,7 +439,7 @@
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;
-;;; Dealing with dotted notation 
+;;; Dealing with dotted notation
 ;;; Expand into a binding of a new variable
 ;;; and replace all references
 ;;;
@@ -471,7 +471,7 @@
   (let ((bindings-by-set-type nil) (master-alist nil))
     (labels ((do-one (form set-type)
                (cond
-                ((and (predication-maker-p form) 
+                ((and (predication-maker-p form)
                       (eql (predication-maker-predicate form) 'value-of))
                  (when  (not (eql set-type 'bindings))
                    ;; don't scan value-of forms if we're doing bindings
@@ -483,7 +483,7 @@
                 ((logic-variable-maker-p form)
                  (do-one (logic-variable-maker-name form) set-type))
                 ((and (listp form) (= (length form) 2) (eql set-type 'bindings))
-                 ;; if it's the short syntax and we're doing bindings, then do nothing                 
+                 ;; if it's the short syntax and we're doing bindings, then do nothing
                  )
                 ((listp form)
                  (loop for token in form do (do-one token set-type)))
@@ -492,7 +492,7 @@
                  ;; Bindings-By-Set-Type is an Alist set-typeed by the name of the set.  It only
                  ;; gets an entry if this was a new symbol
                  (let ((entry (assoc set-type bindings-by-set-type)))
-                   (unless entry 
+                   (unless entry
                      (setq entry (list set-type nil))
                      (push entry bindings-by-set-type))
                    (unless (member form master-alist :key #'first :test #'equal)
@@ -515,9 +515,9 @@
     (values master-alist bindings-by-set-type)))
 
 (defun normal-binding? (form)
-  (or (and (predication-maker-p form) 
+  (or (and (predication-maker-p form)
            (eql (predication-maker-predicate form) 'value-of))
-      (and (listp form) 
+      (and (listp form)
            (= (length form) 2)
            (logic-variable-maker-p (first form)))))
 
@@ -528,7 +528,7 @@
   (let ((bindings-for-set-type (second (assoc set-type bindings-by-set-type))))
     (cond
      ((and (null reference-alist) (eql set-type 'bindings))
-      (loop for thing in set-of-stuff 
+      (loop for thing in set-of-stuff
           if (normal-binding? thing)
           collect (de-prettify-binding thing)
           else collect thing))
@@ -554,18 +554,18 @@
               if (normal-binding? thing)
               collect (de-prettify-binding thing)
               else collect (substitute-hidden-bindings thing reference-alist)))))))
-              
+
 (defun substitute-hidden-bindings (set-of-stuff reference-alist)
   (labels ((do-one (form)
              (cond
               ((and (predication-maker-p form) (eql (predication-maker-predicate form) 'value-of))
                (with-predication-maker-destructured (slot value) form
-                 (ji:make-predication-maker 
-                  (list (predication-maker-predicate form) 
+                 (ji:make-predication-maker
+                  (list (predication-maker-predicate form)
                         (explode slot #\.)
                         (do-one value)))))
               ((predication-maker-p form)
-               (ji:make-predication-maker 
+               (ji:make-predication-maker
                 (loop for token in (predication-maker-statement form)
                     collect (do-one token))))
               ((and (logic-variable-maker-p form) (find #\. (string (logic-variable-maker-name form)) :test #'char-equal))
@@ -578,7 +578,7 @@
                (let* ((entry (assoc form reference-alist)))
                  (second entry)))
               (t form))))
-    (do-one set-of-stuff)    
+    (do-one set-of-stuff)
     ))
 
 ;;; Just a convenience for doing most of the substitutions all at once
@@ -619,12 +619,19 @@
 (defmethod print-object ((record usage-record) stream)
   (format stream "#<usage ~a ref ~a def ~a>" (variable-name record) (ref record) (def record)))
 
-(defparameter *set-names* '(head bindings guards prerequisites plan post-conditions))
+(eval-when (:compile-toplevel :load-toplevel)
+  (defparameter *set-names* '(head bindings guards prerequisites plan post-conditions)))
+
+(defmacro compiler-warn (format-string &rest args)
+  #+allegro
+  `(compiler:warn ,format-string ,@args)
+  #+sbcl
+  `(sb-c:compiler-warn  ,format-string ,@args))
 
 ;;; The head is special: Any ref in the head should be def'd in the body
 ;;; All others anything def'd should be checked against all followers plus the head.
-;;; Fix: I use compiler::warn here which is the right thing for ACL, need to shadow warn 
-;;; and import the right thing as warn for each implementation (mainly SBCL).
+;;; Fix: I use compiler::warn here which is the right thing for ACL, need to shadow warn
+;;; and import the right thing as warn for each implementation (mainly S-BCL).
 (defun perform-usage-checks (alist method)
   (let* ((head (second (assoc 'head alist)))
          (bindings (second (assoc 'bindings alist)))
@@ -645,16 +652,16 @@
                              ((eql set-name 'head)
                               `(cond
                                 (ref (unless (or def (check-for-over-sets var (list ,@after) 'def))
-                                       (compiler::warn "In ~a, Variable ~a is referenced in the head but is not defined after"
+                                       (compiler-warn "In ~a, Variable ~a is referenced in the head but is not defined after"
                                                        method var)))
                                 (def (unless (or ref (check-for-over-sets var (list typing ,@after) 'ref))
-                                       (compiler::warn "In ~a, Varable ~a is defined in the head but is not referenced after"
+                                       (compiler-warn "In ~a, Varable ~a is defined in the head but is not referenced after"
                                                        method var)))))
                              (t `(cond
                                   (ref (unless (or def (check-for-over-sets var (list ,@before) 'def))
-                                         (compiler::warn "In ~a, Variable ~a is referenced in the ~a but is not defined earlier" method var ',set-name)))
+                                         (compiler-warn "In ~a, Variable ~a is referenced in the ~a but is not defined earlier" method var ',set-name)))
                                   (def (unless (or ref (check-for-over-sets var (list head ,@after) 'ref))
-                                         (compiler::warn "In ~a, Variable ~a is defined in the ~a but is not used"
+                                         (compiler-warn "In ~a, Variable ~a is defined in the ~a but is not used"
                                                         method var ',set-name))))))))))
       (labels ((check-for (variable-name set type)
                  (let ((entry (find variable-name set :key #'variable-name)))
@@ -696,9 +703,9 @@
       (do-one prerequisites)
       (do-one typing)
       (do-one plan)
-      (do-one post-conditions))    
+      (do-one post-conditions))
   alist))
-    
+
 (defun find-all-variables (set-of-stuff tag already-seen output-variables)
   (let ((answers nil))
     (labels ((do-one (stuff &optional predication-maker)
@@ -727,8 +734,8 @@
                        ;; Except for the head
                        ;; Any 2nd mention is a ref, Any 1st mention is a def
                        ;; For any normal predicate this seems true, it will bind the unbound variables.
-                       ;; when pattern matching.  
-                       (cond 
+                       ;; when pattern matching.
+                       (cond
                         ((member symbol already-seen)
                          ;; a 2nd mention of an variable that is an output-variable of the predicate
                          ;; that's already defined in this set is taken to be a reference
@@ -739,7 +746,7 @@
                            (setf (ref entry) t))
                          )
                         (t (push symbol already-seen)
-                           ;; (if is-output? 
+                           ;; (if is-output?
                            ;;     (setf (def entry) t)
                            ;;   (setf (ref entry) t))
                            (cond ((eql tag 'head)
@@ -773,7 +780,7 @@
 
 (defparameter *all-goals* nil)
 
-(defmacro define-goal (name variables &key outputs) 
+(defmacro define-goal (name variables &key outputs)
   `(eval-when (:load-toplevel :execute :compile-toplevel)
      (pushnew ',name *all-goals*)
      (define-predicate ,name ,variables (ltms:ltms-predicate-model))
@@ -834,7 +841,7 @@
 
 (define-predicate take-action (action-predicate input-state output-state action) (ltms:ltms-predicate-model))
 (define-predicate action-taken (action input-state output-state) (ltms:ltms-predicate-model))
-   
+
 (defun link-action (name arguments prior-state next-state)
   (let ((action (make-instance 'action
                   :role-name name
@@ -860,14 +867,14 @@
 ;;; Compiles the source form into a Joshua backward chaining rule
 ;;;
 ;;; Fix: Still needs to do the implicitly binding stuff in def-atttack-method
-;;; 
+;;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 (defparameter *all-actions* nil)
 
-(defmacro define-action (name variables &key bindings prerequisites post-conditions (define-predicate t) capecs outputs typing output-variables) 
+(defmacro define-action (name variables &key bindings prerequisites post-conditions (define-predicate t) capecs outputs typing output-variables)
   (flet ((make-logic-variables (names)
-	   (loop for var in names 
+	   (loop for var in names
 	       if (logic-variable-maker-p var)
 	       collect var
 	       else collect `(logic-variable-maker ,(intern (string-upcase (format nil "?~a" var))))))
@@ -886,8 +893,8 @@
            (action-variable (first (make-logic-variables '(action))))
            (real-head (ji:make-predication-maker `(take-action [,name ,@logic-variables] ,@state-logic-variables ,action-variable))))
       (multiple-value-bind (early-typing late-typing)
-          (loop for type in typing 
-              for variable = (first type) 
+          (loop for type in typing
+              for variable = (first type)
               if (and (eql variable :break) (loop for var in (rest (rest type)) thereis (mentioned-in? var real-head)))
               collect type into early
               else when (and (mentioned-in? variable real-head)
@@ -895,7 +902,7 @@
                              (not (member (logic-variable-maker-name variable) output-variables :key #'logic-variable-maker-name)))
               collect type into early
               else collect type into late
-              finally (return (values early late))) 
+              finally (return (values early late)))
         ;; First find all
         ;; implicit bindings i.e. things of the form ?foo.bar.baz and
         ;; note where the first reference occurs
@@ -911,7 +918,7 @@
                      collect `(record-predicate-output-variable ',name ',stripped-name))
                (defrule ,rule-name (:backward)
                  then ,real-head
-                 if [and ,@(process-typing early-typing) 
+                 if [and ,@(process-typing early-typing)
                          ,@(merge-and-substitute-hidden-bindings (process-bindings bindings input-state-variable) all-refs hidden-bindings-alist 'bindings)
                          ,@(merge-and-substitute-hidden-bindings (process-typing late-typing) all-refs hidden-bindings-alist 'typing)
                          ,@(merge-and-substitute-hidden-bindings (process-prerequisites prerequisites input-state-variable) all-refs hidden-bindings-alist 'prerequsities)
@@ -919,7 +926,7 @@
                          ;; so at this point we've checked that the prerequisites are satisfied
                          (prog1 t
                            (when (unbound-logic-variable-p ,output-state-variable)
-                             (unify ,output-state-variable 
+                             (unify ,output-state-variable
                                     (intern-state (intern (string-upcase (gensym "state-"))) ,input-state-variable)))
                            (let* ((action-taken-pred (tell [action-taken [,name ,@logic-variables] ,input-state-variable ,output-state-variable]
                                                            :justification :none))
@@ -930,7 +937,7 @@
                              ,@(process-new-outputs outputs)
                              ,@(let* ((mnemonic (intern (string-upcase (format nil "action-taken-~A" name))))
                                       (justification-2 `(list ',mnemonic (list action-taken-pred))))
-                                 (merge-and-substitute-hidden-bindings (process-post-conditions post-conditions output-state-variable justification-2) 
+                                 (merge-and-substitute-hidden-bindings (process-post-conditions post-conditions output-state-variable justification-2)
                                                                        all-refs hidden-bindings-alist 'post-conditions))))
                          (unify ,action-variable (link-action ',name (list,@logic-variables) ,input-state-variable ,output-state-variable))
                          ]))))))))
