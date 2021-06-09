@@ -64,28 +64,34 @@
 			       (list logic-variable-maker))))
     `(predication-maker ',new-statement)))
 
+;;; This is the heart of the compiler from PDDL style to Joshua style
+;;; It's recursive descent framework with a dispatch on the type (i.e. the first token) of the form
+;;; being processed
+
 (defun rebuild-plan-structure (plan-structure &optional (input-state `(logic-variable-maker .(intern (string-upcase "?input-state"))))
 							(output-state `(logic-variable-maker ,(intern (string-upcase "?output-state")))))
-  ;; as we traverse the plan-structure tree we accumulate the list structure
-  ;; of the plan and push
-  ;; each this returns 3 values.  I'm not sure why the third yet
+  ;; traverse the plan-structure accumulating the forms to put in the Joshua rule
+  ;; and the list-structure for the eventual plan
   ;; Every sublevel of structure is supposed to return 3 things:
-  ;; 1) The code to emit????
-  ;; 2) The plan structure for this level
+  ;; 1) The code to emit in the matching part (i.e. in the prologue of the IF part of the rule), typically
+  ;;     something to match like a sub-goal predication, but occasionally lisp forms (e.g. break)
+  ;; 2) The plan structure for this level (i.e. the stuff that gets unified with the plan logic-variable)
   ;; 3) The output state at the end of this level
   (labels ((do-next-level (structure connective input-state output-state)
 	     ;; each level should either be a :sequential/:parallel/:repeat
 	     ;;  or a :goal/:plan pair
-	     ;;  or maybe a :action item (to be dealth with later)
+             ;;  or an :action item 
+             ;; or pseudo things like a :note :bind or :break
              (destructuring-bind (key . stuff) structure
                (case key
                  ((:sequential :repeat)
                   (loop for (thing . more-to-come) on stuff
-		      for last = (or (not more-to-come) (not (loop for (key) in more-to-come thereis (member key '(:sequential :parallel :repeat :goal :action)))))
+		      for last = (or (not more-to-come) 
+                                     (not (loop for (key) in more-to-come 
+                                              thereis (member key '(:sequential :parallel :repeat :goal :action)))))
 		      for next-input-state = input-state then his-output-state
 		      for next-output-state = (when last output-state)
-		      for his-result = (do-next-level thing key next-input-state next-output-state)
-                      for (his-stuff his-plan-structure his-output-state) = his-result
+                      for (his-stuff his-plan-structure his-output-state) = (do-next-level thing key next-input-state next-output-state)
                       append his-stuff into stuff
 		      when his-plan-structure  ;; a note provides no plan structure
                       collect his-plan-structure into plan-structure
@@ -330,13 +336,16 @@
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;
-;;; defattach-method: The Macro for defining attack planning methods
+;;; defattack-method: The Macro for defining attack planning methods
 ;;;
 ;;; This takes the declarative PDDL style definition of a HTM planning method
 ;;; and translates it into a Joshua backward chaining rule
 ;;;
 ;;; Does a modest amount of analysis to figure out where the type
-;;; constraints can be placed
+;;; constraints can be placed.
+;;;
+;;; Also does a modest amount of analysis to find logic-variables that are introduced but never reference
+;;; and ones that are referenced but never defined.
 ;;;
 ;;; Allows one to refer to parts of data-structures through use of "dotted-path" notation
 ;;;  e.g.  ?foo.bar.baz.  Whenever one of these is found a binding of the form [value-of (?foo bar bar) ?lv-xxx]
@@ -382,6 +391,7 @@
 					     plan
 					     post-conditions
                                              output-variables ;; Marks that variables in the to-achieve that are bound during execution
+                                             attack-identifier
 					     )
   (let* ((plan-variable `(logic-variable-maker ,(gensym "?PLAN")))
          (real-head `(predication-maker '(achieve-goal ,to-achieve ,input-state  ,output-state ,plan-variable)))
@@ -412,6 +422,8 @@
         (destructuring-bind (goals-to-achieve plan-structure thing) (or rebuilt-plan-structure (list nil nil nil))
           (declare (ignore thing))
           (setq plan-structure (substitute-hidden-bindings plan-structure all-refs))
+          (when attack-identifier
+            (push `(list :attack-identifier ',attack-identifier) (rest (rest plan-structure))))
           `(eval-when (:load-toplevel :execute)
              (pushnew ',method-name *all-attack-methods*)
              ;; Now generate the backward rule
@@ -624,7 +636,7 @@
 
 (defmacro compiler-warn (format-string &rest args)
   #+allegro
-  `(compiler:warn ,format-string ,@args)
+  `(compiler::warn ,format-string ,@args)
   #+sbcl
   `(sb-c:compiler-warn  ,format-string ,@args))
 

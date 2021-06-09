@@ -265,6 +265,7 @@
 (defclass attack-plan (json-id-mixin)
   ((supergoal :initform nil :accessor supergoal :initarg :supergoal)
    (combinator :initform nil :accessor combinator :initarg :combinator)
+   (attack-identifier :initform nil :accessor attack-identifier :initarg :attack-identifier)
    (steps :initform nil :accessor steps :initarg :steps)
    (subgoals :initform nil :accessor subgoals :initarg :subgoals)
    (actions :initform nil :accessor actions :initarg :actions)
@@ -297,7 +298,7 @@
                    (setq action (make-instance (if repeated? 'repeated-attack-action 'attack-action) :name name))
                    (setf (gethash name action-hash-table) action))
                  action))
-             (intern-plan (combinator steps supergoal)
+             (intern-plan (combinator steps supergoal attack-identifier)
                (let ((the-plan (loop for plan in interned-plans
 				   when (and 
 					 (eql (combinator plan) combinator)
@@ -305,6 +306,7 @@
 				   do (return plan))))
                  (unless the-plan
                    (setq the-plan (make-instance 'attack-plan
+                                    :attack-identifier attack-identifier
 				    :combinator combinator
 				    :steps steps
 				    :subgoals (loop for step in steps when (typep step 'attack-goal) collect step)
@@ -325,9 +327,11 @@
 			    the-interned-goal))
 		   ((:action :repeated-action) (intern-action (second step) (eq type :repeated-action)))
 		   ((:sequential :parallel :singleton :repeat)
-		    (let ((steps (loop for his-step in (rest step)
+		    (let* ((attack-identifier (when (eql (first (second step)) :attack-identifier)
+                                                (second (second step))))
+                           (steps (loop for his-step in (if attack-identifier  (rest (rest step)) (rest step))
 				     collect (traverse his-step supergoal))))
-		      (intern-plan type steps supergoal)))
+		      (intern-plan type steps supergoal attack-identifier)))
 		   (:otherwise (break "What is this ~a" step))
 		   ))))
       (loop for raw-plan in raw-plans 

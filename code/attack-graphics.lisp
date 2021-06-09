@@ -27,7 +27,11 @@
 	  ((:sequential :parallel :repeat)
 	   (clim:surrounding-output-with-border (stream :shape :rectangle :ink clim:+green+)
 	     (clim:with-text-face (stream :bold)
-	       (format stream "~A" (first step)))))
+	       (format stream "~A" (first step))
+               (when (eql (first (second step)) :attack-identifier)
+                 (format stream "~%Attack-identifier: ~a" (second (second step))))
+               )))
+          (:attack-identifier)
 	  (:singleton
 	   (clim:surrounding-output-with-border (stream :shape :rectangle :ink clim:+green+)
 	     (clim:with-text-face (stream :bold)
@@ -48,7 +52,9 @@
 (defun plan-inferior (step)
   (case (first step)
     ((:sequential :parallel :singleton :repeat)
-     (rest step))
+     (if (eql (first (second step)) :attack-identifier)
+         (rest (rest step))
+       (rest step)))
     (:goal (let ((plan (getf step :plan)))
 	     (when plan
              (list plan))))
@@ -302,11 +308,14 @@
   (clim:with-drawing-options (stream :line-thickness 2)
     (clim:surrounding-output-with-border (stream :shape :oval :ink clim:+green+)
       (clim:with-text-face (stream :bold)
-	(let ((combinator (combinator plan)))
+	(let ((combinator (combinator plan))
+              (attack-identifier (attack-identifier plan)))
 	  (format stream "~a" (case combinator
 				((:sequential :parallel :repeat) combinator)
 				(:singleton :reduces-to)
-				(:otherwise (break "~a ~a" combinator plan)))))
+				(:otherwise (break "~a ~a" combinator plan))))
+          (when attack-identifier
+            (format stream "~%Attack-identifier: ~a" attack-identifier)))
         ))))
 
 (defmethod print-merged-plan-object ((or-node plan-or-node) stream)

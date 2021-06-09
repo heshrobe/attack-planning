@@ -148,7 +148,7 @@
 		(json:encode-object-member key value-token stream))))))
 
 (defmethod dump-node ((node attack-plan) &optional (stream *standard-output*))
-  (with-slots (combinator (unique-id json-id)) node
+  (with-slots (combinator attack-identifier (unique-id json-id)) node
     (terpri stream)
     (json:with-object (stream)
       (json:encode-object-member 'id unique-id stream)
@@ -156,6 +156,9 @@
 	(json:encode-object-member 'type 'plan stream)
 	(terpri stream)
 	(json:encode-object-member 'combinator combinator stream)
+        (when attack-identifier
+          (terpri stream)
+          (json:encode-object-member 'attack-identifier attack-identifier stream))
   )))
 
 (defmethod dump-node ((node plan-or-node) &optional (stream *standard-output*))

@@ -1142,7 +1142,8 @@ predicate promising the thing is known.
            (:action [connect-via ?loader-server ?attacker ?victim-computer ?protocol-name])
            (:action [login-with-credentials ?victim-user ?victim-os ?loader-server ?attacker ?protocol-name ?credentials])
            (:goal [install-malware ?attacker ?loader-server ?victim-computer mirai-malware])
-           ))
+           )
+    :attack-identifier foo)
 
 (defattack-method find-other-victim-computers
     :to-achieve [find-another-potential-victim ?current-victim ? ?other-victim]
