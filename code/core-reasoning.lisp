@@ -109,14 +109,15 @@
   ;; (format t "~%Checking action ~a ~a" (first step1) (first step2))
   (equal value1 value2))
 
-(defun make-attacker-computer (name attacker &key location (typical? t) (server? t))
+(defun make-attacker-computer (name attacker &key location ip-address (typical? t) (server? t))
   (kill-redefined-object name)
   (let ((his-computer (make-object 'attacker-computer
-			       :name name
-			       :typical-p typical?)))
+                                   :ip-addresses (when ip-address (list ip-address))
+                                   :name name
+                                   :typical-p typical?)))
     (tell `[value-of (,attacker computers) ,his-computer])
     (unless server?
-      (tell `[uses-computer ,attacker ,his-computer]))
+      (tell `[uses-computer ,attacker ,his-computer]))    
     (when location
       (tell `[value-of (,location computers) ,his-computer]) 
       (tell `[value-of (,his-computer subnets) ,location]))
@@ -183,7 +184,13 @@
 	 (loop for computer in adware-servers
 	     do (tell `[attacker-adware-server ,attacker ,computer])))
        (loop for (role computer-name his-location) in servers-and-roles
-           for attacker-computer = (make-attacker-computer computer-name attacker :location (or his-location location))
+           for ip-address = (when (and (stringp his-location) (not (find #\\ his-location :test #'char-equal)))
+                              ;; If the location is a raw string without \ then it's an IP address lot a location
+                              ;; in cidr format
+                              (create-ip-address his-location))
+           for attacker-computer = (if ip-address
+                                       (make-attacker-computer computer-name attacker :ip-address ip-address :typical? nil)
+                                       (make-attacker-computer computer-name attacker :typical? nil :location (or his-location location)))
            do (tell `[attacker-computer-with-role ,attacker ,role ,attacker-computer]))  
        ;; there isn't one.  It's just a starting point.
        (tell `[in-state [has-foothold nil ,his-computer ,attacker foothold] initial])

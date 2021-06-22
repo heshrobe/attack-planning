@@ -4,6 +4,11 @@
 
 ;;; Notes: virtual computers
 
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;;
+;;; Preliminary base and mixin classes
+;;;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 (define-object-type print-nicely-mixin)
 
@@ -38,6 +43,9 @@
 
 (defmethod ji::part-of-predicate-for-object-type ((thing aplan-object)) 'named-component)
 (defmethod ji::type-of-predicate-for-object-type ((thing aplan-object)) 'object-type-of)
+
+
+
 
 (define-aplan-object system-entity
     :super-types (can-be-typical-mixin print-nicely-mixin)
@@ -677,7 +685,7 @@
 (define-aplan-object computer
     :parts ((os (operating-system-for-computer self))
 	    (cycle-pool 'cycle-pool))
-    :slots ((ip-addresses :set-valued t )
+    :slots ((ip-addresses :set-valued t :initarg :ip-addresses)
 	    (subnets :set-valued t )
 	    (site :set-valued t )
 	    (communication-protocols :set-valued t )
