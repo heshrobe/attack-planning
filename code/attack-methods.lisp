@@ -390,7 +390,7 @@
 	   (:goal [get-foothold ?victim-computer ?protocol])
            (:bind [current-foothold ?current-foothold-computer ?current-foothold-role])
 	   (:goal [achieve-knowledge-of-password ?attacker ?victim-user ?victim-computer])
-           (:action [login ?victim-user ?victim-os-instance ?current-foothold-computer ?current-foothold-role]))
+           (:action [login ?attacker ?victim-user ?victim-os-instance ?current-foothold-computer ?current-foothold-role]))
     :post-conditions ([has-remote-execution ?attacker ?victim-computer ?victim-user])
     )
 
@@ -740,6 +740,8 @@
     :to-achieve [achieve-knowledge-of-password ?attacker ?victim-user ?victim-computer]
     :bindings ([value-of ?victim-user.computers ?victim-computer]
 	       [value-of ?victim-computer.os.superuser ?victim-user]
+               ;; Note that this blocks attempts to use this unless
+               ;; there's an attacker download server
                [attacker-download-server ?attacker ?download-server])
     :typing ((?victim-user user)
 	     (?victim-computer computer))
@@ -1154,6 +1156,7 @@ predicate promising the thing is known.
     :prerequisites ([not [unifiable ?other-victim ?current-victim]])
     )
                
+
 
 #|
 
@@ -1195,3 +1198,29 @@ predicate promising the thing is known.
     )
 
 |#
+
+
+
+(defattack-method crack-password-for-caldera
+    :to-achieve [achieve-knowledge-of-password ?attacker ?victim ?victim-computer]
+    :bindings ([attacker-computer-with-role ?attacker hashcat-server ?cracker-computer]
+               [attacker-computer-with-role ?attacker caldera-server ?caldera-c2-server]
+               [resource-named ?victim-computer password-file ?password-file]
+               [resource-named ?victim-computer shadow-file ?shadow-file])
+    :typing ((?cracker-computer computer)
+             (?caldera-c2-server computer)
+             (?victim-computer computer)
+             (?password-file password-file)
+             (?shadow-file password-file))
+    :plan (:sequential
+           (:goal [achieve-remote-execution ?victim-computer ?])
+           (:action [compress-files ?attacker ?victim-computer (?password-file ?shadow-file) ?compressed-file])
+           (:action [transmit-data ?attacker ?compressed-file ?victim-computer ?caldera-c2-server])
+           (:action [crack-password ?attacker ?compressed-file ?victim ?caldera-c2-server ?cracker-computer]))
+    :post-conditions ([knows-password ?attacker ?victim]))
+
+;;; the top level method wants to mung a high file on the secure machine
+;;; that requires achieving the access rights of a sysadmin
+;;;  which in turn requires getting to know the sysadmin's password (method above)
+;;; then you need to get a foothold to the secure machine for logging into it via ssh as sysadmin
+;;; then you can modify the file.

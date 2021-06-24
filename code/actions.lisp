@@ -83,11 +83,12 @@
   :outputs ((?new-process (make-object 'process :name (make-name 'shell-process))))
   :post-conditions ([process-launched ?new-process ?victim-computer ?victim-os ?new-user ?current-role]))
 
-(define-action login (?victim-user ?victim-os-instance ?current-foothold-computer ?current-foothold-role)
-  :bindings ([attacker-and-computer ?attacker ?attacker-computer]
-	     [current-foothold ?current-foothold-computer ?current-foothold-role]
+(define-action login (?attacker ?victim-user ?victim-os-instance ?current-foothold-computer ?current-foothold-role)
+  :bindings ([current-foothold ?current-foothold-computer ?current-foothold-role]
 	     [value-of ?victim-os-instance.computer ?victim-computer])
   :prerequisites ([connection-established ?current-foothold-computer ?victim-computer ?protocol-name]
+                  ;; The user has to be an authorized user of the machine.
+                  [value-of ?victim-computer.users ?victim-user]
                   [knows-credentials ?attacker ?victim-user])
   :post-conditions ([is-logged-in ?attacker ?victim-user ?victim-os ?victim-computer])
   )
@@ -167,7 +168,9 @@
 (define-action guess-password (?attacker ?user ?victim-computer)
   :bindings ([current-foothold ?foothold-computer ?foothold]
 	     [protocol-for remote-execution remote-shell ?protocol-name])
-  :prerequisites ([connection-established ?foothold-computer ?victim-computer ?protocol-name])
+  :prerequisites ([connection-established ?foothold-computer ?victim-computer ?protocol-name]
+                  [has-guessable-password ?user]
+                  )
   :post-conditions ([knows-credentials ?attacker ?user]
 		    [knows-password ?attacker ?user])
   )
@@ -236,6 +239,18 @@
   :prerequisites ([has-remote-execution ?attacker ?victim-computer ?role]
 		  [malware-installed-on-computer ?attacker ?victim-computer key-logger]
 		  [user-forced-to-login ?victim-user ?victim-computer])
+  :post-conditions ([knows-password ?attacker ?victim-user])
+  )
+
+(define-action compress-files (?attacker ?victim-computer ?set-of-files ?new-file)
+  :prerequisites ([has-remote-execution ?attacker ?victim-computer ?role])
+  :outputs ((?new-file (create-new-resource 'compressed-password-file 'compressed-file ?victim-computer)))
+  :post-conditions ([compressed-file-of ?new-file ?set-of-files]))
+
+(define-action crack-password (?attacker ?password-files ?victim ?c2-server ?cracker-computer)
+  :bindings ((?victim-computer ?victim.computers))
+  :prerequisites ([data-exfiltrated ?password-files ?attacker ?victim-computer ?c2-server])
+  :typing ((?password-files comppressed-password-file))
   :post-conditions ([knows-password ?attacker ?victim-user])
   )
 

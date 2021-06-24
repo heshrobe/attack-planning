@@ -84,7 +84,8 @@
 
 (define-aplan-object file
   :super-types (data-resource)
-  :slots ((directories :set-valued t )))
+  :slots ((directories :set-valued t )
+          (filename :initarg :filename :initform nil)))
 
 (define-aplan-object dynamically-loadable-code-file
     :super-types (file))
@@ -145,7 +146,10 @@
 ;;;  and the data store
 
 (define-aplan-object password-file
-  :super-types (file))
+    :super-types (file))
+
+(define-aplan-object compressed-file
+    :super-types (file))
 
 (define-aplan-object configuration-file
   :super-types (file))
@@ -174,6 +178,12 @@
 (define-aplan-object application-program
     :super-types (program)
     )
+
+(define-aplan-object attacker-program
+    :super-types (program))
+
+(define-aplan-object password-cracker-program
+    :super-types (attacker-program application-program))
 
 (define-aplan-object system-process
     :super-types (process))
@@ -271,6 +281,12 @@
 (define-aplan-object firefox
   :super-types (browser-process)
   )
+
+(define-aplan-object attacker-process
+    :super-types (process))
+
+(define-aplan-object password-cracker-process
+    :super-types (user-process attacker-process))
 
 (define-aplan-object scheduler
   :super-types (system-process))
@@ -386,6 +402,16 @@
 (define-aplan-object has-resources-mixin
     :slots ((resources :set-valued t )))
 
+(defrule resource-named (:backward)
+  :then [resource-named ?computer ?name ?resource]
+  :if [and [value-of (?computer resources) ?resource]
+           (eql (role-name ?resource) ?name)])
+
+(defrule resource-of-type (:backward)
+  :then [resource-of-type ?computer ?type ?resource]
+  :if [and [value-of (?computer resources) ?resource]
+           (typep ?resource ?type)])
+
 (define-aplan-object authorization-pool
   :slots ((computers :set-valued t )
           (capabilities :set-valued t )
@@ -408,7 +434,6 @@
 ;;; Note: For mobile users don't we need to bind authorization
 ;;; pools with site?
 
-
 ;;; USER inherits can-be-typical-mixin from system-entity
 (define-aplan-object user
     :slots (
@@ -419,8 +444,14 @@
 	    (ensemble  :initarg :ensemble)
 	    (superuser-for :set-valued t)
             (credentials :initform (make-credentials-for-user self))
+            (guessable-password :initform nil :initarg :guessable-password)
 	    )
     :super-types (in-authorization-pool system-entity print-nicely-mixin))
+
+(defrule password-is-guessable (:backward)
+  :then [has-guessable-password ?user]
+  :if [and [value-of (?user guessable-passable) ?guessable]
+           (not (null ?guessable))])
 
 (defun make-credentials-for-user (user)
   (make-object 'credential :user user :name (make-name 'credential)))

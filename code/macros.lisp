@@ -238,18 +238,22 @@
       (otherwise (tell `[value-of (,workload user-workload processes) ,process])))
     process))
 
-(defmacro defuser (name &key email-address computers (user-type 'user)
-			     authorization-pools capabilities
-			     positive-address positive-mask
-			     negative-address negative-mask
-			     (ensemble nil ensemble-p)
-			     (typical nil typical-p)
-			     superuser-for
-                             (role nil role-p)
-			     )
+(defmacro defuser (name &rest plist
+                   &key email-address computers (user-type 'user)
+                        authorization-pools capabilities
+                        positive-address positive-mask
+                        negative-address negative-mask
+                        (ensemble nil ensemble-p)
+                        (typical nil typical-p)
+                        superuser-for
+                        (role nil role-p)
+                        &allow-other-keys
+                        )
+  (ji:with-keywords-removed (initargs plist :email-address :computers :user-type :authorization-pools :capabilities
+                                      :positive-address :positive-mask :negative-address :negative-mask :ensemble :typical :superuser-for :role)
   `(with-atomic-action
-       (kill-redefined-object ',name)
-     (let ((user (make-object ',user-type :name ',name)))
+    (kill-redefined-object ',name)
+     (let ((user (make-object ',user-type :name ',name ,@initargs)))
        (tell `[value-of (,user name) ,',name])
        ,@(when email-address
           `((tell `[value-of (,user email-address) ,',email-address])))
@@ -268,7 +272,7 @@
            (destructuring-bind (role-name object) role
              (unless (listp object) (setq object (list object)))
              `((tell `[system-role ,(Follow-path ',object) ,',role-name ,user]))))
-       user)))
+       user))))
 
 (defun apply-positive-and-negative-masks (user
 					  positive-mask-address positive-mask-mask
@@ -307,6 +311,12 @@
                (unless (listp object) (setq object (list object)))
                `((tell `[system-role ,(Follow-path ',object) ,',role-name ,resource]))))
         resource))))
+
+(defun create-new-resource (name type computer &rest initargs)
+  (let ((new-thing (apply #'make-object type :name name initargs)))
+    (tell `[value-of (,new-thing computers) ,computer])
+    (tell `[value-of (,computer resources) ,new-thing])
+    new-thing))
 
 
 

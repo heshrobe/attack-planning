@@ -395,3 +395,8 @@
 (define-aplan-predicate can-issue-command-to (master victim command bus) (non-stateful-predicate-model))
 
 (define-aplan-predicate system-role (system role-name component) (non-stateful-predicate-model))
+
+(define-aplan-predicate resource-named (system name resource) (non-stateful-predicate-model))
+(define-aplan-predicate resource-of-type (system type resource) (non-stateful-predicate-model))
+(define-aplan-predicate compressed-file-of (compressed-file input-files) (non-stateful-predicate-model))
+(define-aplan-predicate has-guessable-password (user) (non-stateful-predicate-model))
