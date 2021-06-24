@@ -148,9 +148,19 @@
 (defattack-method write-file-property-directly
     :to-achieve [affect data-integrity ?file]
     :typing ((?file file))
+    :bindings ([attacker-and-computer ?attacker ?]
+               [has-permission ?privileged-user write ?file]
+               (?victim-computer ?file.computers)
+               (?victim-os ?victim-computer.os))               
     :prerequisites ([desirable-property-of ?file data-integrity])
-    :plan (:goal [modify contents ?file])
-    )
+    :plan (:sequential
+           (:goal [get-foothold ?victim-computer ssh])
+           (:bind [current-foothold ?new-foothold-computer ?new-foothold-role])
+           (:break "New foothold ~a" ?new-foothold-computer)
+           (:goal [login ?attacker ?privileged-user ?victim-os ?new-foothold-computer ?new-foothold-role])
+           (:break)
+           (:goal [modify contents ?file])
+           ))
 
 ;;; To affect the data-integrity of some data-set
 ;;; Get control of a process that produces the data-set
@@ -354,6 +364,7 @@
 	     (?victim-computer computer))
     :plan (:sequential
 	   (:note [place-visited ?victim-computer remote-execution])
+           (:break "Trying to get shell on ~a" ?victim-computer.os)
 	   (:goal [achieve-remote-shell ?victim-computer.os ?victim-user])
            )
     )
@@ -893,6 +904,7 @@
 	   ;; Now see if the attacker can gain remote execution on the new-foothold-computer and in what role
            ;; (?new-foothold-role is a return value)
            (:bind [accepts-connection ?victim-computer ?protocol-name ?new-foothold-computer])
+           ;; (:break "~a ~a" ?new-foothold-computer ?current-foothold-computer)
 	   (:goal [achieve-remote-execution ?new-foothold-computer ?new-foothold-role])
 	   ;;If so then actually make the connection to the victim from the new foothold
 	   ;; (:goal [make-connection ?victim-os-instance ?protocol-name ?remote-execution-state ?output-contet])
