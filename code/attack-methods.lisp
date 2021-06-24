@@ -156,9 +156,9 @@
     :plan (:sequential
            (:goal [get-foothold ?victim-computer ssh])
            (:bind [current-foothold ?new-foothold-computer ?new-foothold-role])
-           (:break "New foothold ~a" ?new-foothold-computer)
+           ;; (:break "New foothold ~a" ?new-foothold-computer)
            (:goal [login ?attacker ?privileged-user ?victim-os ?new-foothold-computer ?new-foothold-role])
-           (:break)
+           ;; (:break)
            (:goal [modify contents ?file])
            ))
 
@@ -364,7 +364,7 @@
 	     (?victim-computer computer))
     :plan (:sequential
 	   (:note [place-visited ?victim-computer remote-execution])
-           (:break "Trying to get shell on ~a" ?victim-computer.os)
+           ;; (:break "Trying to get shell on ~a" ?victim-computer.os)
 	   (:goal [achieve-remote-shell ?victim-computer.os ?victim-user])
            )
     )
