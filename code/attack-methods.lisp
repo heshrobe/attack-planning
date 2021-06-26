@@ -144,21 +144,17 @@
 ;;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
-;;; Fix: Need to do an get-foothold to get foothold
+;;; Strategy is to achieve a remote shell on the target
+;;; as a privileged user and then to nuke the file. From 
+;;; there.
 (defattack-method write-file-property-directly
     :to-achieve [affect data-integrity ?file]
     :typing ((?file file))
-    :bindings ([attacker-and-computer ?attacker ?]
-               [has-permission ?privileged-user write ?file]
-               (?victim-computer ?file.computers)
-               (?victim-os ?victim-computer.os))               
+    :bindings ((?victim-computer ?file.computers)
+               [has-permission ?privileged-user write ?file])
     :prerequisites ([desirable-property-of ?file data-integrity])
     :plan (:sequential
-           (:goal [get-foothold ?victim-computer ssh])
-           (:bind [current-foothold ?new-foothold-computer ?new-foothold-role])
-           ;; (:break "New foothold ~a" ?new-foothold-computer)
-           (:goal [login ?attacker ?privileged-user ?victim-os ?new-foothold-computer ?new-foothold-role])
-           ;; (:break)
+           (:goal [achieve-remote-execution ?victim-computer ?privileged-user])
            (:goal [modify contents ?file])
            ))
 
@@ -364,10 +360,9 @@
 	     (?victim-computer computer))
     :plan (:sequential
 	   (:note [place-visited ?victim-computer remote-execution])
-           ;; (:break "Trying to get shell on ~a" ?victim-computer.os)
 	   (:goal [achieve-remote-shell ?victim-computer.os ?victim-user])
-           )
-    )
+           ;; (:trace  "Got remote shell in state ~a" ?output-state)
+           ))
 
 ;;; Note: This is odd if the way you get knowledge of the password
 ;;; is by phishing or something else that takes time
@@ -386,12 +381,7 @@
 (defattack-method how-to-logon
     :to-achieve [achieve-remote-shell ?victim-os-instance ?victim-user]
     :output-variables ()
-    :bindings (;; I think this isn't right.  We're posting a get-foothold goal
-	       ;; below, which means that the foothold from which the login
-	       ;; will happen is that foothold not the current one (they might be
-	       ;; the same in some cases);
-               ;; [current-foothold ?current-foothold-computer ?current-foothold-role]
-               (?victim-computer ?victim-os-instance.computer)
+    :bindings ((?victim-computer ?victim-os-instance.computer)
 	       [attacker-and-computer ?attacker ?]
 	       [protocol-for remote-execution remote-shell ?protocol])
     :typing ((?victim-os-instance operating-system)
@@ -401,7 +391,8 @@
 	   (:goal [get-foothold ?victim-computer ?protocol])
            (:bind [current-foothold ?current-foothold-computer ?current-foothold-role])
 	   (:goal [achieve-knowledge-of-password ?attacker ?victim-user ?victim-computer])
-           (:action [login ?attacker ?victim-user ?victim-os-instance ?current-foothold-computer ?current-foothold-role]))
+           (:action [login ?attacker ?victim-user ?victim-os-instance ?current-foothold-computer ?current-foothold-role])
+           )
     :post-conditions ([has-remote-execution ?attacker ?victim-computer ?victim-user])
     )
 
@@ -732,8 +723,18 @@
 
 (defattack-method how-to-get-password-by-guessing
     :to-achieve [achieve-knowledge-of-password ?attacker ?user ?victim-computer]
-    :guards ([is-typical-user ?user]
+    :guards ((user-ensemble-has-typical-user ?user)
+             [is-typical-user ?user]
 	     [not [unifiable ?attacker ?user]])
+    :prerequisites ([has-guessable-password ?user])
+    :plan (:action [guess-password ?attacker ?user ?victim-computer])
+    )
+
+(defattack-method how-to-get-password-by-guessing-of-not-typical-user
+    :to-achieve [achieve-knowledge-of-password ?attacker ?user ?victim-computer]
+    :guards ((not (user-ensemble-has-typical-user ?user))
+	     [not [unifiable ?attacker ?user]])
+    :prerequisites ([has-guessable-password ?user])
     :plan (:action [guess-password ?attacker ?user ?victim-computer])
     )
 
@@ -744,6 +745,7 @@
     :guards ([not [unifiable ?attacker ?user]])
     :typing ((?user user)
 	     (?computer computer))
+    :prerequisites ([has-guessable-password ?user])
     :plan (:action [guess-password ?attacker ?user ?victim-computer])
     )
 
@@ -1213,10 +1215,15 @@ predicate promising the thing is known.
 
 
 
+;;; This is a method for finding the password of one user on a machine
+;;; When you already have presence on the machine as another user
+;;; We might want to have a guard that says not to use this if we already 
+;;; know the password.
 (defattack-method crack-password-for-caldera
     :to-achieve [achieve-knowledge-of-password ?attacker ?victim ?victim-computer]
     :bindings ([attacker-computer-with-role ?attacker hashcat-server ?cracker-computer]
                [attacker-computer-with-role ?attacker caldera-server ?caldera-c2-server]
+               (?other-user ?victim-computer.user)
                [resource-named ?victim-computer password-file ?password-file]
                [resource-named ?victim-computer shadow-file ?shadow-file])
     :typing ((?cracker-computer computer)
@@ -1224,15 +1231,27 @@ predicate promising the thing is known.
              (?victim-computer computer)
              (?password-file password-file)
              (?shadow-file password-file))
+    :guards ([not [known [has-guessable-password ?victim]]])
+    :prerequisites ((not (eq ?other-user ?victim))
+                    [has-guessable-password ?other-user])
     :plan (:sequential
-           (:goal [achieve-remote-execution ?victim-computer ?])
+           (:goal [achieve-remote-execution ?victim-computer ?other-user])
            (:action [compress-files ?attacker ?victim-computer (?password-file ?shadow-file) ?compressed-file])
            (:action [transmit-data ?attacker ?compressed-file ?victim-computer ?caldera-c2-server])
            (:action [crack-password ?attacker ?compressed-file ?victim ?caldera-c2-server ?cracker-computer]))
     :post-conditions ([knows-password ?attacker ?victim]))
 
 ;;; the top level method wants to mung a high file on the secure machine
-;;; that requires achieving the access rights of a sysadmin
-;;;  which in turn requires getting to know the sysadmin's password (method above)
-;;; then you need to get a foothold to the secure machine for logging into it via ssh as sysadmin
-;;; then you can modify the file.
+;;; that requires achieving the access rights of a sysadmin.
+;;; The strategy for that is to get logged in as a normal user on that machine
+;;; then do a scrape of a specific directory for target scripts (to be written)
+;;; But to get logged in as the normal user, we need to know the password of the normal user
+;;; To do that we find another machine that includes that user and try to log in as another
+;;; user whose user name we can guess.
+
+;;; so there are 2 pivots, the first goes from the priviledged user to an unpriviledged user
+;;; on that machine and tries to login as that user and then use that user to get the password
+;;; of the priviledged user.
+;;; The second one goes from that user on a foothold machine to an easily guessed user on the foothold
+;;; and then gets execution for the easily guessed user on the foothold.  Does the password crack
+;;; the logs into the target machine as the intermediate user.
