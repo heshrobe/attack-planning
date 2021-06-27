@@ -161,14 +161,22 @@
    (let ((created-computer-name (intern (string-upcase (format nil "~a-computer" attacker-name)))))
      (kill-redefined-object attacker-name)
      (let* ((attacker (make-object 'attacker :name attacker-name))
-	    (his-computer (or computer 
-			      (make-attacker-computer created-computer-name attacker
-						      :server? nil
-						      :location location))))
+	    (his-computer (cond
+                           ((null computer) 
+                            (make-attacker-computer created-computer-name attacker
+                                                    :server? nil
+                                                    :location location))
+                           ((listp computer)
+                            (destructuring-bind (name ip-address) computer
+                              (make-attacker-computer name attacker
+                                                      :server? nil
+                                                      :ip-address (create-ip-address ip-address))))
+                           (t computer))))
+       (tell `[value-of (,attacker computers) ,his-computer])
        (tell `[value-of (,attacker location) ,location])
        (loop for computer in other-computers
 	   do (tell `[uses-computer ,attacker ,computer]))
-       (if (symbolp download-servers)
+       (if (and download-servers (symbolp download-servers))
 	   (let ((attacker-computer (make-attacker-computer download-servers attacker :location location)))
 	     (tell `[attacker-download-server ,attacker ,attacker-computer]))
 	 (loop for computer in download-servers
