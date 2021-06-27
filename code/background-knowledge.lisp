@@ -17,18 +17,6 @@
           [not [protected-from ?thing buffer-overflow-attack http]]]
   then [is-vulnerable-to ?thing buffer-overflow-attack http])
 
-(defun user-ensemble-has-typical-user (user)
-  (block exit
-    (ask* `[value-of (,user ensemble) ?ensemble]
-          (ask* [value-of (?ensemble typical-user) ?typical-user]
-                (return-from exit ?typical-user)))
-    nil))
-
-(defrule password-is-guessable (:backward)
-  :then [has-guessable-password ?user]
-  :if [and [value-of (?user guessable-password) ?guessable]
-           (not (null ?guessable))])
-
 #|
 
 I think that the above does a better and simpler job of this

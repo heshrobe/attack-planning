@@ -73,12 +73,12 @@
 	 (setf (gethash state-identifier *state-ht*) state)
 	 (if prior-state-supplied-p 
 	     (when (and (symbolp prior-state) (not (null prior-state)))
-               ;; if prior state is explictly NIL we don't want to intern 
-               ;; a state name NIL
+	       ;; if prior state is explictly NIL we don't want to intern 
+	       ;; a state name NIL
 	       (setq prior-state (intern-state prior-state)))
-	   (setq prior-state *initial-state*)) 
+	   (setq prior-state *initial-state*))
 	 (when prior-state
-           (push state (successors prior-state))         
+	   (push state (successors prior-state))
 	   (setf (predecessor state) prior-state
 		 (depth state) (1+ (depth prior-state))
 		 (footholds-held state) (footholds-held prior-state)

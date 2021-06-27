@@ -133,9 +133,6 @@
 		 (:break (list (list `(prog1 t (break ,@stuff)))
 			       nil
 			       input-state))
-                 (:trace (list (list `(prog1 t (format *trace-output* ,@stuff)))
-			       nil
-			       input-state))
                  ((:goal :plan)
                   (let* ((goal (getf structure :goal))
                          (plan (getf structure :plan (ji::make-logic-variable-maker (gentemp (string-upcase "?plan-") ))))

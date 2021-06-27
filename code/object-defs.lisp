@@ -448,7 +448,10 @@
 	    )
     :super-types (in-authorization-pool system-entity print-nicely-mixin))
 
-
+(defrule password-is-guessable (:backward)
+  :then [has-guessable-password ?user]
+  :if [and [value-of (?user guessable-passable) ?guessable]
+           (not (null ?guessable))])
 
 (defun make-credentials-for-user (user)
   (make-object 'credential :user user :name (make-name 'credential)))
