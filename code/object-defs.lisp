@@ -445,6 +445,7 @@
 	    (superuser-for :set-valued t)
             (credentials :initform (make-credentials-for-user self))
             (guessable-password :initform nil :initarg :guessable-password)
+            (owned-computers :initarg :owned-computers :set-valued t)
 	    )
     :super-types (in-authorization-pool system-entity print-nicely-mixin))
 

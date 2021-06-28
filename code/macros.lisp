@@ -147,34 +147,37 @@
 ;;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
-(defmacro defcomputer (name computer-type
+(defmacro defcomputer (name computer-type &rest plist
 		       &key ip-address-string
 			    superuser authorization-pool interfaces
 			    (typical nil typical-p)			    
                             (ensemble nil ensemble-p)
                             (role nil role-p)
-                            )
-  `(with-atomic-action
-       (kill-redefined-object ',name)
-     (let ((computer (make-object ',computer-type :name ',name)))
-       ,@(if (listp ip-address-string)
-	    (loop for ip-address-string in ip-address-string
-		collect `(add-ip-address-to-computer ,ip-address-string computer))
-	   `((add-ip-address-to-computer ,ip-address-string computer)))
-       ,@(when superuser
-          `((tell `[value-of (,computer os superuser) ,(follow-path '(,superuser))])))
-       ,@(when authorization-pool
-         `((tell `[value-of (,computer os authorization-pool) ,(follow-path '(,authorization-pool))])))
-       ,@(when interfaces
-	   (loop for interface in interfaces
-	       collect `(tell `[value-of (,computer hardware-interfaces) ,',interface])))
-       ,@(when ensemble-p `((tell `[value-of (,computer ensemble) ,(object-named ',ensemble)])))
-       ,@(when typical-p `((tell `[value-of (,computer typical-p) ,,typical])))
-       ,@(when role-p 
-           (destructuring-bind (role-name object) role
-             (unless (listp object) (setq object (list object)))
-             `((tell `[system-role ,(Follow-path ',object) ,',role-name ,computer]))))
-       computer)))
+                       &allow-other-keys
+                       )
+  (ji:with-keywords-removed (initargs plist :ip-address-string :superuser :authorization-pool :interfaces
+                                      :typical :ensemble :role)
+    `(with-atomic-action
+      (kill-redefined-object ',name)
+      (let ((computer (make-object ',computer-type :name ',name ,@initargs)))
+        ,@(if (listp ip-address-string)
+              (loop for ip-address-string in ip-address-string
+                  collect `(add-ip-address-to-computer ,ip-address-string computer))
+            `((add-ip-address-to-computer ,ip-address-string computer)))
+        ,@(when superuser
+            `((tell `[value-of (,computer os superuser) ,(follow-path '(,superuser))])))
+        ,@(when authorization-pool
+            `((tell `[value-of (,computer os authorization-pool) ,(follow-path '(,authorization-pool))])))
+        ,@(when interfaces
+            (loop for interface in interfaces
+                collect `(tell `[value-of (,computer hardware-interfaces) ,',interface])))
+        ,@(when ensemble-p `((tell `[value-of (,computer ensemble) ,(object-named ',ensemble)])))
+        ,@(when typical-p `((tell `[value-of (,computer typical-p) ,,typical])))
+        ,@(when role-p 
+            (destructuring-bind (role-name object) role
+              (unless (listp object) (setq object (list object)))
+              `((tell `[system-role ,(Follow-path ',object) ,',role-name ,computer]))))
+        computer))))
 
 (defmacro define-peripheral (name &key peripheral-type interfaces commands)
   `(with-atomic-action

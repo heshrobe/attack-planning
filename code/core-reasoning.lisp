@@ -178,19 +178,25 @@
 	   do (tell `[uses-computer ,attacker ,computer]))
        (if (and download-servers (symbolp download-servers))
 	   (let ((attacker-computer (make-attacker-computer download-servers attacker :location location)))
-	     (tell `[attacker-download-server ,attacker ,attacker-computer]))
+	     (tell `[attacker-download-server ,attacker ,attacker-computer])
+             (tell `[value-of (,attacker owned-computers) ,attacker-computer]))
 	 (loop for computer in download-servers
-	     do (tell `[attacker-download-server ,attacker ,computer])))
+	     do (tell `[attacker-download-server ,attacker ,computer])
+                (tell `[value-of (,attacker owned-computers) ,computer])))
        (if (and command-and-control-servers (symbolp command-and-control-servers))
 	   (let ((attacker-computer (make-attacker-computer command-and-control-servers attacker :location location)))
-	     (tell `[attacker-command-and-control-server ,attacker ,attacker-computer]))
+	     (tell `[attacker-command-and-control-server ,attacker ,attacker-computer])
+             (tell `[value-of (,attacker owned-computers) ,attacker-computer]))
 	 (loop for computer in command-and-control-servers
-	     do (tell `[attacker-command-and-control-server ,attacker ,computer])))
+	     do (tell `[attacker-command-and-control-server ,attacker ,computer])
+                (tell `[value-of (,attacker owned-computers) ,computer])))
        (if (and adware-servers (symbolp adware-servers))
 	   (let ((attacker-computer (make-attacker-computer adware-servers attacker :location location)))
-	     (tell `[attacker-adware-server ,attacker ,attacker-computer]))
+	     (tell `[attacker-adware-server ,attacker ,attacker-computer])
+             (tell `[value-of (,attacker owned-computers) ,attacker-computer]))
 	 (loop for computer in adware-servers
-	     do (tell `[attacker-adware-server ,attacker ,computer])))
+	     do (tell `[attacker-adware-server ,attacker ,computer])
+                (tell `[value-of (,attacker owned-computers) ,computer])))
        (loop for (role computer-name his-location) in servers-and-roles
            for ip-address = (when (and (stringp his-location) (not (find #\\ his-location :test #'char-equal)))
                               ;; If the location is a raw string without \ then it's an IP address lot a location
@@ -199,7 +205,8 @@
            for attacker-computer = (if ip-address
                                        (make-attacker-computer computer-name attacker :ip-address ip-address :typical? nil)
                                        (make-attacker-computer computer-name attacker :typical? nil :location (or his-location location)))
-           do (tell `[attacker-computer-with-role ,attacker ,role ,attacker-computer]))  
+           do (tell `[attacker-computer-with-role ,attacker ,role ,attacker-computer])
+              (tell `[value-of (,attacker owned-computers) ,attacker-computer]))  
        ;; there isn't one.  It's just a starting point.
        (tell `[in-state [has-foothold nil ,his-computer ,attacker foothold] initial])
        (tell `[in-state [attacker-and-computer ,attacker ,his-computer] initial])
