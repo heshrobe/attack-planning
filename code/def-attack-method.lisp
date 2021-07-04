@@ -68,6 +68,7 @@
 ;;; It's recursive descent framework with a dispatch on the type (i.e. the first token) of the form
 ;;; being processed
 
+(defparameter *method-tracing* nil)
 (defun rebuild-plan-structure (plan-structure &optional (input-state `(logic-variable-maker .(intern (string-upcase "?input-state"))))
 							(output-state `(logic-variable-maker ,(intern (string-upcase "?output-state")))))
   ;; traverse the plan-structure accumulating the forms to put in the Joshua rule
@@ -133,7 +134,7 @@
 		 (:break (list (list `(prog1 t (break ,@stuff)))
 			       nil
 			       input-state))
-                 (:trace (list (list `(prog1 t (format *trace-output* ,@stuff)))
+                 (:trace (list (list `(prog1 t (when *method-tracing* (terpri *trace-output*) (format *trace-output* ,@stuff))))
 			       nil
 			       input-state))
                  ((:goal :plan)
@@ -216,7 +217,14 @@
     (loop for thing in assertions collect (do-one thing))))
 
 
-(defun process-guards (assertions input-state) (process-assertions assertions input-state))
+(defun process-guards (assertions input-state)
+  (loop for assertion in assertions
+        if (and (predication-maker-p assertion) (eql (predication-maker-predicate assertion) 'unknown))
+        collect (second (predication-maker-statement assertion)) into unknown-guards
+      else collect (push assertion other-guards) into other-guards
+      finally (append (loop for assertion in (process-assertions unknown-guards input-state)
+                          collect `(predication-maker '(not (predication-maker '(known ,assertion)))))
+                      (process-assertions other-guards input-state))))
 
 
 

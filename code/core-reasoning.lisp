@@ -138,23 +138,27 @@
 					`(list ,@(loop for name in other-computers
 						     collect `(follow-path (list ',name)))))
 		    :adware-servers ,(when adware-servers-p
-				      (if (symbolp adware-servers)
-					  `', adware-servers
-					`(List ,@(Loop for name in adware-servers
-						     collect `(follow-path (list ',name))))))
+                                       (if (symbolp adware-servers)
+                                           `', adware-servers
+                                         `(List ,@(Loop for name in adware-servers
+                                                        collect `(follow-path (list ',name))))))
 		    :download-servers ,(when download-servers-p
 					 (if (symbolp download-servers)
-					   `', download-servers
+                                             `', download-servers
 					   `(list ,@(loop for name in download-servers
                                                         collect `(follow-path (list ',name))))))
                     
 		    :command-and-control-servers ,(when command-and-control-servers-p
-					 (if (symbolp command-and-control-servers)
-					   `', command-and-control-servers
-					   `(list ,@(loop for name in command-and-control-servers
-                                                        collect `(follow-path (list ',name))))))
+                                                    (if (symbolp command-and-control-servers)
+                                                        `', command-and-control-servers
+                                                      `(list ,@(loop for name in command-and-control-servers
+                                                                   collect `(follow-path (list ',name))))))
                     :servers-and-roles ,(when servers-p `',servers)                                          
-		    :computer ,(when computer-p `(follow-path (list ',computer)))))
+		    :computer ,(when computer-p
+                                 (if (symbolp computer)
+                                     `(follow-path (list ',computer))
+                                   `',computer
+                                   ))))
 
 (defun create-attacker (attacker-name &key location computer other-computers download-servers command-and-control-servers adware-servers servers-and-roles)
   (with-atomic-action

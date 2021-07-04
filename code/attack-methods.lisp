@@ -145,6 +145,7 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 ;;; Fix: Need to do an get-foothold to get foothold
+#|
 (defattack-method write-file-property-directly
     :to-achieve [affect data-integrity ?file]
     :typing ((?file file))
@@ -156,11 +157,25 @@
     :plan (:sequential
            (:goal [get-foothold ?victim-computer ssh])
            (:bind [current-foothold ?new-foothold-computer ?new-foothold-role])
-           ;; (:break "New foothold ~a" ?new-foothold-computer)
            (:goal [login ?attacker ?privileged-user ?victim-os ?new-foothold-computer ?new-foothold-role])
-           ;; (:break)
            (:goal [modify contents ?file])
            ))
+|#
+
+(defattack-method write-file-property-directly
+    :to-achieve [affect data-integrity ?file]
+    :typing ((?file file))
+    :bindings ((?victim-computer ?file.computers)
+               ;; [has-permission ?privileged-user write ?file]
+               )
+    :prerequisites ([desirable-property-of ?file data-integrity])
+    :plan (:sequential
+           (:goal [achieve-remote-execution ?victim-computer ?user])
+           (:break "Need new method here, present as ~a" ?user)
+           (:goal [modify contents ?file])
+           ))
+
+
 
 ;;; To affect the data-integrity of some data-set
 ;;; Get control of a process that produces the data-set
@@ -357,17 +372,14 @@
 (defattack-method remote-execution-to-remote-shell
     :to-achieve [achieve-remote-execution ?victim-computer ?victim-user]
     :output-variables (?victim-user)
-    :guards ([not [place-already-visited? ?victim-computer remote-execution]])
+    :guards ([not [place-already-visited? ?victim-computer remote-execution ?victim-user]])
     :bindings ((?victim-user ?victim-computer.os.users))
     :typing ((?victim-computer.os operating-system)
-             (?victim-computer.os.users user)
+             (?victim-user user)
 	     (?victim-computer computer))
     :plan (:sequential
-	   (:note [place-visited ?victim-computer remote-execution])
-           ;; (:break "Trying to get shell on ~a" ?victim-computer.os)
-	   (:goal [achieve-remote-shell ?victim-computer.os ?victim-user])
-           )
-    )
+	   (:note [place-visited ?victim-computer remote-execution ?victim-user])
+	   (:goal [achieve-remote-shell ?victim-computer.os ?victim-user])))
 
 ;;; Note: This is odd if the way you get knowledge of the password
 ;;; is by phishing or something else that takes time
@@ -400,10 +412,17 @@
     :plan (:sequential
 	   (:goal [get-foothold ?victim-computer ?protocol])
            (:bind [current-foothold ?current-foothold-computer ?current-foothold-role])
+           (:trace "Got foothold to ~a for ~a on ~a as ~a" ?victim-computer ?victim-user ?current-foothold-computer ?current-foothold-role)
 	   (:goal [achieve-knowledge-of-password ?attacker ?victim-user ?victim-computer])
            (:action [login ?attacker ?victim-user ?victim-os-instance ?current-foothold-computer ?current-foothold-role]))
     :post-conditions ([has-remote-execution ?attacker ?victim-computer ?victim-user])
     )
+
+;;; If he already knows the password, don't work on it anymore
+(defattack-method trivial-password-retrieval 
+    :to-achieve [achieve-knowledge-of-password ?attacker ?victim-user ?]
+    :prerequisites ([knows-password ?attacker ?victim-user])
+    :plan ())
 
 
 ;;; The stuff with noting place visited is there to prevet goal reduction loops
@@ -413,14 +432,14 @@
 ;;; Note that ?victim-process is an output and isn't bound at this point!
 (defattack-method remote-execution-to-code-injection
     :to-achieve [achieve-remote-execution ?victim-computer ?victim-process]
-    :guards ([not [place-already-visited? ?victim-computer remote-execution]])
+    :guards ([not [place-already-visited? ?victim-computer remote-execution ?victim-process]])
     :bindings ((?victim-process ?victim-computer.os.processes))
     :typing ((?victim-computer.os operating-system)
              (?victim-computer computer)
 	     (?victim-computer.os.processes process))
     :prerequisites ()
     :plan (:sequential
-	   (:note [place-visited ?victim-computer remote-execution])
+	   (:note [place-visited ?victim-computer remote-execution ?victim-process])
 	   (:goal [achieve-code-injection ?victim-process ?victim-computer.os])))
 
 ;;; Note that ?process is bound by the method above and is an input.
@@ -441,13 +460,13 @@
 (defattack-method remote-execution-to-code-reuse
     :to-achieve [achieve-remote-execution ?victim-computer ?victim-process]
     :output-variables (?victim-process)
-    :guards ([not [place-already-visited? ?victim-computer remote-execution]])
+    :guards ([not [place-already-visited? ?victim-computer remote-executio ?victim-process]])
     :bindings ((?victim-process ?victim-computer.os.processes))
     :prerequisites ([value-of ?victim-process.host-os ?victim-computer.os])
     :typing ((?victim-computer.os operating-system)
 	     (?victim-process process))
     :plan (:sequential
-	   (:note [place-visited ?victim-computer remote-execution])
+	   (:note [place-visited ?victim-computer remote-execution ?victim-process])
 	   (:goal [achieve-code-reuse ?victim-process ?victim-computer.os])))
 
 ;;; Note that ?process is an input and is bound at this point
@@ -468,13 +487,13 @@
 (defattack-method remote-execution-to-corrupt-attachment
     :to-achieve [achieve-remote-execution ?victim-computer ?victim-user]
     :output-variables (?victim-user)
-    :guards ([not [place-already-visited? ?victim-computer remote-execution]])
+    :guards ([not [place-already-visited? ?victim-computer remote-execution ?victim-user]])
     :bindings ((?victim-user ?victim-computer.os.users)
                [attacker-and-computer ?attacker ?])
     :prerequisites ([email-client-of ?victim-user ?])
     :typing ((?victim-user user))
     :Plan (:sequential
-           (:note [place-visited ?victim-computer remote-execution])
+           (:note [place-visited ?victim-computer remote-execution ?victim-user])
            (:goal [get-user-to-click-on ?attacker ?victim-user ? ?])))
 
 ;;; This includes implicitly the action of launching the process
@@ -732,10 +751,33 @@
 
 (defattack-method how-to-get-password-by-guessing
     :to-achieve [achieve-knowledge-of-password ?attacker ?user ?victim-computer]
+    :guards ((user-ensemble-has-typical-user ?user)
+             [is-typical-user ?user]
+	     [not [unifiable ?attacker ?user]]
+             [unknown [knows-password ?attacker ?user]]
+             )
+    :prerequisites ([value-of (?user has-weak-password) yes])
+    :plan (:action [guess-password ?attacker ?user ?victim-computer])
+    )
+
+(defattack-method how-to-get-password-by-guessing-of-not-typical-user
+    :to-achieve [achieve-knowledge-of-password ?attacker ?user ?victim-computer]
+    :guards ((not (user-ensemble-has-typical-user ?user))
+	     [not [unifiable ?attacker ?user]]
+             [unknown [knows-password ?attacker ?user]]
+             )
+    :prerequisites ([value-of (?user has-weak-password) yes])
+    :plan (:action [guess-password ?attacker ?user ?victim-computer])
+    )
+
+#|
+(defattack-method how-to-get-password-by-guessing
+    :to-achieve [achieve-knowledge-of-password ?attacker ?user ?victim-computer]
     :guards ([is-typical-user ?user]
 	     [not [unifiable ?attacker ?user]])
     :plan (:action [guess-password ?attacker ?user ?victim-computer])
     )
+|#
 
 (defattack-method guess-superuser-passwords
     :to-achieve [achieve-knowledge-of-password ?attacker ?user ?victim-computer]
@@ -876,8 +918,15 @@
 ;;; so the foothold is where this step is taking place from and the role is the attacker
 (defattack-method direct-foothold
     :to-achieve [get-foothold ?victim-computer ?protocol-name]
-    :guards ([not [place-already-visited? ?victim-computer foothold]])
-    :bindings ([current-foothold ?current-foothold-computer ?current-foothold-role])
+    :guards (;; [not [place-already-visited? ?victim-computer foothold nil]]
+             ;; Don't use one of the attacker's other computers
+             ;; I don't think that one of them would ever be a foothold because
+             ;; of the guard in lateral motion, but to be sure do it here too.
+             (not (member ?current-foothold-computer (owned-computers ?attacker)))
+             )
+    :bindings ([current-foothold ?current-foothold-computer ?current-foothold-role]
+               [attacker-and-computer ?attacker ?]
+               )
     :typing ((?victim-computer computer)
 	     (?current-foothold-computer computer))
     :prerequisites ([accepts-connection ?victim-computer ?protocol-name ?current-foothold-computer])
@@ -889,25 +938,33 @@
     :to-achieve [get-foothold ?victim-computer ?protocol-name]
     :bindings (;; (?victim-os ?victim-computer.os)
 	       ;; Now find somebody that can make the connection, accepts connection will find one if there is one
-	       [current-foothold ?current-foothold-computer ?])
-    :guards ([not [place-already-visited? ?victim-computer foothold]]
+	       [accepts-connection ?victim-computer ?protocol-name ?new-foothold-computer]
+               [current-foothold ?current-foothold-computer ?]
+               [attacker-and-computer ?attacker ?])
+    :guards ([not [place-already-visited? ?victim-computer foothold nil]]
 	     [foothold-doesnt-exist ?victim-computer]
 	     ;; Use this method only if you can't get a connection to the victim from where you are
-	     [not [accepts-connection ?victim-computer ?protocol-name ?current-foothold-computer]])
+             [not [accepts-connection ?victim-computer ?protocol-name ?current-foothold-computer]]
+             ;; Owned computers are computers that the attacker controls other than
+             ;; his primary machine.  No point in trying to move to them since 
+             ;; they have no more ability to get to the victim than the attacker's
+             ;; primary machine
+             (not (member ?new-foothold-computer (owned-computers ?attacker)))
+             )
     :typing (;; (?victim-os operating-system)
 	     (?victim-computer computer)
 	     (?current-foothold-computer computer))
     :plan (:sequential
 	   ;; Make a note that we've already considered this place as a foothold to
 	   ;; prevent looping back to here while trying to achieve remote execution
-	   (:note [place-visited ?victim-computer foothold])
+	   (:note [place-visited ?victim-computer foothold nil])
 	   ;; Now see if the attacker can gain remote execution on the new-foothold-computer and in what role
            ;; (?new-foothold-role is a return value)
-           (:bind [accepts-connection ?victim-computer ?protocol-name ?new-foothold-computer])
            ;; (:break "~a ~a" ?new-foothold-computer ?current-foothold-computer)
 	   (:goal [achieve-remote-execution ?new-foothold-computer ?new-foothold-role])
 	   ;;If so then actually make the connection to the victim from the new foothold
-	   ;; (:goal [make-connection ?victim-os-instance ?protocol-name ?remote-execution-state ?output-contet])
+           ;; (:goal [make-connection ?victim-os-instance ?protocol-name ?remote-execution-state ?output-contet])
+           (:action [connect-via ?new-foothold-computer ?new-foothold-role ?victim-computer ?protocol-name])
 	   )
     :post-conditions ([has-foothold ?victim-computer ?new-foothold-computer ?new-foothold-role ?protocol-name]))
 
@@ -1213,26 +1270,50 @@ predicate promising the thing is known.
 
 
 
+
+;;; This is a method for finding the password of one user on a machine
+;;; When you already have presence on the machine as another user
+;;; We might want to have a guard that says not to use this if we already 
+;;; know the password.
 (defattack-method crack-password-for-caldera
     :to-achieve [achieve-knowledge-of-password ?attacker ?victim ?victim-computer]
     :bindings ([attacker-computer-with-role ?attacker hashcat-server ?cracker-computer]
-               [attacker-computer-with-role ?attacker caldera-server ?caldera-c2-server]
+               [attacker-and-computer ?attacker ?attacker-computer]
+               (?other-user ?victim-computer.users)
                [resource-named ?victim-computer password-file ?password-file]
                [resource-named ?victim-computer shadow-file ?shadow-file])
     :typing ((?cracker-computer computer)
-             (?caldera-c2-server computer)
+             (?attacker-computer computer)
              (?victim-computer computer)
              (?password-file password-file)
              (?shadow-file password-file))
+    :guards ([value-of (?victim has-weak-password) no]
+             [unknown [knows-password ?attacker ?victim]]
+             [unknown [knows-credentials ?attacker ?victim]]
+             (not (eql ?other-user ?victim)))
+    :prerequisites ([value-of (?other-user has-weak-password) yes])
     :plan (:sequential
-           (:goal [achieve-remote-execution ?victim-computer ?])
-           (:action [compress-files ?attacker ?victim-computer (?password-file ?shadow-file) ?compressed-file])
-           (:action [transmit-data ?attacker ?compressed-file ?victim-computer ?caldera-c2-server])
-           (:action [crack-password ?attacker ?compressed-file ?victim ?caldera-c2-server ?cracker-computer]))
-    :post-conditions ([knows-password ?attacker ?victim]))
+           (:goal [achieve-remote-execution ?victim-computer ?other-user])
+           (:action [compress-files ?attacker ?victim-computer (?password-file ?shadow-file) ?compressed-file compressed-password-file])
+           (:goal [exfiltrate-data ?other-user ?compressed-file ?victim-computer ?attacker-computer])
+           (:action [crack-password ?attacker ?compressed-file ?victim ?attacker-computer ?cracker-computer]))
+    :post-conditions ([knows-password ?attacker ?victim]
+                      [knows-credentials ?attacker ?victim]
+                      ))
+
 
 ;;; the top level method wants to mung a high file on the secure machine
-;;; that requires achieving the access rights of a sysadmin
-;;;  which in turn requires getting to know the sysadmin's password (method above)
-;;; then you need to get a foothold to the secure machine for logging into it via ssh as sysadmin
-;;; then you can modify the file.
+;;; that requires achieving the access rights of a sysadmin.
+;;; The strategy for that is to get logged in as a normal user on that machine
+;;; then do a scrape of a specific directory for target scripts (to be written)
+;;; But to get logged in as the normal user, we need to know the password of the normal user
+;;; To do that we find another machine that includes that user and try to log in as another
+;;; user whose user name we can guess.
+
+;;; so there are 2 pivots, the first goes from the priviledged user to an unpriviledged user
+;;; on that machine and tries to login as that user and then use that user to get the password
+;;; of the priviledged user.
+;;; The second one goes from that user on a foothold machine to an easily guessed user on the foothold
+;;; and then gets execution for the easily guessed user on the foothold.  Does the password crack
+;;; the logs into the target machine as the intermediate user.
+

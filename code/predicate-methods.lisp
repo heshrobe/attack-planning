@@ -182,7 +182,7 @@
        (unify existing-foothold-role foothold-role)
        (stack-let ((backward-support (list query +true+ '(ask-data current-foothold))))
 	 (funcall continuation backward-support))))))
-
+tim-com
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;
 ;;; Foothold Exists
@@ -215,13 +215,16 @@
 ;;; If the purpose is remote-execution all we check is that there is a previous
 ;;; entry for the same computer.
 (defmethod ask-in-state ((query place-already-visited?) truth-value (state state) continuation)
-  (with-statement-destructured (computer purpose) query
+  (with-statement-destructured (computer purpose sub-purpose) query
     (let ((it-exists (case purpose
 		       ;; For remote execution, if you got here as a subgoal of getting a foothold for this computer
 		       ;; you're in a loop.  Obviously if you got here as a subgoal of getting remote execution that's 
 		       ;; a loop as well
-		       (remote-execution (loop for (visited-computer) in (places-visited state)
-					     thereis (eql computer visited-computer)))
+		       (remote-execution (loop for (visited-computer visited-purpose visited-subpurpose) in (places-visited state)
+					     thereis (and (eql computer visited-computer)
+                                                          (eql purpose visited-purpose)
+                                                          (eql sub-purpose visited-subpurpose)
+                                                          )))
 		       ;; For foothold, we might be here as a subgoal of getting remote execution so we only look
 		       ;; at foothold entries.  We consider recursing with a different protocol to also be a loop
 		       ;; so protocol is actually ignored.
@@ -262,9 +265,9 @@
     (error 'model-cant-handle-query
 	   :query outer-predication
 	   :model (type-of outer-predication)))
-  (with-statement-destructured (computer purpose) inner-predication 
+  (with-statement-destructured (computer purpose sub-purpose) inner-predication 
     ;; (format *error-output* "~%Noting that ~a was visited for purpose ~a" computer purpose)
-    (pushnew (list computer purpose ) (places-visited state) :test #'equal)))
+    (pushnew (list computer purpose sub-purpose) (places-visited state) :test #'equal)))
 
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;

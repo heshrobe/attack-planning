@@ -151,6 +151,9 @@
 (define-aplan-object compressed-file
     :super-types (file))
 
+(define-aplan-object compressed-password-file
+    :super-types (compressed-file password-file))
+
 (define-aplan-object configuration-file
   :super-types (file))
 
@@ -446,13 +449,9 @@
             (credentials :initform (make-credentials-for-user self))
             (guessable-password :initform nil :initarg :guessable-password)
             (owned-computers :initarg :owned-computers :set-valued t)
+            (has-weak-password :initarg :has-weak-password :initform 'no)
 	    )
     :super-types (in-authorization-pool system-entity print-nicely-mixin))
-
-(defrule password-is-guessable (:backward)
-  :then [has-guessable-password ?user]
-  :if [and [value-of (?user guessable-passable) ?guessable]
-           (not (null ?guessable))])
 
 (defun make-credentials-for-user (user)
   (make-object 'credential :user user :name (make-name 'credential)))

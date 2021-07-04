@@ -155,11 +155,13 @@
 ;;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
-(define-predicate place-already-visited? (computer purpose) (tell-error-model special-stateful-predicate-model))
+;;; the subpurpose field allowsd you to state and query whether you've visited this place for a purpose (e.g. remove execution) 
+;;; with a sub-purpose of the specific user (e.g. sam or howie).
+(define-predicate place-already-visited? (computer purpose sub-purpose) (tell-error-model special-stateful-predicate-model))
 
 ;;; Place-visited always occurs as a note within the :plan structure and the macro expansion
 ;;; puts the input and output states into the predication.
-(define-predicate place-visited (computer purpose) (special-stateful-predicate-model))
+(define-predicate place-visited (computer purpose sub-purpose) (special-stateful-predicate-model))
 
 
 
@@ -399,4 +401,12 @@
 (define-aplan-predicate resource-named (system name resource) (non-stateful-predicate-model))
 (define-aplan-predicate resource-of-type (system type resource) (non-stateful-predicate-model))
 (define-aplan-predicate compressed-file-of (compressed-file input-files) (non-stateful-predicate-model))
-(define-aplan-predicate has-guessable-password (user) (non-stateful-predicate-model))
+
+
+
+
+
+
+
+
+

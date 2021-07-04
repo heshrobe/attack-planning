@@ -39,16 +39,26 @@
 ;;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
+;;; If the attacker has multiple IP addresses, this succeeds multiple times
+;;; when we want it to win only once.  In the caldera example, we ask if the 
+;;; gateway computer can reach the attacker's computer to exfiltrate data 
+;;; (yes, that's backward from the normal direction) and the gateway is multi-homed, 
+;;; So this wins twice when it should only win once.
 (defrule path-allows-connection-from-normal-computer (:backward)
   then [accepts-connection ?victim-computer ?connection-type ?attacker-computer]
   if [and [object-type-of ?victim-computer computer]
 	  [object-type-of ?attacker-computer computer]
+          ;; This is required in case to distinguish normal from attacker computers
+          ;; This was happending by accident because attacker compuers didn't have
+          ;; IP addresses but just Locations, but they can have either. If the
+          ;; attacker computer has an IP addresss, then this rule would trigger
+          ;; as well as the one for attacker computers.
+          (not (eql (type-of ?attacker-computer) 'attacker-computer))
 	  (not (eql ?victim-computer ?attacker-computer))
 	  [reachable-from ?victim-computer ?attacker-computer ?path]
-	  [value-of (?attacker-computer ip-addresses) ?attacker-ip-address]
-	  (host-allows-connection-type ?victim-computer ?attacker-ip-address ?connection-type)
-          (path-is-acceptable-for-connection-type (copy-object-if-necessary ?path)
-                                                  ?attacker-ip-address ?connection-type)
+          (loop for ip-address in (ip-addresses ?attacker-computer)
+              thereis (and (host-allows-connection-type ?victim-computer ip-address ?connection-type)
+                           (path-is-acceptable-for-connection-type (copy-object-if-necessary ?path) ip-address ?connection-type)))
           ]
   )
 

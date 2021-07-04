@@ -2,6 +2,16 @@
 
 (in-package :aplan)
 
+
+
+
+(defun user-ensemble-has-typical-user (user)
+  (block exit
+    (ask* `[value-of (,user ensemble) ?ensemble]
+          (ask* [value-of (?ensemble typical-user) ?typical-user]
+                (return-from exit ?typical-user)))
+    nil))
+
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;
 ;;; Web Server Vulnerabilities

@@ -588,9 +588,11 @@
 	))
 
 (defun test-wilee ()
+  (clear)
+  (load "aplan:models;wilee-example.lisp")
   (do-it :attacker (follow-path '(attacker))
 	 :property 'data-integrity
-	 :computer (follow-path '(high-server))
+	 :computer (follow-path '(high-data-server))
 	 :resource (follow-path '(high-database))))
 
 #|
