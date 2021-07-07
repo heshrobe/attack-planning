@@ -158,7 +158,13 @@
   :super-types (file))
 
 (define-aplan-object scheduler-policy-file
-  :super-types (file))
+    :super-types (file))
+
+(define-aplan-object script-file
+    :super-types (file))
+
+(define-aplan-object admin-script-file
+    :super-types (script-file))
 
 (define-aplan-object process
     :slots ((host-os )

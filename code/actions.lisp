@@ -246,10 +246,10 @@
                     [knows-credentials ?attacker ?victim-user])
   )
 
-(define-action compress-files (?attacker ?victim-computer ?set-of-files ?new-file ?new-file-type)
+(define-action compress-files (?attacker ?victim-computer ?file1 ?file2 ?new-file ?new-file-type)
   :prerequisites ([has-remote-execution ?attacker ?victim-computer ?role])
   :outputs ((?new-file (create-new-resource (make-name 'compressed-password-file) ?new-file-type ?victim-computer)))
-  :post-conditions ([compressed-file-of ?new-file ?set-of-files]))
+  :post-conditions ([compressed-file-of ?new-file ?file1 ?file2]))
 
 (define-action crack-password (?attacker ?password-files ?victim ?c2-server ?cracker-computer)
   :bindings ((?victim-computer ?victim.computers))
@@ -281,6 +281,17 @@
   :prerequisites ([system-role ?object key-for ?key])
   :outputs ((?decrypted-thing (make-object (type-of ?object) :name (make-name (role-name ?object)))))
   :post-conditions ([knows ?attacker decryped-value ?object ?decrypted-thing]))
+
+(define-action parse-admin-password (?attacker ?admin-script ?victim ?attacker-computer)
+  :typing ((?admin-script admin-script-file)
+           (?victim admin-user)
+           (?attacker-computer computer))
+  :bindings ([attacker-and-computer ?attacker ?attacker-computer])
+  :prerequisites ([data-exfiltrated ?admin-script ? ? ?attacker-computer])
+  :post-conditions ([knows-password ?attacker ?victim]
+                    [knows-credentials ?attacker ?victim]))
+                    
+                                         
 
 
 

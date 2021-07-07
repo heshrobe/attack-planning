@@ -259,20 +259,19 @@
     (terpri stream)))  
 
 (defmethod dump-subnet-data ((computer attacker-computer) &optional (stream *standard-output*))
-  (let* ((subnet (first (subnets computer)))
-	 ;; Subnet is the external-internet
-	 ;; and its subnets is the included region
-	 (inclusion-mask (first (subnets subnet)))
-	 (exclusion-subnets (exception-masks inclusion-mask)))
-    (json:as-object-member ('range stream)
-	(dump-mask inclusion-mask stream))
-    (terpri stream)
-    (json:as-object-member ('excluded stream)
-	(json:with-array (stream)
-	  (loop for mask in exclusion-subnets
-	      do (json:as-array-member (stream)
-		   (dump-mask mask stream))
-		 )))))
+  (let* ((subnet (first (subnets computer))))
+    ;; Subnet is the external-internet
+    ;; and its subnets is the included region)
+    (when (typep subnet 'external-internet)
+      (json:as-object-member ('range stream)
+          (dump-mask (first (subnets subnet)) stream))
+      (terpri stream)
+      (json:as-object-member ('excluded stream)
+          (json:with-array (stream)
+            (loop for mask in (exception-masks (first (subnets subnet)))
+                do (json:as-array-member (stream)
+                     (dump-mask mask stream))
+                   ))))))
 
 (defmethod dump-subnet-data ((ensemble ensemble) &optional (stream *standard-output*))
   (let ((size (size ensemble))

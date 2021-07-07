@@ -35,7 +35,9 @@
 	  (:singleton
 	   (clim:surrounding-output-with-border (stream :shape :rectangle :ink clim:+green+)
 	     (clim:with-text-face (stream :bold)
-	       (format stream "reduces to"))))
+	       (format stream "reduces to")
+               (when (eql (first (second step)) :attack-identifier)
+                 (format stream "~%Attack-identifier: ~%~a" (second (second step)))))))
           (:goal (clim:surrounding-output-with-border (stream :shape :rectangle :ink clim:+blue+)
                    (destructuring-bind (goal-type &rest values) (second step)
 		     ;; total hack to reduce space consumption
@@ -47,10 +49,12 @@
 	   (clim:surrounding-output-with-border (stream :shape :rectangle :ink clim:+red+)
 	     (clim:with-text-face (stream :bold)
 	       (destructuring-bind (action-type &rest rest) (second step)
-		 (format stream "~:[Do:~;Repeatedly:~] ~A~%~{~a~^~%~}" (eql connective :repeated-action) action-type rest))))))))))
+		 (format stream "~:[Do:~;Repeatedly:~] ~A~%~{~a~^~%~}" (eql connective :repeated-action) action-type rest)))))
+          (otherwise (break))
+          )))))
 
 (defun plan-inferior (step)
-  (case (first step)
+  (ecase (first step)
     ((:sequential :parallel :singleton :repeat)
      (if (eql (first (second step)) :attack-identifier)
          (rest (rest step))
@@ -58,7 +62,8 @@
     (:goal (let ((plan (getf step :plan)))
 	     (when plan
              (list plan))))
-    ((:action :repeated-action) nil)))
+    ((:action :repeated-action) nil)
+    ))
 
 ;;; Fix if possible: There must be a simpler way to construct this recursion
 (defun plan-inferior-action-only (step)
@@ -310,10 +315,9 @@
       (clim:with-text-face (stream :bold)
 	(let ((combinator (combinator plan))
               (attack-identifier (attack-identifier plan)))
-	  (format stream "~a" (case combinator
+	  (format stream "~a" (ecase combinator
 				((:sequential :parallel :repeat) combinator)
-				(:singleton :reduces-to)
-				(:otherwise (break "~a ~a" combinator plan))))
+				(:singleton :reduces-to)))
           (when attack-identifier
             (format stream "~%Attack-identifier: ~a" attack-identifier)))
         ))))

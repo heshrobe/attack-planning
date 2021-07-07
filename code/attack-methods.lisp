@@ -171,10 +171,12 @@
     :prerequisites ([desirable-property-of ?file data-integrity])
     :plan (:sequential
            (:goal [achieve-remote-execution ?victim-computer ?user])
-           (:break "Need new method here, present as ~a" ?user)
-           (:goal [modify contents ?file])
+           (:trace "Achieved remote execution as ~a on ~a" ?user ?victim-computer)
+           ;; this winds up using modify-through-access-rights which doesn't actually
+           ;; care what the 2nd argument is
+           (:goal [modify data-integrity ?file])
+           (:trace "Modified data integrity of ~a" ?file)
            ))
-
 
 
 ;;; To affect the data-integrity of some data-set
@@ -199,6 +201,8 @@
 	   ;; Also note that it returns in a state where you have remote-execution on the new-foothold-computer
            ;; And you've opened a connecion to the victim computer
 	   (:goal [get-foothold ?database.computers database-protocol])
+           ;; this winds up using modify-through-access-rights which doesn't actually
+           ;; care what the 2nd argument is
 	   (:goal [modify data-integrity ?database]))
     )
 
@@ -307,7 +311,8 @@
     :to-achieve [modify ? ?object]
     :bindings ([attacker-and-computer ?attacker ?]
 	       [current-foothold ?current-foothold-computer ?])
-    :typing ((?object.computers computer))
+    :typing ((?object.computers computer)
+             (?object database))
     ;; Use this only if you don't already have the required capability
     ;; (what if more than one capability implies the right?  Shouldn't
     ;; we check that he doesn't have any of them).
@@ -317,6 +322,27 @@
 	   (:action [use-access-right-to-modify ?attacker write ?other-role ?current-foothold-computer ?object ?object.computers])
            )
     )
+
+;;; This assumes that you've already gotten remote exection as somebody
+;;; on the victim computer so that you can use some hack to get the 
+;;; needed access right. Once you've gotten the access right 
+;;; you can then overwrite the file.
+(defattack-method modify-file-through-access-rights
+    :to-achieve [modify data-integrity ?file]
+    :bindings ([attacker-and-computer ?attacker ?]
+               (?victim-computer ?file.computers))
+    :typing ((?file file)
+             (?victim-computer computer))
+    :prerequisites ([has-remote-execution ?attacker ?victim-computer ?])
+     :plan (:sequential
+            (:trace "In modify-file-through-access-rights")
+            (:goal [achieve-access-right write ?file ?privileged-user])
+            (:trace "In modify-file-through-access-rights, got acces to ~a as ~a" ?file ?privileged-user)
+            (:action [use-access-right-to-modify ?attacker write ?privileged-user ?victim-computer ?file ?victim-computer])
+            (:trace "Used accessd right to modify ~a as ~a on ~a" ?file ?privileged-user ?victim-computer)
+            )
+     :attack-identifier "T1485")
+
 
 ;;; To increase the size of the active user set of some OS
 ;;; Find a user in the authorization pool for the OS
@@ -420,9 +446,13 @@
 
 ;;; If he already knows the password, don't work on it anymore
 (defattack-method trivial-password-retrieval 
-    :to-achieve [achieve-knowledge-of-password ?attacker ?victim-user ?]
+    :to-achieve [achieve-knowledge-of-password ?attacker ?victim-user ?computer]
     :prerequisites ([knows-password ?attacker ?victim-user])
-    :plan ())
+    :plan (:sequential
+           (:action [goal-already-satisfied [achieve-knowledge-of-password ?attacker ?victim-user ?computer]]))
+    ;; for debugging purposes
+    ;; :attack-identifier "trivial-password-retrieval"
+    )
 
 
 ;;; The stuff with noting place visited is there to prevet goal reduction loops
@@ -602,17 +632,65 @@
     :to-achieve [achieve-access-right ?right ?object ?foothold-role]
     :bindings ([current-foothold ? ?foothold-role])
     :guards ([has-permission ?foothold-role ?right ?object])
-    :plan (:action [goal-already-satisfied [achieve-access-right ?right ?object ?foothold-role]])
+    :plan (:sequential 
+           (:action [goal-already-satisfied [achieve-access-right ?right ?object ?foothold-role]]))
+    ;; for debugging purposes
+    ;;:attack-identifier "achieve-a-right-you-already-have"
     )
 
+;;; Original version.
+;;; You're on the foothold machine and the role you have there
+;;; doesn't give you access.  But there is someone who does have
+;;; access.  So get that user's credentials.
 (defattack-method achieve-a-right-you-dont-have
     :to-achieve [achieve-access-right ?right ?object ?other-user]
     :output-variables (?other-user)
-    :bindings ([current-foothold ?foothold-computer ?]
+    :bindings ([current-foothold ?foothold-computer ?foothold-role]
 	       [attacker-and-computer ?attacker ?]
 	       [has-permission ?other-user ?right ?object])
-    :guards ([not [has-permission ? ?right ?object]])
-    :plan (:goal [achieve-knowledge-of-password ?attacker ?other-user ?foothold-computer]))
+    :guards ([not [has-permission ?foothold-role ?right ?object]])
+    :plan (:sequential 
+           (:goal [achieve-knowledge-of-password ?attacker ?other-user ?foothold-computer]))
+    ;; for debugging purposes
+    ;; :attack-identifier "achieve-a-right-you-dont-have"
+    )
+
+;;; version that makes caldrea example happy.
+;;; You're on the foothold machine in a role that doesn't have permission to the sensitive file
+;;; Bur some other user does. 
+;;; The object is on some other machine.
+;;; So try to get the credentials of the user who doesn on that other machine.
+(defattack-method achieve-a-right-you-dont-have-remote
+    :to-achieve [achieve-access-right ?right ?object ?other-user]
+    :output-variables (?other-user)
+    :bindings ([current-foothold ? ?foothold-role]
+               (?victim-computer ?object.computers)
+	       [attacker-and-computer ?attacker ?]
+	       [has-permission ?other-user ?right ?object])
+    :guards ([not [has-permission ?foothold-role ?right ?object]])
+    :plan (:sequential 
+           (:goal [achieve-knowledge-of-password ?attacker ?other-user ?victim-computer]))
+    ;; for debugging purposes
+    ;; :attack-identifier "achieve-a-right-you-dont-have-remote"
+    )
+
+;;; This works when you're already logged in as some other user
+;;; on the machine that has the file.  The user you're logged in as
+;;; doesn't have the needed access right.  Returns the user that does have
+;;; the access right.
+(defattack-method achieve-a-right-you-dont-have-when-logged-in
+    :to-achieve [achieve-access-right ?right ?object ?privileged-user]
+    :output-variables (?privileged-user)
+    :bindings ((?victim-computer ?object.computers)
+	       [attacker-and-computer ?attacker ?]
+	       [has-permission ?privileged-user ?right ?object])
+    :guards ([not [has-permission ?other-user ?right ?object]])
+    :prerequisites ([has-remote-execution ?attacker ?victim-computer ?other-user])
+    :plan (:sequential
+           (:goal [achieve-knowledge-of-password ?attacker ?privileged-user ?victim-computer]))
+    ;; for debugging purposes
+    ;; :attack-identifier "achieve-a-right-you-dont-have-when-logged-in"
+    )
 
 ;;; A bit of a mess?
 ;;; ?domain-admin.role = domain-admin-capability  ??
@@ -637,8 +715,9 @@
            (:action [scan ?attacker ?sysvol domain-admin-password ?password])
            (:action [scan ?attacker ?sysvol domain-admin-password-key ?key])
            (:action [decrypt ?attacker ?password ?key ?])
-           (:action [launch-process ?attacker ?victim-computer ?victim-os shell ?domain-administrator ?victim-role])
-           )
+           (:action [launch-process ?attacker ?victim-computer ?victim-os shell ?domain-administrator ?victim-role]))
+    ;; for debugging purposes
+    ;; :attack-identifier "achieve-domain-admin-rights"
     )
 
 ;;; The ?user part of this is actually to feed back to the higher
@@ -676,6 +755,8 @@
     :prerequisites ([has-permission ?the-process ?right ?object])
     :plan (:sequential
 	   (:goal [takes-direct-control-of ?attacker execution ?the-process]))
+    ;; for debugging purposes
+    ;; :attack-identifier "achieve-domain-admin-rights"
     )
 
 (defattack-method achieve-access-right-by-server-process-subversion
@@ -694,6 +775,8 @@
     :prerequisites ([has-permission ?the-process ?right ?object])
     :plan (:sequential
 	   (:goal [takes-direct-control-of ?attacker execution ?the-process]))
+    ;; for debugging purposes
+    ;; :attack-identifier "achieve-access-right-by-server-process-subversion"
     )
 
 ;;; similar comment to above about foothold etc
@@ -717,6 +800,8 @@
     :prerequisites ((has-capability ?other-user ?capability))
     :plan (:sequential
            (:Goal [achieve-remote-shell ?foothold-os ?other-user]))
+    ;; for debugging purposes
+    ;; attack-identifier "how-to-achieve-access-right-by-remote-shell-on-target"
     )
 
 
@@ -871,7 +956,7 @@
              (?victim-computer computer)
              (?subnet subnet))
     :bindings ((?subnet ?victim-computer.subnets))
-    :plan (:parallel
+    :plan (:sequential
            (:goal [observe-network-traffic ?attacker ?subnet])
            (:action [sniff-a-password ?attacker ?user ?subnet]))
     )
@@ -956,7 +1041,7 @@
 	     (?current-foothold-computer computer))
     :plan (:sequential
 	   ;; Make a note that we've already considered this place as a foothold to
-	   ;; prevent looping back to here while trying to achieve remote execution
+           ;; prevent looping back to here while trying to achieve remote execution
 	   (:note [place-visited ?victim-computer foothold nil])
 	   ;; Now see if the attacker can gain remote execution on the new-foothold-computer and in what role
            ;; (?new-foothold-role is a return value)
@@ -1214,7 +1299,9 @@ predicate promising the thing is known.
            (:action [login-with-credentials ?victim-user ?victim-os ?loader-server ?attacker ?protocol-name ?credentials])
            (:goal [install-malware ?attacker ?loader-server ?victim-computer mirai-malware])
            )
-    :attack-identifier foo)
+    ;; for debugging purposes
+    ;; :attack-identifier foo
+    )
 
 (defattack-method find-other-victim-computers
     :to-achieve [find-another-potential-victim ?current-victim ? ?other-victim]
@@ -1294,12 +1381,57 @@ predicate promising the thing is known.
     :prerequisites ([value-of (?other-user has-weak-password) yes])
     :plan (:sequential
            (:goal [achieve-remote-execution ?victim-computer ?other-user])
-           (:action [compress-files ?attacker ?victim-computer (?password-file ?shadow-file) ?compressed-file compressed-password-file])
+           ;; Hack to make the JSON dumper happy, compress is a 2 into 1 operation.
+           (:action [compress-files ?attacker ?victim-computer ?password-file ?shadow-file ?compressed-file compressed-password-file])
            (:goal [exfiltrate-data ?other-user ?compressed-file ?victim-computer ?attacker-computer])
            (:action [crack-password ?attacker ?compressed-file ?victim ?attacker-computer ?cracker-computer]))
     :post-conditions ([knows-password ?attacker ?victim]
-                      [knows-credentials ?attacker ?victim]
-                      ))
+                      [knows-credentials ?attacker ?victim])
+    :attack-identifier "T1003.008"
+    )
+
+
+;;; This is used when you have foothold to the machine as some user
+;;; that isn't admin level on the target machine but is a user on the 
+;;; target machine,
+;;; This other user has to have read capabiity to the active directory scripts
+;;; The guys that invoke this need to be looked into.
+;;; There's a confusion between whether we have remote execution on the machine
+;;; that owns the computer or just a foothold to it.
+;;; In the case that we require remote execution, the problem in the caldera example
+;;; is that the secure computer isn't directly connected to the attacker computer
+;;; so we need to be going from the foothold computer.
+;;; So maybe we need to require remote execution and check that the foothold
+;;; can reach the destination
+(defattack-method get-admin-password-from-active-directory
+    :to-achieve [achieve-knowledge-of-password ?attacker ?admin ?victim-computer]
+    :bindings ([attacker-and-computer ?attacker ?attacker-computer]
+               (?other-user ?victim-computer.users)
+               [resource-named ?victim-computer admin-script ?admin-script]
+               [requires-access-right ?admin-script read ?read-capability]
+               [has-foothold ?victim-computer ?foothold-computer ?other-user ssh]
+               )
+    :guards ([value-of (?admin has-weak-password) no]
+             [unknown [knows-password ?attacker ?admin]]
+             [unknown [knows-credentials ?attacker ?admin]]
+             (not (eql ?other-user ?admin)))
+    :typing ((?attacker-computer computer)
+             (?admin admin-user)
+             (?other-user user)
+             (?victim-computer computer)
+             (?admin-script admin-script-file))
+    :attack-identifier "T1078.002"
+    :prerequisites ((has-capability ?other-user ?read-capability))
+    :plan (:sequential 
+           (:trace "get-admin-password-from-active-directory ~a ~a" ?admin ?victim-computer)
+           (:goal [exfiltrate-data ?other-user ?admin-script ?foothold-computer ?attacker-computer])
+           (:trace "exfiltrated data ~a ~a ~a ~a" ?other-user ?admin-script ?foothold-computer ?attacker-computer)
+           (:action [parse-admin-password ?attacker ?admin-script ?admin ?attacker-computer])
+           (:trace "Got admin password of ~a on ~a" ?admin ?victim-computer))
+    :post-conditions ([knows-password ?attacker ?admin]
+                      [knows-credentials ?attacker ?admin])
+    )
+
 
 
 ;;; the top level method wants to mung a high file on the secure machine

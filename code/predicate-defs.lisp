@@ -400,7 +400,7 @@
 
 (define-aplan-predicate resource-named (system name resource) (non-stateful-predicate-model))
 (define-aplan-predicate resource-of-type (system type resource) (non-stateful-predicate-model))
-(define-aplan-predicate compressed-file-of (compressed-file input-files) (non-stateful-predicate-model))
+(define-aplan-predicate compressed-file-of (compressed-file input-file-1 input-file-2) (non-stateful-predicate-model))
 
 
 

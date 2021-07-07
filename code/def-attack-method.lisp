@@ -84,7 +84,7 @@
              ;;  or an :action item 
              ;; or pseudo things like a :note :bind or :break
              (destructuring-bind (key . stuff) structure
-               (case key
+               (ecase key
                  ((:sequential :repeat)
                   (loop for (thing . more-to-come) on stuff
 		      for last = (or (not more-to-come) 
@@ -221,10 +221,10 @@
   (loop for assertion in assertions
         if (and (predication-maker-p assertion) (eql (predication-maker-predicate assertion) 'unknown))
         collect (second (predication-maker-statement assertion)) into unknown-guards
-      else collect (push assertion other-guards) into other-guards
-      finally (append (loop for assertion in (process-assertions unknown-guards input-state)
-                          collect `(predication-maker '(not (predication-maker '(known ,assertion)))))
-                      (process-assertions other-guards input-state))))
+      else collect assertion into other-guards
+      finally (return (append (loop for assertion in (process-assertions unknown-guards input-state)
+                                  collect `(predication-maker '(not (predication-maker '(known ,assertion)))))
+                              (process-assertions other-guards input-state)))))
 
 
 

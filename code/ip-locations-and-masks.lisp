@@ -14,6 +14,7 @@
 (define-protocol database-protocol  1433 database-access sql)
 (define-protocol smtp  (25 465 2525) email transmission)
 (define-protocol ftp (20 21) file-download )
+(define-protocol file-access-protocol () file-access)
 (define-protocol http (80) web)
 
 (defun ports-for-protocol (protocol)
