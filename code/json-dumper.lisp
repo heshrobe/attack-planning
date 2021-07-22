@@ -132,20 +132,21 @@
   (destructuring-bind (action-type &rest values) (action-name node)
     (let ((predicate-args (ji::find-predicate-arglist action-type))
 	  (unique-id (json-id node)))
-      (terpri stream)
-      (json:with-object (stream)
-	(json:encode-object-member 'id unique-id stream)
-	(terpri stream)
-	(json:encode-object-member 'type (typecase node (repeated-attack-action 'repeated-action) (otherwise 'action)) stream)
-	(terpri stream)
-	(json:encode-object-member 'action action-type stream)
-	(loop for key in predicate-args
-	    for value in values
-	    for value-token = (cond ((or (symbolp value) (numberp value)) value) ((typep value 'state) value) (t (role-name value)))
-	    when (eql key 'resource-or-component) do (setq key 'resource)
-	    unless (typep value-token 'state)
-	    do 	(terpri stream)
-		(json:encode-object-member key value-token stream))))))
+      (unless (eql action-type 'goal-already-satisfied)
+        (terpri stream)
+        (json:with-object (stream)
+          (json:encode-object-member 'id unique-id stream)
+          (terpri stream)
+          (json:encode-object-member 'type (typecase node (repeated-attack-action 'repeated-action) (otherwise 'action)) stream)
+          (terpri stream)
+          (json:encode-object-member 'action action-type stream)
+          (loop for key in predicate-args
+              for value in values
+              for value-token = (cond ((or (symbolp value) (numberp value)) value) ((typep value 'state) value) (t (role-name value)))
+              when (eql key 'resource-or-component) do (setq key 'resource)
+              unless (typep value-token 'state)
+              do 	(terpri stream)
+                        (json:encode-object-member key value-token stream)))))))
 
 (defmethod dump-node ((node attack-plan) &optional (stream *standard-output*))
   (with-slots (combinator attack-identifier (unique-id json-id)) node
@@ -157,6 +158,7 @@
 	(terpri stream)
 	(json:encode-object-member 'combinator combinator stream)
         (when attack-identifier
+          (break "~a ~a" unique-id attack-identifier)
           (terpri stream)
           (json:encode-object-member 'attack-identifier attack-identifier stream))
   )))
