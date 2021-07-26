@@ -158,7 +158,6 @@
 	(terpri stream)
 	(json:encode-object-member 'combinator combinator stream)
         (when attack-identifier
-          (break "~a ~a" unique-id attack-identifier)
           (terpri stream)
           (json:encode-object-member 'attack-identifier attack-identifier stream))
   )))
