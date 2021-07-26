@@ -76,7 +76,7 @@
 	for attacker-of-state = (attacker this-state)
 	for computer-of-state = (attacker-computer this-state)
 	when (and (not (null attacker-of-state)) (not (null computer-of-state)))
-	do (with-unification 
+	do (with-unification
 	    (unify attacker-computer computer-of-state)
 	    (unify attacker attacker-of-state)
 	    (stack-let ((backward-support (list query +true+ (attacker-and-computer-pred this-state) )))
@@ -134,7 +134,7 @@
 		    :foothold-computer foothold-computer
 		    :foothold-role foothold-role
 		    :protocol foothold-protocol
-		    :foothold-predication predication) 
+		    :foothold-predication predication)
 		  (footholds-held state))
 	    (values predication t)))))))
 
@@ -149,17 +149,17 @@
 	for existing-foothold-computer = (foothold-computer foothold-record )
 	for existing-foothold-role = (foothold-role foothold-record)
 	for existing-foothold-protocol = (protocol foothold-record)
-	for existing-pred = (foothold-predication foothold-record)			 
-	do (with-unification 
+	for existing-pred = (foothold-predication foothold-record)
+	do (with-unification
 	    (unify existing-victim victim-computer)
 	    (unify existing-foothold-computer foothold-computer)
 	    (unify existing-foothold-role foothold-role)
 	    (unify existing-foothold-protocol foothold-protocol)
 	    (stack-let ((backward-support (list query +true+ existing-pred )))
 	      (funcall continuation backward-support))))))
-      
-      
-      
+
+
+
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;
@@ -177,12 +177,12 @@
     (let* ((foothold-record (first (footholds-held state)))
 	   (existing-foothold-computer (foothold-computer foothold-record))
 	   (existing-foothold-role (foothold-role foothold-record)))
-      (with-unification 
+      (with-unification
        (unify existing-foothold-computer foothold-computer)
        (unify existing-foothold-role foothold-role)
        (stack-let ((backward-support (list query +true+ '(ask-data current-foothold))))
 	 (funcall continuation backward-support))))))
-tim-com
+
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;
 ;;; Foothold Exists
@@ -218,7 +218,7 @@ tim-com
   (with-statement-destructured (computer purpose sub-purpose) query
     (let ((it-exists (case purpose
 		       ;; For remote execution, if you got here as a subgoal of getting a foothold for this computer
-		       ;; you're in a loop.  Obviously if you got here as a subgoal of getting remote execution that's 
+		       ;; you're in a loop.  Obviously if you got here as a subgoal of getting remote execution that's
 		       ;; a loop as well
 		       (remote-execution (loop for (visited-computer visited-purpose visited-subpurpose) in (places-visited state)
 					     thereis (and (eql computer visited-computer)
@@ -249,7 +249,7 @@ tim-com
 ;;;  This is a told in a :note within the attack-method
 ;;;   It's the only thing we use :notes for so far
 ;;;
-;;; The predication includes the computer, the purpose (either remote-execution or foothold) 
+;;; The predication includes the computer, the purpose (either remote-execution or foothold)
 ;;;
 ;;;
 ;;; We actually do nothing at the insert stage
@@ -265,7 +265,7 @@ tim-com
     (error 'model-cant-handle-query
 	   :query outer-predication
 	   :model (type-of outer-predication)))
-  (with-statement-destructured (computer purpose sub-purpose) inner-predication 
+  (with-statement-destructured (computer purpose sub-purpose) inner-predication
     ;; (format *error-output* "~%Noting that ~a was visited for purpose ~a" computer purpose)
     (pushnew (list computer purpose sub-purpose) (places-visited state) :test #'equal)))
 
@@ -279,7 +279,7 @@ tim-com
 ;;; in which case we're going to create a predication for it
 ;;; if one doesn't exist
 ;;;
-;;; This is now obsoleted because the ask-data method for all predicates can take a 
+;;; This is now obsoleted because the ask-data method for all predicates can take a
 ;;; truth-value argument of NIL, meaning to ignore truth value
 ;;; and Joshua now provides asks-data methods to handle this type of query.
 ;;; So there's no need to go down to the fetch level for stateful predicates
@@ -291,7 +291,7 @@ tim-com
 ;;;    (declare (ignore value-in-query))
 ;;;    (flet ((slot-continuation (final-slot)
 ;;;	     (typecase final-slot
-;;;	       (ji::basic-slot 
+;;;	       (ji::basic-slot
 ;;;		(with-slots (ji::all-predications) final-slot
 ;;;		  (loop for (nil . predication) in ji::all-predications
 ;;;		      do (funcall continuation predication))))
@@ -315,6 +315,3 @@ tim-com
 ;;;		    (setf (gethash his-role-name parent-predication-table) his-predication))
 ;;;		  (funcall continuation his-predication))))))
 ;;;      (ji::follow-path-to-slot* path #'slot-continuation nil))))
-
-
-
