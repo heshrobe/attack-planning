@@ -235,7 +235,11 @@
 			   (unify state-descriptor winning-state)
 			   (succeed interned-internal-pred 
 				    (gethash winning-state (gethash interned-internal-pred *state-predicate-interning-ht*))))))
-		(t
+		(t ;; If we allow multiple predecessors, we want to search in breadth first order
+                 ;; with the assumption that closest to the current state wins.  Could have an option
+                 ;; to report a conflict?  Another approach is to do depth first and order then choose the answer
+                 ;; of the highest depth.  Makes it easier to detect a conflict.  If it's explicit in the current 
+                 ;; situation you do no search.
 		 (loop for this-state = (intern-state state-descriptor) then (predecessor this-state)
 		     until (null this-state)
 		     if (or (and negated (member this-state false-states))

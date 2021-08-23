@@ -48,8 +48,11 @@
   )
 
 (defmethod explode ((thing symbol) delimeter)
-  (loop for string in (explode-string thing delimeter)
-      collect (intern string)))
+  (let ((*package* (symbol-package thing)))
+    (if (find delimeter (string thing) :test #'char-equal)
+        (loop for string in (explode-string thing delimeter)
+            collect (intern string))
+      (list thing))))
 
 (defmethod explode ((thing list) delimeter)
   (if (logic-variable-maker-p thing)

@@ -451,7 +451,7 @@
     :plan (:sequential
            (:action [goal-already-satisfied [achieve-knowledge-of-password ?attacker ?victim-user ?computer]]))
     ;; for debugging purposes
-    ;; :attack-identifier "trivial-password-retrieval"
+    ;; :attack-idenifier "trivial-password-retrieval"
     )
 
 
