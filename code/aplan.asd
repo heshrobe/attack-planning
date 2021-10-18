@@ -97,6 +97,7 @@
     :maintainer "Howie Shrobe"
     :pathname "."
     :depends-on ("aplan/core" "aplan/ui")
+    :components ((:file "slime-support"))
     )
   
 
