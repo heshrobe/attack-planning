@@ -24,7 +24,7 @@
     :slots ((typical-p :initarg :typical-p :initform nil))
     )
 
-(define-object-type aplan-object 
+(define-object-type aplan-object
     :slots ()
   )
 
@@ -76,6 +76,10 @@
 (define-aplan-object data-set
     :super-types (data-resource)
     )
+
+(define-aplan-object partial-order-mixin
+  :slots ((superiors :initarg :superiors :initform nil :set-valued t)
+          (children :Initarg :children :initform nil :set-valued t)))
 
 (define-aplan-object file-system
     :super-types (data-resource)
@@ -134,7 +138,7 @@
 
 (define-aplan-object database
     :super-types (data-resource)
-    :slots ((schema ) 
+    :slots ((schema )
 	    ;; Note, shouldn't there also be (servers
 	    ;; :set-valued t)
 	    (tables :set-valued t )))
@@ -142,7 +146,7 @@
 ;;; Note: need a notion of a web-site
 ;;;  this has several parts
 ;;; The web server program and its processes
-;;; the home URL 
+;;; the home URL
 ;;;  and the data store
 
 (define-aplan-object password-file
@@ -232,7 +236,7 @@
 
 (define-aplan-object embedded-actuator-process
     :super-types (process))
-    
+
 ;;; Note:
 ;;; It might be more correct to say that there is an apache server program
 ;;; which includers an apache core process as well as request specific processes
@@ -244,35 +248,35 @@
 ;;; I rather think these are obsolete
 ;;;
 ; (define-aplan-object lisp-server-process
-;     
+;
 ;   :super-types (web-server-process))
 
 ; (define-aplan-object cl-http-server-process
-;     
+;
 ;     :super-types (lisp-server-process))
 
 ; (define-aplan-object allegro-http-server-process
-;     
+;
 ;     :super-types (lisp-server-process))
 
 ; (define-aplan-object iis-web-server-process
-;     
+;
 ;   :super-types (web-server-process))
 
 (define-aplan-object user-process
     :super-types (process)
     )
 
-(define-aplan-object application-process 
+(define-aplan-object application-process
     :super-types (user-process)
     )
 
 (define-aplan-object office-process
   :super-types (application-process)
   )
-  
 
-(define-aplan-object browser-process 
+
+(define-aplan-object browser-process
     :super-types (user-process))
 
 (define-aplan-object safari-process
@@ -337,7 +341,7 @@
   :super-types (network-card))
 
 ;;; Having a <port> device in-use and having an avaiable <port> port
-;;; are esentially the same thing since an adversary can just remove 
+;;; are esentially the same thing since an adversary can just remove
 ;;; the <port> device to utilize the port
 (define-aplan-object usb-2
   :super-types (port))
@@ -361,19 +365,19 @@
   :super-types (processing-unit))
 
 ;;; Note: actually the computers are os's
-;;; authorization pools are groups of computers that log in 
+;;; authorization pools are groups of computers that log in
 ;;; the same users with the same passwords together
 
 ;;; Note: Later on we talk about passwords, but that should really
 ;;; be a specialization of a more general notion like "credential"
-;;; Certificates are also credentials as are physical tokens like CAC 
+;;; Certificates are also credentials as are physical tokens like CAC
 ;;; Cards and RSA token generators (hard and soft) as well as biometrics
 
 ;;; In general to log into a system you need to POSSESS the credential
 ;;; However, in the case of a password you can possess it if you know it
 ;;; For a physical credential (e.g. a CAC card) you actually have to have it
 ;;; (or possibly fake it, by knowing its contents and then duplicating the token)
-;;; for a biometric credential you have to mimic the behavior or physical characteristic 
+;;; for a biometric credential you have to mimic the behavior or physical characteristic
 ;;; requested (e.g. fingerprint spoofing).
 
 (define-aplan-object credential
@@ -576,7 +580,7 @@
 	     (new-name (gentemp (concatenate 'string (string-upcase "job-launch-queue") "-" (string os-name) "-")))
 	     (job-launch-queue (make-object 'os-job-launch-request-queue :name new-name))
              (user-job-launch-queue (subpart-named job-launch-queue 'user-job-launch-request-queue))
-             (server-job-launch-queue (subpart-named job-launch-queue 'server-job-launch-request-queue)))        
+             (server-job-launch-queue (subpart-named job-launch-queue 'server-job-launch-request-queue)))
 	(tell `[value-of (,job-launch-queue os) ,os-instance])
 	(tell `[value-of (,os-instance job-launch-queue) ,job-launch-queue])
         (tell `[value-of (,user-job-launch-queue os) ,os-instance])
@@ -588,7 +592,7 @@
 ;;; with the classes only reflecting just the broad family and slots
 ;;; reflecting the details
 ;;;  and possibly the configuration of components
-;;; We probably want to characterize operating systems by Major Family 
+;;; We probably want to characterize operating systems by Major Family
 ;;;  (e.g. windows, linux, unix, macos)
 ;;;  with slots reflecting version
 
@@ -598,7 +602,7 @@
 	    (superuser :set-valued t :Initform nil)
 	    (computer )
 	    (users :set-valued t :Initform nil)
-	    (job-launch-queue ) 
+	    (job-launch-queue )
 	    (processes :set-valued t ))
     :initializations ((make-workload-for-os self)
                       (make-user-set-for-os  self)
@@ -644,7 +648,7 @@
 (define-aplan-object solaris
   :super-types (unix))
 
-(define-aplan-object hp-ux 
+(define-aplan-object hp-ux
   :super-types (unix))
 
 (define-aplan-object windows
@@ -697,7 +701,7 @@
   :super-types (mac))
 
 (define-aplan-object OS-X
-  :super-types (mac unix)) 
+  :super-types (mac unix))
 
 (define-aplan-object cisco-ios
   :super-types (operating-system))
@@ -820,7 +824,7 @@
   :super-types (unix-computer))
 
 (defmethod operating-system-for-computer ((self solaris-computer)) 'solaris)
-  
+
 (define-aplan-object lispm-computer
   :super-types (computer))
 
@@ -930,7 +934,7 @@
 
 ;;; This is a "star-like" wired subnet in which packets are delivered from
 ;;; the connected devices to the switch which sends them to the connected
-;;; device which is the intended destination.  Is there a "promiscuous" mode in which 
+;;; device which is the intended destination.  Is there a "promiscuous" mode in which
 ;;; a connected device gets sent every packet?
 
 (define-aplan-object switched-subnet
@@ -967,7 +971,7 @@
 ;;; Doesn't it also connect to a next level router?
 
 
-(define-aplan-object switch 
+(define-aplan-object switch
     ;; PUT IN FOR AUTOPILOT EXAMPLE
     ;; WHERE THE SWITCH HAS PORTS
     :slots ((ports :set-valued t ))
@@ -985,7 +989,7 @@
     )
 
 ;; router is the thing connecting subnets
-;; One might want to specialize this later into things with 
+;; One might want to specialize this later into things with
 ;; more specific capabilities
 
 ;; this doesn't need subnets slot because
@@ -1051,7 +1055,7 @@
     )
 
 ;; web protocols (http, https)
-(define-aplan-object web-protocol 
+(define-aplan-object web-protocol
     :super-types (communication-protocols)
     )
 
@@ -1068,7 +1072,7 @@
     :super-types (communication-protocols)
     )
 
-(define-aplan-object ftp 
+(define-aplan-object ftp
     :super-types (transfer-protocol)
     )
 
@@ -1094,7 +1098,7 @@
     :super-types (communication-protocols)
     )
 
-(define-aplan-object smtp 
+(define-aplan-object smtp
     :super-types (email-send-protocol)
     )
 
@@ -1157,7 +1161,7 @@
 ;;;
 ;;;   Notes: maybe this should really be a sensor-set
 ;;;          and an effector set
-;;;       
+;;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 (define-aplan-object controller
@@ -1220,7 +1224,3 @@
 (define-aplan-object actuator-command
     :super-types (data-resource)
     )
-
-
-
-

@@ -57,10 +57,8 @@
 ;;; The joshua asd file includes this
 ;; (load "~/josh-dist/joshua/code/asdf-support.lisp")
 
-(defclass subsystem (asdf:system) ())
-
 (asdf:defsystem aplan/core
-  :class subsystem
+  :class asdf/system:subsystem
   :name "aplan-core"
   :description "Attack Plan Generator Core Functionality No UI"
   :maintainer "Howie Shrobe"
@@ -83,7 +81,7 @@
 	       ))
 
 (asdf:defsystem aplan/ui
-  :class subsystem
+  :class asdf/system:subsystem
   :name "aplan-ui"
   :description "Attack Plan Generator UI Components"
   :maintainer "Howie Shrobe"
