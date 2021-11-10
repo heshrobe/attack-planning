@@ -1,6 +1,6 @@
 ;;; -*- Syntax: Joshua; Package: APLAN; readtable: Joshua; Mode: Common-lisp  -*-
 
-(in-package :aplan) 
+(in-package :aplan)
 
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -55,7 +55,7 @@
 (define-goal observe-network-traffic (attacker subnet))
 
 ;;; Privilege Escalation:
-;;; The attacker achieves a particular principal's capability (operation object) 
+;;; The attacker achieves a particular principal's capability (operation object)
 ;;; given that he's achieved a foothold in some role on some computer
 ;;; (the intent is that whatever lateral motion needed has already been done and this
 ;;;  goal shouldn't be satisfied by doing more)
@@ -117,10 +117,12 @@
 (define-goal decrease-size (thing))
 
 ;;; Put the computer into an unusable state that requires sysadmin attention
-;;; 
+;;;
 (define-goal brick-computer (attacker computer))
 
 (define-goal install-malware (attacker server-computer victim-computer malware))
+
+(define-goal install-malware-via-removable-media (attacker removable-media victim-computer malware))
 
 (define-goal get-user-to-click-on (attacker user thing result)
   :outputs (thing result))
@@ -131,3 +133,5 @@
 (define-goal find-another-potential-victim (current-victim protocol-name other-victim)
   :outputs (other-victim))
 (define-goal exfiltrate-data (actor data from-computer to-computer))
+
+(define-goal persistently-execute (attacker victim victim-computer))

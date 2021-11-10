@@ -86,9 +86,39 @@
     :slots ((files :set-valued t ))
     )
 
-(define-aplan-object file
+(define-aplan-object collection
+    :super-types (print-nicely-mixin)
+    :slots ((member-type :initarg :member-type)
+            (members :initarg :member :set-valued t))
+    )
+
+(define-aplan-object file-collection
+    :super-types (data-resource collection)
+    :slots ((member-type :initform 'file))
+  )
+
+(define-aplan-object path-mixin
   :super-types (data-resource)
-  :slots ((directories :set-valued t )
+  :slots ((name :initarg :name))
+  )
+
+(define-aplan-object search-path
+    :super-types (path-mixin))
+
+(defmethod print-object ((thing path-mixin) stream)
+  (format stream "#<~a>" (name thing)))
+
+(define-aplan-object has-directory-mixin
+    :slots ((directory :initarg :directory :initform nil)))
+
+(define-aplan-object directory
+    :super-types (file-collection)
+    :slots ((files :set-valued t ))
+    )
+
+(define-aplan-object file
+  :super-types (has-directory-mixin path-mixin data-resource)
+  :slots ((directory :set-valued t )
           (filename :initarg :filename :initform nil)))
 
 (define-aplan-object dynamically-loadable-code-file
@@ -113,7 +143,11 @@
     :super-types (file))
 
 (define-aplan-object graphic-image-file
-    :super-types (complex-encoded-data-file))
+  :super-types (complex-encoded-data-file))
+
+(define-aplan-object dom-element-image
+    :super-types(graphic-image-file)
+    )
 
 (define-aplan-object jpeg-file
     :super-types (graphic-image-file))
@@ -486,21 +520,9 @@
 	    )
     )
 
-(define-aplan-object collection
-    :super-types (print-nicely-mixin)
-    :slots ((member-type :initarg :member-type)
-            (members :initarg :member :set-valued t))
-    )
 
-(define-aplan-object file-collection
-    :super-types (data-resource collection)
-    :slots ((member-type :initform 'file))
-    )
 
-(define-aplan-object directory
-    :super-types (file-collection)
-    :slots ((files :set-valued t ))
-    )
+
 
 ;;; An ensemble is a collection of computers
 ;;; There are essentially the same from the attacker's perspective
@@ -830,6 +852,35 @@
 
 (defmethod operating-system-for-computer ((self lispm-computer)) 'genera)
 
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;;
+;;; Removable Media
+;;;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+(define-aplan-object removable-media
+    :super-types (hardware)
+    :slots ((attachments :set-valued t :initarg :attachments)))
+
+(define-aplan-object cd-rom
+    :super-types (removable-media))
+
+(define-aplan-object dvd
+    :super-types (removable-media))
+
+(define-aplan-object floppy-disk
+    :super-types (removable-media))
+
+(define-aplan-object usb-stick
+    :super-types (removable-media))
+
+(define-aplan-object external-hard-drive
+    :super-types (removable-media))
+
+(define-aplan-object ssd
+    :super-types (external-hard-drive))
+
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;
 ;;; IP addresses and masks
@@ -1131,6 +1182,13 @@
     :slots ((body)
             (attachments :set-valued t :initarg :attachments)))
 
+(define-aplan-object hyper-link
+    :super-types (data-resource))
+
+;; browser-extension
+(define-aplan-object extension
+    :super-types (data-resource))
+
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;
 ;;; Buses that computers plug into
@@ -1222,5 +1280,10 @@
     )
 
 (define-aplan-object actuator-command
+    :super-types (data-resource)
+    )
+
+(define-aplan-object web-object
+    :slots ((object-type))
     :super-types (data-resource)
     )

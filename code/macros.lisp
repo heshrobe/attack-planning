@@ -135,7 +135,7 @@
                collect `(tell `[value-of (,capability more-general) ,(follow-path '(,g))]))
        ,@(loop for l in lesser
              collect `(tell `[value-of (,capability more-specific) ,(follow-path '(,l))]))
-       ,@(when role-p 
+       ,@(when role-p
            `((tell `[value-of (,capability role) ,',role])))
        )))
 
@@ -150,7 +150,7 @@
 (defmacro defcomputer (name computer-type &rest plist
 		       &key ip-address-string
 			    superuser authorization-pool interfaces
-			    (typical nil typical-p)			    
+			    (typical nil typical-p)
                             (ensemble nil ensemble-p)
                             (role nil role-p)
                        &allow-other-keys
@@ -173,7 +173,7 @@
                 collect `(tell `[value-of (,computer hardware-interfaces) ,',interface])))
         ,@(when ensemble-p `((tell `[value-of (,computer ensemble) ,(object-named ',ensemble)])))
         ,@(when typical-p `((tell `[value-of (,computer typical-p) ,,typical])))
-        ,@(when role-p 
+        ,@(when role-p
             (destructuring-bind (role-name object) role
               (unless (listp object) (setq object (list object)))
               `((tell `[system-role ,(Follow-path ',object) ,',role-name ,computer]))))
@@ -271,7 +271,7 @@
        ,@(when typical-p `((tell `[value-of (,user typical-p) ,,typical])))
        ,@(when superuser-for (loop for computer in superuser-for
                                  collect `(tell `[value-of (,user superuser-for) ,(follow-path (list ',computer 'os))])))
-       ,@(when role-p 
+       ,@(when role-p
            (destructuring-bind (role-name object) role
              (unless (listp object) (setq object (list object)))
              `((tell `[system-role ,(Follow-path ',object) ,',role-name ,user]))))
@@ -289,14 +289,14 @@
         (let ((negative-mask (make-negative-location-mask negative-mask-address negative-mask-mask)))
           (tell `[value-of (,user location) ,negative-mask])))))
 
-(defmacro defresource (name resource-type &key capability-requirements 
+(defmacro defresource (name resource-type &key capability-requirements
                                                computers authorization-pool
                                                (primary-computer nil primary-p)
                                                (role nil role-p))
   (let ((true-resource-type (if (symbolp resource-type) resource-type (first resource-type)))
-        (resource-type-args (if (symbolp resource-type) nil 
+        (resource-type-args (if (symbolp resource-type) nil
                               (loop for (key value) on (rest resource-type) by #'cddr
-                                  collect key 
+                                  collect key
                                   collect (if (symbolp value) `(follow-path '(,value)) value)))))
     `(with-atomic-action
       (kill-redefined-object ',name)
@@ -309,7 +309,7 @@
               collect `(tell `[value-of (,resource capability-requirements) (,',operation ,(follow-path '(,capability)))]))
         ,@(when authorization-pool
          `((tell `[value-of (,resource authorization-pool) ,(follow-path '(,authorization-pool))])))
-        ,@ (when role-p 
+        ,@ (when role-p
              (destructuring-bind (role-name object) role
                (unless (listp object) (setq object (list object)))
                `((tell `[system-role ,(Follow-path ',object) ,',role-name ,resource]))))
@@ -320,6 +320,22 @@
     (tell `[value-of (,new-thing computers) ,computer])
     (tell `[value-of (,computer resources) ,new-thing])
     new-thing))
+
+#|
+
+;;; From Eric
+;;; Defresource may cover this need
+(defmacro defobject (name &key object-type)
+  `(with-atomic-action
+     (kill-redefined-object ',name)
+     (let ((object (make-object ',object-type :name ',name)))
+       ;; when an object is defined, then tell value
+       ,@(when object-type
+           `((tell `[value-of (,object object-type) ,',object-type])))
+       object
+       )))
+
+|#
 
 
 

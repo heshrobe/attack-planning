@@ -152,7 +152,7 @@
     :bindings ([attacker-and-computer ?attacker ?]
                [has-permission ?privileged-user write ?file]
                (?victim-computer ?file.computers)
-               (?victim-os ?victim-computer.os))               
+               (?victim-os ?victim-computer.os))
     :prerequisites ([desirable-property-of ?file data-integrity])
     :plan (:sequential
            (:goal [get-foothold ?victim-computer ssh])
@@ -324,8 +324,8 @@
     )
 
 ;;; This assumes that you've already gotten remote exection as somebody
-;;; on the victim computer so that you can use some hack to get the 
-;;; needed access right. Once you've gotten the access right 
+;;; on the victim computer so that you can use some hack to get the
+;;; needed access right. Once you've gotten the access right
 ;;; you can then overwrite the file.
 (defattack-method modify-file-through-access-rights
     :to-achieve [modify data-integrity ?file]
@@ -445,7 +445,7 @@
     )
 
 ;;; If he already knows the password, don't work on it anymore
-(defattack-method trivial-password-retrieval 
+(defattack-method trivial-password-retrieval
     :to-achieve [achieve-knowledge-of-password ?attacker ?victim-user ?computer]
     :prerequisites ([knows-password ?attacker ?victim-user])
     :plan (:sequential
@@ -552,7 +552,7 @@
 	   (:action [send-email ?attacker ?email-message ?foothold-computer ?email-server-computer ?victim-user])
 	   (:action [user-clicks-on-attachment ?victim-user ?victim-computer ?email-message ?attachment ?new-process])
            (:action [system-launches-process-for-file ?victim-os ?victim-computer ?victim-user ?attachment ?new-process])
-           )           
+           )
     :post-conditions ([current-foothold ?victim-computer ?new-process]
                       [has-remote-execution ?attacker ?victim-computer ?new-process])
     )
@@ -632,7 +632,7 @@
     :to-achieve [achieve-access-right ?right ?object ?foothold-role]
     :bindings ([current-foothold ? ?foothold-role])
     :guards ([has-permission ?foothold-role ?right ?object])
-    :plan (:sequential 
+    :plan (:sequential
            (:action [goal-already-satisfied [achieve-access-right ?right ?object ?foothold-role]]))
     ;; for debugging purposes
     ;;:attack-identifier "achieve-a-right-you-already-have"
@@ -649,7 +649,7 @@
 	       [attacker-and-computer ?attacker ?]
 	       [has-permission ?other-user ?right ?object])
     :guards ([not [has-permission ?foothold-role ?right ?object]])
-    :plan (:sequential 
+    :plan (:sequential
            (:goal [achieve-knowledge-of-password ?attacker ?other-user ?foothold-computer]))
     ;; for debugging purposes
     ;; :attack-identifier "achieve-a-right-you-dont-have"
@@ -657,7 +657,7 @@
 
 ;;; version that makes caldrea example happy.
 ;;; You're on the foothold machine in a role that doesn't have permission to the sensitive file
-;;; Bur some other user does. 
+;;; Bur some other user does.
 ;;; The object is on some other machine.
 ;;; So try to get the credentials of the user who doesn on that other machine.
 (defattack-method achieve-a-right-you-dont-have-remote
@@ -668,7 +668,7 @@
 	       [attacker-and-computer ?attacker ?]
 	       [has-permission ?other-user ?right ?object])
     :guards ([not [has-permission ?foothold-role ?right ?object]])
-    :plan (:sequential 
+    :plan (:sequential
            (:goal [achieve-knowledge-of-password ?attacker ?other-user ?victim-computer]))
     ;; for debugging purposes
     ;; :attack-identifier "achieve-a-right-you-dont-have-remote"
@@ -1031,7 +1031,7 @@
 	     ;; Use this method only if you can't get a connection to the victim from where you are
              [not [accepts-connection ?victim-computer ?protocol-name ?current-foothold-computer]]
              ;; Owned computers are computers that the attacker controls other than
-             ;; his primary machine.  No point in trying to move to them since 
+             ;; his primary machine.  No point in trying to move to them since
              ;; they have no more ability to get to the victim than the attacker's
              ;; primary machine
              (not (member ?new-foothold-computer (owned-computers ?attacker)))
@@ -1258,7 +1258,7 @@ predicate promising the thing is known.
            (:goal [propagate-easy-login ?attacker ?loader-server ?victim-computer ?protocol-name ?credentials])
            (:repeat
             (:goal [find-another-potential-victim ?victim-computer ?protocol-name ?other-victim-computer])
-            (:goal [find-easy-login-target ?victim-computer ?credentials.user ?other-victim-computer ?report-server ?protocol-name ?new-credentials]) 
+            (:goal [find-easy-login-target ?victim-computer ?credentials.user ?other-victim-computer ?report-server ?protocol-name ?new-credentials])
             (:goal [propagate-easy-login ?attacker ?loader-server ?other-victim-computer ?protocol-name ?new-credentials])
             )))
 
@@ -1270,7 +1270,7 @@ predicate promising the thing is known.
     :prerequisites ([accepts-connection ?victim-computer ?protocol-name ?prober-computer])
     :plan (:sequential
            (:action [connect-via ?prober-computer ?prober ?victim-computer ?protocol-name])
-           (:action [attempt-login ?prober ?prober-computer ?victim-computer ?protocol-name ?credentials]) 
+           (:action [attempt-login ?prober ?prober-computer ?victim-computer ?protocol-name ?credentials])
            (:goal [exfiltrate-data ?victim ?credentials ?victim-computer ?report-server])
            ;; after this action, the report server and the download server communicate but that's
            ;; probaly not observable and guaranteed to succeed.  Could always add that later, skip for now.
@@ -1284,7 +1284,7 @@ predicate promising the thing is known.
 (defattack-method exfiltrate-data
     :to-achieve [exfiltrate-data ?actor ?data ?source-computer ?target-computer]
     :prerequisites ([accepts-connection ?target-computer ftp ?source-computer])
-    :plan (:sequential 
+    :plan (:sequential
            (:action [open-ftp-connection ?actor ?source-computer ?target-computer])
            (:action [transmit-data ?actor ?data ?source-computer ?target-computer])))
 
@@ -1311,7 +1311,7 @@ predicate promising the thing is known.
                (?other-victim ?victim-subnet.computers))
     :prerequisites ([not [unifiable ?other-victim ?current-victim]])
     )
-               
+
 
 
 #|
@@ -1328,7 +1328,7 @@ predicate promising the thing is known.
     :to-achieve [achieve-remote-execution ?victim-computer ?victim-user]
     ;; Redundant to perform an attack on a computer that has already been infected
     :guards ([not [place-already-visited? ?victim-computer remote-execution]])
-    ;; Probably need to implement a browser version binding because this attack is for IE only, 
+    ;; Probably need to implement a browser version binding because this attack is for IE only,
     ;; the os is most likely always going to be Windows (not sure if I should specify the OS in this case)
     :bindings((?victim-os ?victim-computer.os)
 	      (?victim-user ?victim-os.users))
@@ -1353,6 +1353,223 @@ predicate promising the thing is known.
 		      [current-foothold ?current-foothold-computer ?current-foothold-role])
     )
 
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;;
+;;; MITRE Initial Access Start
+;;;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+(defattack-method Drive-By-Compromise
+    ;; End goal: Gain access to system and code execution
+    :to-achieve [achieve-remote-execution ?victim-computer ?victim-user]
+    :output-variables (?victim-user)
+    :bindings ((?victim-user ?victim-os.users)
+               (?attacker-and-computer ?attacker ?attacker-computer)
+               (?victim-os ?victim-computer.os)
+               (current-foothold ?foothold-computer ?foothold-role))
+    :typing ((?victim-computer computer)
+             (?victim-user user)
+             ;;(?new-process-type )
+             )
+    :prerequisites(
+                   ;; User visits a malicious website
+                   [user-visits-malicious-website ?user]
+                   )
+    :plan (:sequential
+           ;; Once a user visits a malicious website, the scripts will automatically execute, searching for versions of browser and plugins for potential vulnerable version
+           (:bind [current-foothold ?new-foothold-computer ?new-foothold-role])
+           (:action [launch-process ?attacker ?computer ?victim-computer.os ? ?new-foothold-role])
+           ;; Once script succeeds in finding one, exploit code is delivered to the browser
+           ;; If exploitation is successful, adversary will have code execution on user's system
+           ;; Since current-foothold is bound to new fields, can just use foothold-role to reference the new foothold role
+           )
+    :post-conditions ([has-remote-execution ?attacker ?victim-computer ?foothold-role])
+    )
+
+
+(defattack-method Exploit-Public-Facing-Application
+    :to-achieve [achieve-remote-execution ?victim-computer ?victim-user]
+    :bindings ((?victim-user ?victim-os.users)
+               (?attacker-and-computer ?attacker ?attacker-computer)
+               (?victim-os ?victim-computer.os))
+    :typing ((?victim-computer computer)
+             (?victim-user user))
+    :prerequisites(
+                   ;; Adversary already has access to existing vulnerabilities in applications: has-control-of?
+                   ;; User visits malicious website
+                   [user-visits-malicious-website ?user]
+                   )
+    :plan (:sequential
+           ;; Adversary execute payload/sends phish to user
+           (:action [create-email-with-corrupt-attachment ?attacker ? ? ?])
+           (:action [send-email ?attacker ? ?attacker-computer ? ?user])
+           ;; User receives and opens
+           (:action [user-clicks-on-attachment ?user ?computer ? ? ?])
+           ;; Scripts execute
+           (:action [system-launches-process-for-file ?victim-os ? ?])
+           )
+    :post-conditions ([has-remote-execution ?attacker ?victim-computer ?foothold-role])
+    )
+
+(defattack-method External-Remote-Services
+    :to-achieve [achieve-remote-execution ?victim-computer ?victim-user]
+    :bindings ((?victim-user ?user)
+               (?attacker-and-computer ?attacker ?attacker-computer)
+               (?victim-os ?victim-computer.os)
+               [current-foothold ?foothold-computer ?foothold-role]
+               ;; Maybe a binding for vpn?
+               )
+    :typing ([?victim-computer computer]
+             [?victim-user user]
+             )
+    :plan (:sequential
+           ;; Adversary gains credentials using password snuffing techniques
+           (:goal [achieve-knowledge-of-password ?attacker ?user ?computer])
+           ;; Use credentials to login to VPN
+           (:action [login-with-credentials ?user ?victim-computer.os ?attacker-computer ?foothold-computer ?foothold-role ? ?])
+           ;; Adversary downloads malware into targeted systems, need to make a malware object maybe
+           (:goal [install-malware ?attacker ?attacker-computer ?victim-computer ?]))
+    :post-condition ([has-remote-execution ?attacker ?victim-computer ?foothold-role])
+    )
+
+
+(defattack-method Hardware-Additions
+    :to-achieve [achieve-remote-execution ?victim-computer ?victim-user]
+    :bindings ((?victim-user ?user)
+               (?attacker-and-computer ?attacker ?attacker-computer)
+               [current-foothold ?foothold-computer ?foothold-role]
+               )
+    :typing ([?victim-computer computer]
+             [?victim-user user]
+             )
+    :plan (:sequential
+           ;; Adversary connects firmware/hardware to targeted network, protocol name)
+           (:action [connect-via ?foothold-computer ?foothold-role ?computer ?])
+           ;; Using shellcode to execute scripts for password sniffing
+           (:goal [achieve-knowledge-of-password ?attacker ?user ?attacker-computer))
+           )
+    :post-condition ([has-remote-execution ?attacker ?victim-computer ?foothold-role])
+    )
+
+(defattack-method Spearphishing-Attachment
+    :to-achieve [achieve-remote-execution ?victim-computer ?victim-user]
+    :bindings ((?attacker-and-computer ?attacker ?attacker-computer)
+               (current-foothold ?foothold-computer ?foothold-role]
+               )
+    :typing([?victim-computer computer]
+            [?victim-user user])
+    :plan (:sequential
+           (:action [create-email-with-corrupt-attachment ?attacker ? ? ?])
+           (:action [send-email ?attacker ? ?attacker-computer ? user])
+           )
+    :post-condition ([has-remote-execution ?attacker ?victim-computer ?foothold-role])
+    )
+
+(defattack-method Spearphishing-Link
+    :to-achieve [achieve-remote-execution ?victim-computer ?victim-user]
+    :bindings ((?attacker-and-computer ?attacker ?attacker-computer)
+               (current-foothold ?foothold-computer ?foothold-role]
+               )
+    :typing([?victim-computer computer]
+            [?victim-user user])
+    :plan (:sequential
+           (:action [create-email-with-corrupt-link ?attacker ? ?])
+           (:action [send-email ?attacker ? ?attacker-computer ? ?user])
+           )
+    :post-condition ([has-remote-execution ?attacker ?victim-computer ?foothold-role])
+    )
+
+;; Create an action for adversary making corrupt removeable media?
+(defattack-method Replication-Through-Removeable-Media
+    :to-achieve [achieve-remote-execution ?victim-computer ?victim-user]
+    :bindings([current-foothold ?foothold-computer ?foothold-role]
+              (?attacker-and-computer ?attacker ?attacker-computer))
+    :typing([?victim-computer computer]
+            [?victim-user user]
+            [?removable-media usb-stick)
+    :plan (:sequential
+           ;; Adversary adds malware into removeable media or just creates one
+           (:action [create-removable-media-with-corrupt-attachment ?attacker ? usb-stick ?])
+           ;; Victim plugs media into personal device
+           (:action [user-uses-removable-media user computer usb-stick ? ?])
+           ;; Malware is downloaded
+           (:goal [install-malware-via-removable-media ?attacker usb-stick computer ?])
+           )
+    :post-condition ([has-remote-execution ?attacker ?victim-computer ?foothold-role])
+    )
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;;
+;;; MITRE Persistence
+;;;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+;; Using this attack method has a lot of different potential post conditions:download/installing payloads, launch malicious process
+;;T1197
+
+
+(defattack-method BITS-Jobs
+    :to-achieve [persistently-execute ?attacker ?victim ?victim-computer]
+    :bindings([attacker-and-computer ?attacker ?attacker-computer])
+    :typing((?victim-computer computer)
+            (?victim user)
+            (?malware-package malware-package))
+    :prerequisites([already-compromised ?attacker ?victim])
+    :plan(:sequential
+          (:action [download-software ?malware-package ?attacker-computer ?victim-computer ?])
+          (:action [load-software ?malware-package ?victim-computer]))
+    :post-conditions ([malware-installed-on-computer ?attacker ?victim-computer ?malware-package])
+    )
+
+;;T1176
+(defattack-method Browser-Extensions
+    :to-achieve [persistently-execute ?attacker ?victim ?victim-computer]
+    :bindings([attacker-and-computer ?attacker ?attacker-computer]
+              [current-foothold ? ?foothold-role])
+    :typing((?browser-process browser-process)
+            (?victim user))
+    :prerequisites([already-compromised ?attacker ?victim])
+    :plan(:sequential
+          (:action [create-malicious-browser-extension ?attacker ?browser-process ?])
+          (:action [download-software ?extension ?attacker-computer ?victim-computer ?foothold-role])
+          )
+    :post-conditions([malware-installed-on-computer ?attacker ?victim-computer ?extension])
+    )
+
+;; T1574.001
+(defattack-method dll-hijack-search-order
+    ;; Exploits the way Windows loads software (Windows has a specific order in which it loads background processes)
+    ;; When software is downloaded, Windows will create new referecnes to directories in the PATH variable
+    :to-achieve [achieve-remote-execution ?victim-machine ?victim-user]
+    :bindings([named-component ?victim-machine os ?victim-os]
+              [value-of ?victim-os.users ?victim-user]
+              [attacker-and-machine ?attacker ?]
+              [attacker-download-server ?attacker ?download-server]
+              )
+    :typing((?victim-machine computer)
+            (?victim-user user)
+            (?victim-os windows)
+            )
+
+    :prerequisites(
+                   [is-vulnerable-to ?process dll-hijack]
+                   ;; Vulnerable to a foothold attack denoted by protocol, which gives
+                   [is-vulnerable-to ?process ?protocol]
+                   ;; Must also have write privileges to the directories present in the PATH variable - not so sure about this line
+                   [has-permission ?attacker write ?object] ;; Need to define write
+                   )
+    :plan(:sequential
+          (:goal [get-foothold ?victim-machine ?protocol])
+          ;; Malware is typically in a seemingly innocuous software
+          ;; Once this malware is downloaded, Windows will create new references to directories in PATH
+          (:action [download-software malicious-dll ?download-server ?victim-machine ?role]) ;; Need to specify role
+          ;; Once the malware is downloaded, Windows will create new references to directories in PATH, which will in turn load the DLL's (including the malicious one)
+          ;; Load the software, leads to malicious DLL loading, done
+          (:action [load-software malicious-dll ?victim-machine])
+          )
+    :post-conditions([has-remote-execution ?attacker ?victim-machine ?foothold-role] ;; Privilege escalation
+                     [current-foothold ?current-foothold-machine ?current-foothold-role])
+    )
+
 |#
 
 
@@ -1360,7 +1577,7 @@ predicate promising the thing is known.
 
 ;;; This is a method for finding the password of one user on a machine
 ;;; When you already have presence on the machine as another user
-;;; We might want to have a guard that says not to use this if we already 
+;;; We might want to have a guard that says not to use this if we already
 ;;; know the password.
 (defattack-method crack-password-for-caldera
     :to-achieve [achieve-knowledge-of-password ?attacker ?victim ?victim-computer]
@@ -1392,7 +1609,7 @@ predicate promising the thing is known.
 
 
 ;;; This is used when you have foothold to the machine as some user
-;;; that isn't admin level on the target machine but is a user on the 
+;;; that isn't admin level on the target machine but is a user on the
 ;;; target machine,
 ;;; This other user has to have read capabiity to the active directory scripts
 ;;; The guys that invoke this need to be looked into.
@@ -1422,7 +1639,7 @@ predicate promising the thing is known.
              (?admin-script admin-script-file))
     :attack-identifier "T1078.002"
     :prerequisites ((has-capability ?other-user ?read-capability))
-    :plan (:sequential 
+    :plan (:sequential
            (:trace "get-admin-password-from-active-directory ~a ~a" ?admin ?victim-computer)
            (:goal [exfiltrate-data ?other-user ?admin-script ?foothold-computer ?attacker-computer])
            (:trace "exfiltrated data ~a ~a ~a ~a" ?other-user ?admin-script ?foothold-computer ?attacker-computer)
@@ -1448,4 +1665,3 @@ predicate promising the thing is known.
 ;;; The second one goes from that user on a foothold machine to an easily guessed user on the foothold
 ;;; and then gets execution for the easily guessed user on the foothold.  Does the password crack
 ;;; the logs into the target machine as the intermediate user.
-

@@ -107,7 +107,7 @@
           [object-type-of ?password-file password-file]
           ]
   then [input-of ?logon-controller ?password-file]
-  ) 
+  )
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;
@@ -192,7 +192,7 @@
 	  ]
   then [impacts size ?job-request-queue size ?workload]
   )
- 
+
 (defrule size-of-part-of-request-queue-impacts-size-of-full-request-queue (:forward)
   if [and [object-type-of ?os-instance operating-system]
 	  [value-of (?os-instance job-launch-queue) ?full-request-queue]
@@ -372,9 +372,9 @@
 
 ;;; Def-symmetric-pointers is a macro that allows us to make sure that both forward and backward
 ;;; pointers between objects are present.  The simple format is a rule-name and a pair of triples:
-;;; (object-type logic-variable slot-name) 
+;;; (object-type logic-variable slot-name)
 ;;; Two forward chaining rules are generated: One matches the first triple and asserts the second
-;;; the other one is vice versa.  
+;;; the other one is vice versa.
 (def-symmetric-pointers computer-superusers operating-system ?the-os superuser user ?superuser superuser-for)
 
 (def-symmetric-pointers computer-users computer ?the-computer users user ?the-user computers)
@@ -413,7 +413,7 @@
 
 (def-symmetric-pointers resource-computer computer-resource ?r computers has-resources-mixin ?c resources)
 
-(def-symmetric-pointers file-directory file ?file directories directory ?directory files)
+(def-symmetric-pointers file-directory file ?file directory directory ?directory files)
 
 (def-symmetric-pointers subnet-site subnet ?subnet site site ?site subnets)
 
@@ -432,7 +432,7 @@
 	  [part-of ?os ?part]
 	  [object-type-of ?part computer-resource]]
   then [value-of (?part computers) ?computer])
-	  
+
 
 ;;; All this needs to be redone in a decision theoretic framework!
 ;;; inferring desirable properties
@@ -470,7 +470,7 @@
 ;;; Presentation integrity means that a user will see what you intend to see
 ;;; You can affect this by screwing up the data behind this
 ;;; Or you can affect this by misdirecting the user to the wrong place
-;;; Note: This shouldn't be a property of an os-instance, but rather a property 
+;;; Note: This shouldn't be a property of an os-instance, but rather a property
 ;;; of a web-site or something like that.
 
 (defrule os-presentation-integrity (:forward)
@@ -529,7 +529,7 @@
 
 
 ;;; this forces the user to "own" every computer at his site
-;;; by forward reasoning.  
+;;; by forward reasoning.
 ;;; I'm not sure I want to do this, when we define a user
 ;;; we can say what his computers are
 ;;; plus typically we have a typical user and a typical computer
@@ -718,3 +718,36 @@
 ;;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
+
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;;
+;;; Web Server Vulnerabilities
+;;;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+(defrule apache-can-be-hacked-1 (:forward)
+  if [object-type-of ?process apache-web-server-process]
+  then [is-vulnerable-to ?process overflow-attack http]
+  )
+
+(defrule check-sandbox-vulnerability (:forward)
+  if [object-type-of ?process ie-process]
+  then [is-vulnerable-to ?process pidl-url-attack]
+  )
+
+;; Creating a rule where there is a dom element present and the user is the victim, the dom-element can be clicked
+(defrule can-user-click (:forward)
+  if [object-type-of ?object web-object]
+  then [object-clicked ?object infected-image]
+  )
+
+
+;; symmetric pointer for chaining rules: browser object pointing to program vice versa
+;;(def-symmetric-pointers browser-program-object browser ?object program program ?program process)
+
+;; Checking to see if the system has a dll vulnerability- Checking to see if it's a window's process
+;;(defrule check-dll-vulnerability (:forward)
+;;  if [object-type-of ?victim-os windows]
+;;  then [is-vulnerable-to ?process dll-hijack]
+;;  )

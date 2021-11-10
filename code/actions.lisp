@@ -30,6 +30,13 @@
   :post-conditions ([has-control-of ?attacker execution ?process])
   )
 
+
+(define-action create-malicious-browser-extension (?attacker ?process ?extension)
+  :output-variables (?extension)
+  :prerequisites ()
+  :outputs ((?extension (make-object 'extension :name (make-name 'extension))))
+  )
+
 ;;; This should be replaced by the one below and an action to create the phishing email
 (define-action send-phishing-email (?attacker ?attacker-foothold-computer ?email-server ?victim ?process)
   :prerequisites ([has-foothold ?email-computer ?sending-computer ?sending-role smtp]
@@ -51,6 +58,16 @@
   :post-conditions ()
   )
 
+
+(define-action create-email-with-corrupt-link (?attacker ?hyper-link ?email-message)
+  :output-variables (?email-message ?hyper-link)
+  :prerequisites()
+  :outputs ((?hyper-link (make-object 'hyper-link :name (make-name 'hyper-link)))
+            (?email-message (make-object 'email-message :name (make-name 'email-message) :attachments ?hyper-link))
+            )
+  :post-conditions ()
+  )
+
 (define-action send-email (?attacker ?email ?sending-computer ?email-server ?victim)
   :bindings ([value-of ?victim.computers ?victim-computer])
   :prerequisites ([has-foothold ?email-server ?sending-computer ?sending-role smtp]
@@ -60,11 +77,29 @@
 		    )
   )
 
+(define-action create-removable-media-with-corrupt-attachment (?attacker ?attachment-type ?removable-media ?attachment)
+  :output-variables (?removable-media ?attachment)
+  :prerequisites ()
+  :outputs ((?attachment (make-object 'application-file :name (make-name 'attachment) :application ?attachment-type))
+            (?attachments (list ?attachment))
+            (?removable-media (make-object 'removable-media :name (make-name 'removable-media) :attachments ?attachments)))
+  :post-conditions ()
+  )
+
 (define-action user-clicks-on-attachment (?user ?user-computer ?email-message ?attachment ?new-process)
   :prerequisites ([email-received ?user ?email-message ?user-computer])
   :bindings ([value-of ?email-message.attachments ?attachment]
              [value-of ?attachment.application ?application-type])
   :typing ((?email-message email-message)
+           (?attachment application-file))
+  :post-conditions ([file-clicked-on ?user ?attachment ?application-type])
+  )
+
+(define-action user-uses-removable-media (?user ?user-computer ?removable-media ?attachment ?new-process)
+  :prerequisites ()
+  :bindings([value-of ?removable-media.attachments ?attachment]
+            [value-of ?attachment.application ?application-type])
+  :typing ((?removable-media removable-media)
            (?attachment application-file))
   :post-conditions ([file-clicked-on ?user ?attachment ?application-type])
   )
@@ -90,7 +125,7 @@
   :prerequisites ([connection-established ?current-foothold-computer ?victim-computer ?protocol-name]
                   ;; The user has to be an authorized user of the machine.
                   [value-of ?victim-computer.users ?victim-user]
-                  
+
                   [knows-credentials ?attacker ?victim-user]
                   )
   :post-conditions ([is-logged-in ?attacker ?victim-user ?victim-os ?victim-computer])
@@ -109,7 +144,7 @@
 ;;; but I haven't yet introduced conditional actions and methods.
 ;;; For plan recognition it probably doesn't matter
 ;;; The attacker, acting from its foothold, attempts to login into a victim computer over some protocol
-;;; using a white list of user-id password pairs returning the credentials (user-id and password) of a 
+;;; using a white list of user-id password pairs returning the credentials (user-id and password) of a
 ;;; successful entry on the white list.
 ;;; The white-list probably doesn't need to be represented here?
 (define-action attempt-login (?attacker ?foothold-computer ?victim-computer ?protocol ?credentials)
@@ -257,7 +292,7 @@
   :typing ((?password-files compressed-password-file))
   :post-conditions ([knows-password ?attacker ?victim]
                     [knows-credentials ?attacker ?victim]
-                   ) 
+                   )
   )
 
 (define-action modify-data-structures (?process ?data-set ?foothold-computer ?foothold-role)
@@ -290,8 +325,8 @@
   :prerequisites ([data-exfiltrated ?admin-script ? ? ?attacker-computer])
   :post-conditions ([knows-password ?attacker ?victim]
                     [knows-credentials ?attacker ?victim]))
-                    
-                                         
+
+
 
 
 

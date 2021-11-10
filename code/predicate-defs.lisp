@@ -1,14 +1,14 @@
 ;;; -*- Syntax: Joshua; Package: APLAN; readtable: Joshua; Mode: Common-lisp  -*-
 
-(in-package :aplan) 
+(in-package :aplan)
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;
 ;;; Restorable predicates
 ;;;
 ;;; There are some facts about the world that we want to preserve even after
-;;; we've cleared the joshua database to remove a specific "environment model" 
-;;; 
+;;; we've cleared the joshua database to remove a specific "environment model"
+;;;
 ;;; We'll have a list of predicates to retell and appropriate
 ;;; predicate-methods to make this work
 ;;;
@@ -51,12 +51,12 @@
 (eval-when (:load-toplevel :compile-toplevel :execute)
   (defparameter *all-aplan-predicates* nil)
   (defparameter *aplan-predicate-binding-map* (make-hash-table))
-  
+
   (define-predicate-model aplan-predicate-model () (ltms:ltms-predicate-model))
-  
-  (defun record-predicate-output-variable (predicate name) 
+
+  (defun record-predicate-output-variable (predicate name)
     (pushnew name (gethash predicate *aplan-predicate-binding-map*)))
-  
+
   (defun corresponding-abstract-variable (predication-maker logic-variable-maker)
     (let ((position (position logic-variable-maker (predication-maker-statement predication-maker)
                               :test #'equal))
@@ -65,9 +65,9 @@
 
   (defun lookup-predicate-output-variable (predicate name)
     (member name (gethash predicate *aplan-predicate-binding-map*)))
-  
+
   (defmacro define-aplan-predicate (name parameters models &key outputs)
-    (let ((all-models (if (member 'aplan-predicate-model models) 
+    (let ((all-models (if (member 'aplan-predicate-model models)
                           models
                         (append models (list 'aplan-predicate-model)))))
       `(eval-when (:load-toplevel :compile-toplevel :execute)
@@ -107,11 +107,11 @@
 ;;;  Instead of passing this along as arguments to each method, it's treated as hidden state that
 ;;;  can be updated and retrieved with the predicates below.
 ;;;
-;;; By keepin track of what footholds the attacker has already achieved 
+;;; By keepin track of what footholds the attacker has already achieved
 ;;;  the planner can avoid trying to get the same foothold twice
 ;;;
 ;;; Footholds are computers that are capable of reaching a target computer using a specific protocol
-;;;  I.e. if you want to attack Foo you can try to get a foothold on Bar if Bar can talk to Foo 
+;;;  I.e. if you want to attack Foo you can try to get a foothold on Bar if Bar can talk to Foo
 ;;;       using a specific protocol.
 ;;;  So getting a foothold to Foo may involve getting remote execution on Bar
 ;;; But Bar may not be accessible from whereever the attacker currently has a foothold,
@@ -155,7 +155,7 @@
 ;;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
-;;; the subpurpose field allowsd you to state and query whether you've visited this place for a purpose (e.g. remove execution) 
+;;; the subpurpose field allowsd you to state and query whether you've visited this place for a purpose (e.g. remove execution)
 ;;; with a sub-purpose of the specific user (e.g. sam or howie).
 (define-predicate place-already-visited? (computer purpose sub-purpose) (tell-error-model special-stateful-predicate-model))
 
@@ -252,7 +252,7 @@
 (define-aplan-predicate protected-from (thing attack protocol) (non-stateful-predicate-model))
 (define-aplan-predicate vulnerable-to-capec (thing capec cve-number) (non-stateful-predicate-model))
 
-;;; 
+;;;
 (define-aplan-predicate bind (thing1 thing2) (ji:unification-model non-stateful-predicate-model))
 
 ;;; I think I got rid of the need for these.
@@ -339,7 +339,7 @@
 (define-aplan-predicate translation-of (symbolic-rep concrete-rep) (non-stateful-predicate-model))
 
 (define-aplan-predicate path-between (subnet1 subnet2 path) (non-stateful-predicate-model))
- 
+
 (define-aplan-predicate reachable-from (computer1 computer2 router) (non-stateful-predicate-model))
 
 (define-aplan-predicate reachable-for-remote-execution (victim-computer attacker protocol) (non-stateful-predicate-model))
@@ -362,7 +362,7 @@
 #+allegro
 (excl:def-fwrapper wrap-arglist-2 (symbol)
   (handler-case (excl:call-next-fwrapper)
-    (error nil 
+    (error nil
       (error "~s  is not a function, macro or predicate" symbol))
     (:no-error (answer &optional flag) (values answer flag))))
 
@@ -404,9 +404,20 @@
 
 
 
+(define-aplan-predicate precedes-in-search-path (path before after) (non-stateful-predicate-model))
 
 
+;; User clicking on a link Question, what is the modifier at the end?
+;;(define-predicate user-click (victim-user victim-machine object))
 
+(define-aplan-predicate user-can-click (victim-user object element) ())
 
+(define-aplan-predicate object-clicked (object element) ())
+;; Creating malicious url path, specify the type of url (file path url, legitimate url)
+;;(define-predicate create-bad-url (victim-user victim-machine url-type) (non-stateful-predicate-model))
 
+(define-aplan-predicate user-visits-malicious-website (user) ())
 
+(define-aplan-predicate compressed-file-of (compressed-file input-file-1 input-file-2) (non-stateful-predicate-model))
+
+(define-aplan-predicate already-compromised (attacker victim) ())

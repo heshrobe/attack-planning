@@ -15,7 +15,7 @@
 (defexternal-internet outside ("192.168.0.0" "255.255.0.0"))
 
 ;;; Our attacker lives somewhere out there
-(define-attacker attacker 
+(define-attacker attacker
     :location outside
     :download-servers attacker-download-server
     :adware-servers attacker-adware-server)
@@ -66,7 +66,7 @@
   :greater (sysadmin))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;;; 
+;;;
 ;;; The networking environment of our Enterprise
 ;;; There are 3 enclaves (called "sites" here)
 ;;; The worker enclave
@@ -74,7 +74,7 @@
 ;;; and the server enclave
 ;;; They are on separate subnets:
 ;;; 192.168.0.x, 192.168.10.x, 192.168.20.x
-;;; 
+;;;
 ;;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
@@ -106,7 +106,7 @@
   :authorization-pool victim-authorization-pool
   :ensemble worker-computers
   :superuser ()
-  ) 
+  )
 
 ;;; Typical worker bee is a typical user of a typical
 ;;; computer in the worker-computers ensemble
@@ -222,7 +222,7 @@
 ;;; what traffic they pass but also what connections they will accept (any host can do this)
 ;;; If a blacklist (or whitelist) specifies :for-host t, then that is specifying what
 ;;; connection they will accept.  If not, then it specifies what traffic it will pass
-;;; 
+;;;
 ;;; Normally a blacklist will specify a range of addresses that are blocked as an ip-address and mask
 ;;; (specified in the ":block" field.
 ;;; But there can be holes in this range, specified in the :exceptions field
@@ -237,7 +237,7 @@
 ;;;
 ;;; the Main Router
 ;;; Note that routers and switches are both network "bridges" and computers.
-;;; 
+;;;
 ;;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
@@ -313,7 +313,7 @@
     :block everywhere
     )
 
-;;; The switch as a computer will not 
+;;; The switch as a computer will not
 ;;; accept telnet or email connections from anywhere
 (defblacklist (telnet worker-net-switch)
     :for-host t
@@ -565,8 +565,8 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 (defun get-variables ()
-  (declare (special worker-computer worker-bee attacker 
-		    low-server low-server-os 
+  (declare (special worker-computer worker-bee attacker
+		    low-server low-server-os
 		    admin-computer victim-router attacker-computer outside
 		    low-database high-database sysadmin high-server high-server-os
 		    download-server))
