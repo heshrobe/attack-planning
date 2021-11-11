@@ -26,7 +26,9 @@
 
 (define-object-type aplan-object
     :slots ()
-  )
+    )
+
+(defparameter *all-object-types* nil)
 
 (eval-when (:compile-toplevel :load-toplevel :execute)
   (defmacro define-aplan-object (name &rest plist)
@@ -39,7 +41,9 @@
 	    (getf plist :tms) t)
       (remf plist :super-types)
       )
-    `(define-object-type ,name ,@plist)))
+    `(eval-when (:compile-toplevel :load-toplevel :execute)
+       (push ',name *all-object-types*)
+       (define-object-type ,name ,@plist))))
 
 (defmethod ji::part-of-predicate-for-object-type ((thing aplan-object)) 'named-component)
 (defmethod ji::type-of-predicate-for-object-type ((thing aplan-object)) 'object-type-of)
@@ -71,7 +75,23 @@
 
 (define-aplan-object data-resource
     :super-types (computer-resource)
+    :slots ((host-os))
     )
+
+(define-aplan-object collection
+    :super-types (print-nicely-mixin)
+    :slots ((member-type :initarg :member-type)
+            (members :initarg :member :set-valued t))
+    )
+
+(define-aplan-object key-value-pair
+    :super-types (data-resource)
+    :slots ((key)
+            (value)))
+
+(define-aplan-object key-value-store
+    :super-types (collection data-resource)
+    :slots ((entries :set-valued t)))
 
 (define-aplan-object data-set
     :super-types (data-resource)
@@ -84,12 +104,6 @@
 (define-aplan-object file-system
     :super-types (data-resource)
     :slots ((files :set-valued t ))
-    )
-
-(define-aplan-object collection
-    :super-types (print-nicely-mixin)
-    :slots ((member-type :initarg :member-type)
-            (members :initarg :member :set-valued t))
     )
 
 (define-aplan-object file-collection
@@ -673,8 +687,16 @@
 (define-aplan-object hp-ux
   :super-types (unix))
 
+;;; The registry in windows is a key-value store
+;;; used by the OS for all kinds of stuff.
+
+(define-aplan-object registry
+    :super-types (key-value-store)
+    )
+
 (define-aplan-object windows
-  :super-types (operating-system))
+    :super-types (operating-system)
+    :parts ((registry key-value-store)))
 
 (define-aplan-object windows-95
   :super-types (windows))
@@ -788,6 +810,9 @@
 
 (define-aplan-object windows-95-computer
   :super-types (windows-computer))
+
+;;; Generic windows
+(defmethod operating-system-for-computer ((self windows-computer)) 'windows)
 
 (defmethod operating-system-for-computer ((self windows-95-computer)) 'windows-95)
 
