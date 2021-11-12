@@ -57,7 +57,8 @@
     :prerequisites ([impacts ?resource-property ?resource ?desirable-property ?victim])
     ;; :bindings ([attacker-and-computer ?attacker ?attacker-computer])
     :typing ((?resource computer-resource))
-    :plan (:goal [affect ?resource-property ?resource])
+    :plan (:sequential
+           (:goal [affect ?resource-property ?resource]))
     )
 
 

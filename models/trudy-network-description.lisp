@@ -186,8 +186,9 @@
 
 ;; Define users for server pool
 (defuser server-administrator
-  :capabilities (server-super-user)
-  :authorization-pools (server-pool))
+    :has-weak-password 'yes
+    :capabilities (server-super-user)
+    :authorization-pools (server-pool))
 
 (defuser server-user
     :typical t
