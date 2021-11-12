@@ -113,20 +113,28 @@
 
 (define-aplan-object path-mixin
   :super-types (data-resource)
-  :slots ((name :initarg :name))
+  :slots ()
   )
 
 (define-aplan-object search-path
     :super-types (path-mixin))
 
 (defmethod print-object ((thing path-mixin) stream)
-  (format stream "#<~a>" (name thing)))
+  (format stream "#<~a ~a>" (type-of thing) (role-name thing)))
 
 (define-aplan-object has-directory-mixin
     :slots ((directory :initarg :directory :initform nil)))
 
+(defmethod full-path ((thing has-directory-mixin) &optional (delimiter "/"))
+  (labels ((do-one-more (this-guy path-so-far)
+             (let ((next-string (concatenate 'string  (string (role-name this-guy)) delimiter path-so-far)))
+               (if (null (directory this-guy))
+                  (concatenate 'string delimiter next-string)
+                 (do-one-more (directory this-guy) next-string)))))
+    (do-one-more thing "")))
+
 (define-aplan-object directory
-    :super-types (file-collection)
+    :super-types (path-mixin has-directory-mixin file-collection)
     :slots ((files :set-valued t ))
     )
 

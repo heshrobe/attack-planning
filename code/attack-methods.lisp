@@ -184,7 +184,7 @@
 (defattack-method mung-process-output
     :to-achieve [affect data-integrity ?data-set]
     :bindings ([output-of ?process ?data-set]
-	       [attacker-and-computer ?attacker ])
+	       [attacker-and-computer ?attacker ?])
     :typing ((?process process))
     :plan (:sequential
            (:goal [take-control-of ?attacker data-integrity ?process])
@@ -764,7 +764,9 @@
     :output-variables (?user)
     ;; all this is asking is there a process in the workload
     ;; and if so with which user's permissions is it running
-    :bindings ((?the-process ?object.computers.os.workload.server-workload.processes)
+    :bindings ((?victim-computer ?object.computers)
+               (?victim-os ?victim-computer.os)
+               (?the-process ?victim-os.workload.server-workload.processes)
                [runs-with-permissions-of ?the-process ?user]
 	       [attacker-and-computer ?attacker ?]
                )
@@ -836,6 +838,8 @@
 
 (defattack-method how-to-get-password-by-guessing
     :to-achieve [achieve-knowledge-of-password ?attacker ?user ?victim-computer]
+    :typing ((?user user)
+             (?victim-computer computer))
     :guards ((user-ensemble-has-typical-user ?user)
              [is-typical-user ?user]
 	     [not [unifiable ?attacker ?user]]
@@ -847,6 +851,8 @@
 
 (defattack-method how-to-get-password-by-guessing-of-not-typical-user
     :to-achieve [achieve-knowledge-of-password ?attacker ?user ?victim-computer]
+    :typing ((?user user)
+             (?victim-computer computer))
     :guards ((not (user-ensemble-has-typical-user ?user))
 	     [not [unifiable ?attacker ?user]]
              [unknown [knows-password ?attacker ?user]]
