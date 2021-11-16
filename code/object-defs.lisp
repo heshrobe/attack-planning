@@ -28,7 +28,8 @@
     :slots ()
     )
 
-(defparameter *all-object-types* nil)
+(eval-when (:compile-toplevel :load-toplevel :execute)
+  (defparameter *all-object-types* nil))
 
 (eval-when (:compile-toplevel :load-toplevel :execute)
   (defmacro define-aplan-object (name &rest plist)
@@ -142,8 +143,7 @@
 
 (define-aplan-object file
   :super-types (has-directory-mixin path-mixin data-resource)
-  :slots ((directory :set-valued t )
-          (filename :initarg :filename :initform nil)))
+  :slots ((filename :initarg :filename :initform nil)))
 
 (define-aplan-object dynamically-loadable-code-file
     :super-types (file))
