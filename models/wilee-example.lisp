@@ -114,13 +114,14 @@
 ;;; meaning they can read-or-write any resource that
 ;;; requires read or write capability
 (defuser typical-worker-bee
-    :user-type normal-user
-    :ensemble worker-computers
-    :computers (typical-worker-computer)
-    :typical t
-    :capabilities (user-write)
-    :authorization-pools (victim-authorization-pool)
-    )
+  :user-type normal-user
+  :ensemble worker-computers
+  :computers (typical-worker-computer)
+  :typical t
+  :capabilities (user-write)
+  :authorization-pools (victim-authorization-pool)
+  :has-weak-password t
+  )
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;
@@ -157,6 +158,7 @@
   :authorization-pools (victim-authorization-pool)
   :capabilities (sysadmin)
   :superuser-for (typical-worker-computer typical-admin-computer)
+  :has-weak-password 'yes
   )
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;

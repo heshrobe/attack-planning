@@ -84,14 +84,14 @@
   (labels ((do-next-level (structure connective input-state output-state)
 	     ;; each level should either be a :sequential/:parallel/:repeat
 	     ;;  or a :goal/:plan pair
-             ;;  or an :action item 
+             ;;  or an :action item
              ;; or pseudo things like a :note :bind or :break
              (destructuring-bind (key . stuff) structure
                (ecase key
                  ((:sequential :repeat)
                   (loop for (thing . more-to-come) on stuff
-		      for last = (or (not more-to-come) 
-                                     (not (loop for (key) in more-to-come 
+		      for last = (or (not more-to-come)
+                                     (not (loop for (key) in more-to-come
                                               thereis (member key '(:sequential :parallel :repeat :goal :action)))))
 		      for next-input-state = input-state then his-output-state
 		      for next-output-state = (when last output-state)
@@ -137,7 +137,7 @@
 		 (:break (list (list `(prog1 t (break ,@stuff)))
 			       nil
 			       input-state))
-                 (:trace (list (list `(prog1 t (when *method-tracing* (terpri *trace-output*) (format *trace-output* ,@stuff))))
+                 (:trace (list (list `(prog1 t (when *method-tracing* (terpri t) (format t ,@stuff))))
 			       nil
 			       input-state))
                  ((:goal :plan)
@@ -204,19 +204,19 @@
 (defun process-assertions (assertions input-state)
   (labels ((do-one (assertion)
 	     (cond
-	      ;; special case for debugging
-	      ((and (listp assertion) (not (predication-maker-p assertion)))
-	       (if (eql (first assertion) 'break)
-		   `(prog1 t ,assertion)
-		 assertion))
-	      ((eql (predication-maker-predicate assertion) 'or)
-	       (with-predication-maker-destructured (&rest assertions) assertion
-		 (loop for assertion in assertions
-		     collect (do-one assertion) into processed-assertions
-		     finally (return `(predication-maker '(or ,@processed-assertions))))))
-	      ((and (listp assertion) (not (predication-maker-p assertion))) assertion)
-	      ((compile-without-state assertion) assertion)
-	      (t `(predication-maker '(in-state ,assertion ,input-state))))))
+	       ;; special cases for debugging
+	       ((and (listp assertion) (not (predication-maker-p assertion)) (eql (first assertion) :break))
+		`(prog1 t (break ,@(rest assertion))))
+               ((and (listp assertion) (not (predication-maker-p assertion)) (eql (first assertion) :trace))
+                `(prog1 t (when *method-tracing* (terpri t) (format t ,@(rest assertion)))))
+	       ((and (listp assertion) (predication-maker-p assertion) (eql (predication-maker-predicate assertion) 'or))
+	        (with-predication-maker-destructured (&rest assertions) assertion
+		  (loop for assertion in assertions
+		        collect (do-one assertion) into processed-assertions
+		        finally (return `(predication-maker '(or ,@processed-assertions))))))
+	       ((and (listp assertion) (not (predication-maker-p assertion))) assertion)
+	       ((compile-without-state assertion) assertion)
+	       (t `(predication-maker '(in-state ,assertion ,input-state))))))
     (loop for thing in assertions collect (do-one thing))))
 
 
@@ -309,12 +309,14 @@
 ;;; Except that it allows break forms
 (defun process-typing (forms)
   (loop for form in forms
-      if (and (listp form) (eql (first form) :break))
-         collect `(break ,@(rest form))
-      else if (and (listp form) (= (length form) 2))
-      collect (destructuring-bind (thing type) form
-                (ji:make-predication-maker `(object-type-of ,thing ,type)))
-      else collect form))
+        if (and (listp form) (eql (first form) :break))
+          collect `(prog1 t (break ,@(rest form)))
+        else if (and (listp form) (eql (first form) :trace))
+               collect `(prog1 t (when *method-tracing* (terpri t) (format t ,@(rest form))))
+        else if (and (listp form) (= (length form) 2))
+               collect (destructuring-bind (thing type) form
+                         (ji:make-predication-maker `(object-type-of ,thing ,type)))
+        else collect form))
 
 (defun mentioned-in? (lv-maker set-of-forms)
   (let ((name (if (symbolp lv-maker) lv-maker (logic-variable-maker-name lv-maker))))
@@ -394,6 +396,7 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 (defparameter *all-attack-methods* nil)
+(defparameter *compile-for-debugging* nil)
 
 (defmacro defattack-method (method-name &key to-achieve
 					     (input-state `(logic-variable-maker ,(intern (string-upcase "?input-state"))))
@@ -406,7 +409,13 @@
 					     post-conditions
                                              output-variables ;; Marks that variables in the to-achieve that are bound during execution
                                              attack-identifier
-					     )
+					  )
+  (when (and (null attack-identifier) *compile-for-debugging*)
+    (setq attack-identifier method-name))
+  (setq bindings (loop for thing in bindings
+                       if (and (listp thing) (eql (first thing) :trace))
+                         collect `(prog1 t (when *method-tracing* (terpri t) (format t ,@(rest thing))))
+                       else collect thing))
   (let* ((plan-variable `(logic-variable-maker ,(gensym "?PLAN")))
          (real-head `(predication-maker '(achieve-goal ,to-achieve ,input-state  ,output-state ,plan-variable)))
          (rebuilt-plan-structure (rebuild-plan-structure plan input-state output-state))
@@ -553,33 +562,33 @@
   ;; (break "~{~a~^, ~}~%~a~%~{~a~^,~}~%~a" set-of-stuff reference-alist bindings-by-set-type set-type)
   (let ((bindings-for-set-type (second (assoc set-type bindings-by-set-type))))
     (cond
-     ((and (null reference-alist) (eql set-type 'bindings))
-      (loop for thing in set-of-stuff
-          if (normal-binding? thing)
-          collect (de-prettify-binding thing)
-          else collect thing))
-     ((null reference-alist) set-of-stuff)
-     ((and (null bindings-for-set-type) (eql set-type 'bindings))
-      (loop for thing in set-of-stuff
-          if (normal-binding? thing)
-          collect (de-prettify-binding thing)
-          else collect (substitute-hidden-bindings thing reference-alist)))
-     ((null bindings-for-set-type)
-      (substitute-hidden-bindings set-of-stuff reference-alist))
-     (t (let ((already-emitted nil))
-          ;; loop over the forms
-          ;; for each check all the implicit bindings
-          ;; and if it's already been emitted skip it
-          ;; otherwise if it's in the form, emit it and remember that it's been emitted
-          (loop for thing in set-of-stuff
-              append (loop for (implicit-binding lv) in bindings-for-set-type
-                         when (and (mentioned-in? implicit-binding thing)
-                                   (not (member lv already-emitted)))
-                         collect (de-prettify-binding (ji:make-predication-maker `(value-of ,implicit-binding ,lv)))
-                         and do (push lv already-emitted))
-              if (normal-binding? thing)
-              collect (de-prettify-binding thing)
-              else collect (substitute-hidden-bindings thing reference-alist)))))))
+      ((and (null reference-alist) (eql set-type 'bindings))
+       (loop for thing in set-of-stuff
+             if (normal-binding? thing)
+               collect (de-prettify-binding thing)
+             else collect thing))
+      ((null reference-alist) set-of-stuff)
+      ((and (null bindings-for-set-type) (eql set-type 'bindings))
+       (loop for thing in set-of-stuff
+             if (normal-binding? thing)
+               collect (de-prettify-binding thing)
+             else collect (substitute-hidden-bindings thing reference-alist)))
+      ((null bindings-for-set-type)
+       (substitute-hidden-bindings set-of-stuff reference-alist))
+      (t (let ((already-emitted nil))
+           ;; loop over the forms
+           ;; for each check all the implicit bindings
+           ;; and if it's already been emitted skip it
+           ;; otherwise if it's in the form, emit it and remember that it's been emitted
+           (loop for thing in set-of-stuff
+                 append (loop for (implicit-binding lv) in bindings-for-set-type
+                              when (and (mentioned-in? implicit-binding thing)
+                                        (not (member lv already-emitted)))
+                                collect (de-prettify-binding (ji:make-predication-maker `(value-of ,implicit-binding ,lv)))
+                                and do (push lv already-emitted))
+                 if (normal-binding? thing)
+                   collect (de-prettify-binding thing)
+                 else collect (substitute-hidden-bindings thing reference-alist)))))))
 
 (defun substitute-hidden-bindings (set-of-stuff reference-alist)
   (labels ((do-one (form)

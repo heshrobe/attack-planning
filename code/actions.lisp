@@ -205,9 +205,14 @@
 
 (define-action guess-password (?attacker ?user ?victim-computer)
   :bindings ([current-foothold ?foothold-computer ?foothold]
-	     [protocol-for remote-execution remote-shell ?protocol-name])
+	     [protocol-for remote-execution remote-shell ?protocol-name]
+             (:trace "~%In guess password for ~a on ~a foothold ~a ~a"
+                     ?user ?victim-computer ?foothold-computer ?foothold)
+             )
   :prerequisites ([connection-established ?foothold-computer ?victim-computer ?protocol-name]
+                  (:trace "Have conditions to guess password for ~a" ?user)
                   [value-of (?user has-weak-password) yes]
+                  (:trace "User ~a has weak password" ?user)
                   )
   :post-conditions ([knows-credentials ?attacker ?user]
 		    [knows-password ?attacker ?user])
