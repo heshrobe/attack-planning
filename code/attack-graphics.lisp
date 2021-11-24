@@ -240,7 +240,7 @@
      (orientation '(clim:member-alist (("horizontal" . :horizontal) ("vertical" . :vertical))) :default :vertical)
      (pdf? 'clim:boolean :default nil :prompt "Generate to a pdf file")
      (file-name 'clim:pathname)
-     (text-size '(clim:member :very-small :small :normal :large :very-large))
+     (text-size '(clim:member :very-small :small :normal :large :very-large) :default :small)
      (actions-only 'clim:boolean :default nil :prompt "Only show actions?"))
   (show-plan (attack-plan-collector clim:*application-frame*) plan-number
              :orientation orientation
@@ -404,7 +404,7 @@
 
 (define-aplan-command (com-dump-plan-to-json :name t :menu t)
     ((plan-number 'integer)
-     &key (file-name 'clim:pathname)) 
+     &key (file-name 'clim:pathname))
   (let* ((plan (nth plan-number (attack-plans (attack-plan-collector clim:*application-frame*))))
          ;; this is a terrible hack, it's because the canonical format of plans is either list structure
          ;; or a different set of data structures from those used for the merged plan.  This is stupic, but

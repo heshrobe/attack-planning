@@ -260,14 +260,14 @@
 ;;; (define-predicate vulnerable-to-overflow-attack (process protocol) (ltms:ltms-predicate-model))
 
 (define-aplan-predicate is-typical-user (user) (non-stateful-predicate-model))
+(define-aplan-predicate is-superuser (os user ) (non-stateful-predicate-model))
+
 
 ;;; I'm treating this as if it's not temporally contingent.  There's a
 ;;; temporally contingent predicate just below runs-with-permission-of
 ;;; that says someone is running with superuser privilege,
 
 ;;; These could change over time (I think)
-
-(define-aplan-predicate is-superuser (os user ) ())
 
 (define-aplan-predicate has-permission (user operation object) ())
 

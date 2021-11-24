@@ -522,17 +522,17 @@
   )
 
 (defrule is-superuser (:backward)
-  :then [in-state [is-superuser ?os ?user] ?state]
+  :then [is-superuser ?os ?user]
   :if (block find-it
-        (ask* `[in-state [value-of (,?os superuser) ?super] ?state]
+        (ask* `[value-of (,?os superuser) ?super]
           (when (eql ?super ?user)
             (return-from find-it t)))
         nil))
 
 (defrule isnt-superuser (:backward)
-  :then [not [in-state [is-superuser ?os ?user] ?state]]
+  :then [not [is-superuser ?os ?user]]
   :if (block find-it
-        (ask* `[in-state [value-of (,?os superuser) ?super] ?state]
+        (ask* `[value-of (,?os superuser) ?super]
           (when (eql ?super ?user)
             (return-from find-it nil)))
         t))

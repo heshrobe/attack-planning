@@ -120,7 +120,7 @@
   :typical t
   :capabilities (user-write)
   :authorization-pools (victim-authorization-pool)
-  :has-weak-password t
+  :has-weak-password 'yes
   )
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -206,11 +206,13 @@
   :ip-address-string "192.168.20.4"
   :typical nil
   :authorization-pool victim-authorization-pool
-  :ensemble server-computers)
+  :ensemble server-computers
+  :superuser typical-sysadmin
+  )
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;
-;;; The router, switches and "firewall" rules
+;;; The Router, switches and "firewall" rules
 ;;; The router is addressable at the 1 position in each subnet
 ;;; The switch is addressable at the 2 position in its subnet
 ;;; Vanilla computers start at 3 within their subnet
