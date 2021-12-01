@@ -396,7 +396,7 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 (defparameter *all-attack-methods* nil)
-(defparameter *compile-for-debugging* nil)
+(defparameter *compile-for-debugging* t)
 
 (defmacro defattack-method (method-name &key to-achieve
 					     (input-state `(logic-variable-maker ,(intern (string-upcase "?input-state"))))
