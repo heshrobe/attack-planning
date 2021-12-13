@@ -1,4 +1,4 @@
-;;; -*- Mode: LISP; Syntax: Joshua; Package: aplan; readtable: joshua -*- 
+;;; -*- Mode: LISP; Syntax: Joshua; Package: aplan; readtable: joshua -*-
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;
@@ -10,17 +10,17 @@
 ;;;
 ;;; Then we define particular subnets within that site
 ;;; (192.10.0.0 255.255.0.0 and 192.20.0.0 255.255)
-;;; 
+;;;
 ;;; Then we define the routers that connect the subnets (not yet updated).
-;;; 
+;;;
 ;;; For these we specify what protocols that pass and which protocols are blocked
 ;;; and from what network ranges
 ;;;
-;;; Then we define machines and state what subnets those machines are on
+;;; Then we define computers and state what subnets those computers are on
 ;;;
-;;; This information allows us to compute which machines an outside user can 
+;;; This information allows us to compute which computers an outside user can
 ;;; connect to using which protocols
-;;; 
+;;;
 ;;;
 ;;;
 ;;;  To test this in the interface, use auto-pilot, accuracy, auto-pilot-process
@@ -39,7 +39,7 @@
 ;;; how to handle the engineering network?
 ;;; also should we have a subnet, the cctv example has one but never uses it...
 
-(define-attacker attacker 
+(define-attacker attacker
     :location outside)
 
 
@@ -57,7 +57,7 @@
   :greater (communication-super-user))
 
 (defcapability communication-user-read communication-pool
-  :greater (communication-user-write)) 
+  :greater (communication-user-write))
 
 ;; Define users in communication pool
 ;; do we need to have different communication pools
@@ -83,37 +83,37 @@
   :external-networks (outside))
 
 ;; the specs don't list an ip for the furuno hub so i dont know what to put here
-(defswitch furuno-switch switch "192.10.0.2" 
-	   :authorization-pool communication-pool 
+(defswitch furuno-switch switch "192.10.0.2"
+	   :authorization-pool communication-pool
 	   :superuser switch-administrator)
 
-(defswitch voyager-switch switch "192.20.0.2" 
-	   :authorization-pool communication-pool 
+(defswitch voyager-switch switch "192.20.0.2"
+	   :authorization-pool communication-pool
 	   :superuser switch-administrator)
 
 ;; Define resources in communication pool
 (defresource router-password-file password-file
     :capability-requirements ((write communication-super-user) (read communication-user-read))
-    :machines (cradlepoint-router))
+    :computers (cradlepoint-router))
 
 (defresource router-configuration-file configuration-file
     :capability-requirements ((write communication-super-user) (read communication-user-read))
-    :machines (cradlepoint-router))
+    :computers (cradlepoint-router))
 
 (defresource switch-configuration-file configuration-file
     :capability-requirements ((write communication-super-user) (read communication-user-read))
-    :machines (furuno-switch))
+    :computers (furuno-switch))
 
 
 ;;;;;;;;;;;;;;;;;;;;;;;
 ;; "IT Network" pool
 ;; Just what they define in the specs
-;; includes email server, 
-;; 
+;; includes email server,
+;;
 ;;;;;;;;;;;;;;;;;;;;;;;
 
 
-;; Define router access policies 
+;; Define router access policies
 
 ;;; The router will reject TELNET packets from anywhere outside the 192.x.x.x range
 (defblacklist (telnet cradlepoint-router)
@@ -127,7 +127,7 @@
     )
 
 ;; first argument is allowed range, the second argument is the blacklisted range
-;; can take more arugments? 
+;; can take more arugments?
 ;;; It can take an arbitary number of blacklisted ranges
 
 (defwhitelist (ssh cradlepoint-router)
@@ -163,48 +163,49 @@
 ;;;;;;;;;;;;;;;;;;;
 ;; "IT Network" pooltell
 ;; Just what they define in the specs
-;; includes email server, 
-;; 
+;; includes email server,
+;;
 ;;;;;;;;;;;;;;;;;;;;;;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;; Server pool 
+;; Server pool
 ;;
-;; encompasses Storage Server, Display Server, 
+;; encompasses Storage Server, Display Server,
 ;; and Video Processing Server
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 (defauthorization-pool server-pool)
 
-;; Capabilities for server pool 
+;; Capabilities for server pool
 (defcapability server-super-user server-pool)
 
 (defcapability server-user-write server-pool
   :greater (server-super-user))
 
 (defcapability server-user-read server-pool
-  :greater (server-user-write)) 
+  :greater (server-user-write))
 
 ;; Define users for server pool
 (defuser server-administrator
-  :capabilities (server-super-user)
-  :authorization-pools (server-pool))
+    :has-weak-password 'yes
+    :capabilities (server-super-user)
+    :authorization-pools (server-pool))
 
 (defuser server-user
     :typical t
     :capabilities (server-user-write)
     :authorization-pools (server-pool))
 
-(defcomputer host-laptop linux-computer 
+(defcomputer host-laptop linux-computer
   :ip-address-string "192.1.1.2"
   :authorization-pool server-pool
   :superuser server-administrator)
 
-(defcomputer windows-email-vm windows-7-computer 
+(defcomputer windows-email-vm windows-7-computer
   :ip-address-string "192.10.0.3"
   :authorization-pool server-pool
   :superuser server-administrator)
 
-(defcomputer navnet windows-7-computer 
+(defcomputer navnet windows-7-computer
   :ip-address-string "192.10.0.4"
   :authorization-pool server-pool
   :superuser server-administrator
@@ -213,13 +214,13 @@
 
 (defresource typical-chart file
 	     :capability-requirements ((write server-super-user) (read server-user-read))
-	     :machines (navnet))
+	     :computers (navnet))
 
 (defresource waypoint-sequence data-resource
 	     :capability-requirements ((write server-super-user) (read server-user-read))
-	     :machines (navnet))
-  
-  
+	     :computers (navnet))
+
+
 (defwhitelist (email windows-email-vm)
     :pass everywhere)
 
@@ -230,7 +231,7 @@
 ;; Define resources in server pool
 (defresource emails file
     :capability-requirements ((write server-super-user) (read server-user-read))
-    :machines (windows-email-vm))
+    :computers (windows-email-vm))
 
 
 
@@ -240,7 +241,7 @@
 ;;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
-(defbus navigation-bus 
+(defbus navigation-bus
     :bus-type canbus
     :slots (0 1 2 3 4 5 6)
     )
@@ -253,7 +254,7 @@
 
 (defprocess auto-pilot-process
     :process-type control-system-process
-    :machine auto-pilot
+    :computer auto-pilot
     )
 
 (define-peripheral gps
@@ -264,10 +265,10 @@
 
 (defprocess gps-process
     :process-type embedded-sensor-process
-    :machine gps)
+    :computer gps)
 
 (defresource gps-position sensor-signal
-	     :machines (GPS))
+	     :computers (GPS))
 
 
 (define-connection auto-pilot serial navigation-bus 3)
@@ -290,11 +291,11 @@
     )
 
 
-;; TODO: need to define new data types for a VM (since we 
-;; running a windows VM on the linux machine)
+;; TODO: need to define new data types for a VM (since we
+;; running a windows VM on the linux computer)
 
 ;; TODO: we need to find a way to describe the cell tower connection
-;; in our system model 
+;; in our system model
 
 ;; Question: is there just one user w/ superuser privilege in both
 ;; the engineering and other (forget the name) networks
@@ -315,17 +316,17 @@
 
 (defprocess email-server
     :process-type email-server-process
-    :machine windows-email-vm
+    :computer windows-email-vm
     )
 
 (defprocess navigation-process
     :process-type control-system-process
-    :machine navnet
+    :computer navnet
     )
 
 (defprocess web-server-process
     :Process-type apache-web-server-process
-    :machine navnet
+    :computer navnet
     )
 
 (define-input navigation-process typical-chart)
@@ -346,7 +347,7 @@
 (defun test-trudy ()
   (do-it :attacker (follow-path '(attacker))
 	 :property 'accuracy
-	 :machine (follow-path '(auto-pilot))
+	 :computer (follow-path '(auto-pilot))
 	 :resource (follow-path '(auto-pilot-process))))
 
 

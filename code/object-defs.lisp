@@ -26,7 +26,10 @@
 
 (define-object-type aplan-object
     :slots ()
-  )
+    )
+
+(eval-when (:compile-toplevel :load-toplevel :execute)
+  (defparameter *all-object-types* nil))
 
 (eval-when (:compile-toplevel :load-toplevel :execute)
   (defmacro define-aplan-object (name &rest plist)
@@ -39,7 +42,9 @@
 	    (getf plist :tms) t)
       (remf plist :super-types)
       )
-    `(define-object-type ,name ,@plist)))
+    `(eval-when (:compile-toplevel :load-toplevel :execute)
+       (push ',name *all-object-types*)
+       (define-object-type ,name ,@plist))))
 
 (defmethod ji::part-of-predicate-for-object-type ((thing aplan-object)) 'named-component)
 (defmethod ji::type-of-predicate-for-object-type ((thing aplan-object)) 'object-type-of)
@@ -71,7 +76,23 @@
 
 (define-aplan-object data-resource
     :super-types (computer-resource)
+    :slots ((host-os))
     )
+
+(define-aplan-object collection
+    :super-types (print-nicely-mixin)
+    :slots ((member-type :initarg :member-type)
+            (members :initarg :member :set-valued t))
+    )
+
+(define-aplan-object key-value-pair
+    :super-types (data-resource)
+    :slots ((key)
+            (value)))
+
+(define-aplan-object key-value-store
+    :super-types (collection data-resource)
+    :slots ((entries :set-valued t)))
 
 (define-aplan-object data-set
     :super-types (data-resource)
@@ -86,12 +107,6 @@
     :slots ((files :set-valued t ))
     )
 
-(define-aplan-object collection
-    :super-types (print-nicely-mixin)
-    :slots ((member-type :initarg :member-type)
-            (members :initarg :member :set-valued t))
-    )
-
 (define-aplan-object file-collection
     :super-types (data-resource collection)
     :slots ((member-type :initform 'file))
@@ -99,27 +114,36 @@
 
 (define-aplan-object path-mixin
   :super-types (data-resource)
-  :slots ((name :initarg :name))
+  :slots ()
   )
+
 
 (define-aplan-object search-path
     :super-types (path-mixin))
 
 (defmethod print-object ((thing path-mixin) stream)
-  (format stream "#<~a>" (name thing)))
+  (format stream "#<~a ~a>" (type-of thing) (role-name thing)))
 
 (define-aplan-object has-directory-mixin
     :slots ((directory :initarg :directory :initform nil)))
 
+(defmethod file-path-string ((thing has-directory-mixin) &optional (delimiter "/"))
+  (labels ((do-one-more (this-guy path-so-far)
+             (let ((next-string (concatenate 'string  (string (role-name this-guy)) delimiter path-so-far)))
+               (if (null (directory this-guy))
+                  (concatenate 'string delimiter next-string)
+                 (do-one-more (directory this-guy) next-string)))))
+    (do-one-more thing "")))
+
+
 (define-aplan-object directory
-    :super-types (file-collection)
+    :super-types (path-mixin has-directory-mixin file-collection)
     :slots ((files :set-valued t ))
     )
 
 (define-aplan-object file
   :super-types (has-directory-mixin path-mixin data-resource)
-  :slots ((directory :set-valued t )
-          (filename :initarg :filename :initform nil)))
+  :slots ((filename :initarg :filename :initform nil)))
 
 (define-aplan-object dynamically-loadable-code-file
     :super-types (file))
@@ -673,8 +697,16 @@
 (define-aplan-object hp-ux
   :super-types (unix))
 
+;;; The registry in windows is a key-value store
+;;; used by the OS for all kinds of stuff.
+
+(define-aplan-object registry
+    :super-types (key-value-store)
+    )
+
 (define-aplan-object windows
-  :super-types (operating-system))
+    :super-types (operating-system)
+    :parts ((registry key-value-store)))
 
 (define-aplan-object windows-95
   :super-types (windows))
@@ -788,6 +820,9 @@
 
 (define-aplan-object windows-95-computer
   :super-types (windows-computer))
+
+;;; Generic windows
+(defmethod operating-system-for-computer ((self windows-computer)) 'windows)
 
 (defmethod operating-system-for-computer ((self windows-95-computer)) 'windows-95)
 

@@ -33,32 +33,40 @@
 ;;; and use that to violate data-privacy.
 
 (defattack-method affect-property-by-controlling-impacting-component
-    :to-achieve [affect ?desirable-property ?victim]
-    ;; find some component of the OS of a computer that the victim runs on
-    :bindings ([component ?victim.computers.os ?component]
-	       ;; [current-foothold ?foothold-computer ?foothold-role]
-	       [attacker-and-computer ?attacker ?])
-    :typing ((?victim computer-resource)
-	     (?component process))
-    :prerequisites ([impacts ?component-property ?component ?desirable-property ?victim])
-    :plan (:sequential
+  :to-achieve [affect ?desirable-property ?victim]
+  ;; find some component of the OS of a computer that the victim runs on
+  :bindings (;; (prog1 t (Format t "~%Entering Rule 1 ~a ~a" ?desirable-property ?victim))
+             [component ?victim.computers.os ?component]
+             [impacts ?component-property ?component ?desirable-property ?victim]
+	     ;; [current-foothold ?foothold-computer ?foothold-role]
+	     [attacker-and-computer ?attacker ?])
+  :typing ((?victim computer-resource)
+	   (?component process))
+  :prerequisites ()
+  :plan (:sequential
            ;; this breaks down into two steps:
            ;; 1) Get control of some component of the victim
            ;; 2) Use that control to affect the property of the victim
            ;; Notice that the first step is oblivous to its purpose
            ;; This certainly makes things simpler but might lead to getting control in a way
-           ;; that doesn't actually work
-           (:goal [take-control-of ?attacker ?component-property ?component])
-           (:goal [use-control-of-to-affect-resource ?attacker ?component ?desirable-property ?victim]))
-    )
+         ;; that doesn't actually work
+         (:trace "Rule 1 Trying to take control of ~a ~a" ?component-property ?component)
+         (:goal [take-control-of ?attacker ?component-property ?component])
+         (:goal [use-control-of-to-affect-resource ?attacker ?component ?desirable-property ?victim]))
+  )
 
 (defattack-method affect-property-by-affecting-input
-    :to-achieve [affect ?desirable-property ?victim]
-    :prerequisites ([impacts ?resource-property ?resource ?desirable-property ?victim])
-    ;; :bindings ([attacker-and-computer ?attacker ?attacker-computer])
-    :typing ((?resource computer-resource))
-    :plan (:goal [affect ?resource-property ?resource])
-    )
+  :to-achieve [affect ?desirable-property ?victim]
+  :bindings (;; (prog1 t (format t "~%Entering affect property ~a by affecting input ~a" ?desirable-property ?victim))
+             [impacts ?resource-property ?resource ?desirable-property ?victim])
+  ;; :bindings ([attacker-and-computer ?attacker ?attacker-computer])
+  :typing ((?resource computer-resource))
+  :plan (:sequential
+         (:trace "Trying to affect ~a of ~a" ?resource-property ?resource)
+         (:goal [affect ?resource-property ?resource])
+         (:trace "Affected ~a of ~a" ?resource-property ?resource)
+         )
+  )
 
 
 
@@ -165,7 +173,9 @@
 (defattack-method write-file-property-directly
     :to-achieve [affect data-integrity ?file]
     :typing ((?file file))
-    :bindings ((?victim-computer ?file.computers)
+    :bindings (;;(prog1 t "Entering Write-file-property-directly ~a" ?file)
+               (?victim-computer ?file.computers)
+               ;; (prog1 t "Write-file-property-directly computer ~a" ?victim-computer)
                ;; [has-permission ?privileged-user write ?file]
                )
     :prerequisites ([desirable-property-of ?file data-integrity])
@@ -176,7 +186,8 @@
            ;; care what the 2nd argument is
            (:goal [modify data-integrity ?file])
            (:trace "Modified data integrity of ~a" ?file)
-           ))
+           )
+  )
 
 
 ;;; To affect the data-integrity of some data-set
@@ -184,7 +195,7 @@
 (defattack-method mung-process-output
     :to-achieve [affect data-integrity ?data-set]
     :bindings ([output-of ?process ?data-set]
-	       [attacker-and-computer ?attacker ])
+	       [attacker-and-computer ?attacker ?])
     :typing ((?process process))
     :plan (:sequential
            (:goal [take-control-of ?attacker data-integrity ?process])
@@ -308,20 +319,20 @@
 ;;; then you do nothing.  Otherwise you go through achieve-access-right
 ;;; Partially fixed
 (defattack-method modify-through-access-rights
-    :to-achieve [modify ? ?object]
-    :bindings ([attacker-and-computer ?attacker ?]
-	       [current-foothold ?current-foothold-computer ?])
-    :typing ((?object.computers computer)
-             (?object database))
-    ;; Use this only if you don't already have the required capability
-    ;; (what if more than one capability implies the right?  Shouldn't
-    ;; we check that he doesn't have any of them).
-    :plan (:sequential
-           (:goal [achieve-access-right write ?object ?other-role])
-	   (:goal [make-connection ?object.computers database-protocol])
-	   (:action [use-access-right-to-modify ?attacker write ?other-role ?current-foothold-computer ?object ?object.computers])
-           )
-    )
+  :to-achieve [modify ? ?object]
+  :bindings ([attacker-and-computer ?attacker ?]
+	     [current-foothold ?current-foothold-computer ?])
+  :typing ((?object.computers computer)
+           (?object database))
+  ;; Use this only if you don't already have the required capability
+  ;; (what if more than one capability implies the right?  Shouldn't
+  ;; we check that he doesn't have any of them).
+  :plan (:sequential
+         (:goal [achieve-access-right write ?object ?other-role])
+	 (:goal [make-connection ?object.computers database-protocol])
+	 (:action [use-access-right-to-modify ?attacker write ?other-role ?current-foothold-computer ?object ?object.computers])
+         )
+  )
 
 ;;; This assumes that you've already gotten remote exection as somebody
 ;;; on the victim computer so that you can use some hack to get the
@@ -399,13 +410,18 @@
     :to-achieve [achieve-remote-execution ?victim-computer ?victim-user]
     :output-variables (?victim-user)
     :guards ([not [place-already-visited? ?victim-computer remote-execution ?victim-user]])
-    :bindings ((?victim-user ?victim-computer.os.users))
+    :bindings (;; (prog1 t (format t "~%Entering remote-e-to-remote-s ~a ~a" ?victim-computer ?victim-user))
+               (?victim-user ?victim-computer.os.users))
     :typing ((?victim-computer.os operating-system)
              (?victim-user user)
 	     (?victim-computer computer))
-    :plan (:sequential
+  :plan (:sequential
+           (:trace "Starting subgoals of remote-e-to-remote-s ~a" ?victim-user)
 	   (:note [place-visited ?victim-computer remote-execution ?victim-user])
-	   (:goal [achieve-remote-shell ?victim-computer.os ?victim-user])))
+	   (:goal [achieve-remote-shell ?victim-computer.os ?victim-user])
+           (:trace "Got remote shell on ~a as ~a" ?victim-computer.os ?victim-user)
+           )
+  )
 
 ;;; Note: This is odd if the way you get knowledge of the password
 ;;; is by phishing or something else that takes time
@@ -422,38 +438,32 @@
 ;;; Note: If victim-computer isn't bound in a value-of, the compiler
 ;;; screws up, see *cl-temp* buffer
 (defattack-method how-to-logon
-    :to-achieve [achieve-remote-shell ?victim-os-instance ?victim-user]
-    :output-variables ()
-    :bindings (;; I think this isn't right.  We're posting a get-foothold goal
-	       ;; below, which means that the foothold from which the login
-	       ;; will happen is that foothold not the current one (they might be
-	       ;; the same in some cases);
-               ;; [current-foothold ?current-foothold-computer ?current-foothold-role]
-               (?victim-computer ?victim-os-instance.computer)
-	       [attacker-and-computer ?attacker ?]
-	       [protocol-for remote-execution remote-shell ?protocol])
-    :typing ((?victim-os-instance operating-system)
-	     (?victim-computer computer)
-	     (?victim-user user))
-    :plan (:sequential
-	   (:goal [get-foothold ?victim-computer ?protocol])
-           (:bind [current-foothold ?current-foothold-computer ?current-foothold-role])
-           (:trace "Got foothold to ~a for ~a on ~a as ~a" ?victim-computer ?victim-user ?current-foothold-computer ?current-foothold-role)
-	   (:goal [achieve-knowledge-of-password ?attacker ?victim-user ?victim-computer])
-           (:action [login ?attacker ?victim-user ?victim-os-instance ?current-foothold-computer ?current-foothold-role]))
-    :post-conditions ([has-remote-execution ?attacker ?victim-computer ?victim-user])
-    )
-
-;;; If he already knows the password, don't work on it anymore
-(defattack-method trivial-password-retrieval
-    :to-achieve [achieve-knowledge-of-password ?attacker ?victim-user ?computer]
-    :prerequisites ([knows-password ?attacker ?victim-user])
-    :plan (:sequential
-           (:action [goal-already-satisfied [achieve-knowledge-of-password ?attacker ?victim-user ?computer]]))
-    ;; for debugging purposes
-    ;; :attack-idenifier "trivial-password-retrieval"
-    )
-
+  :to-achieve [achieve-remote-shell ?victim-os-instance ?victim-user]
+  :output-variables ()
+  :bindings (;; I think this isn't right.  We're posting a get-foothold goal
+	     ;; below, which means that the foothold from which the login
+	     ;; will happen is that foothold not the current one (they might be
+	     ;; the same in some cases);
+             ;; [current-foothold ?current-foothold-computer ?current-foothold-role]
+             ;; (prog1 t (format t "~%Entering how to login ~a ~a" ?victim-os-instance ?victim-user))
+             (?victim-computer ?victim-os-instance.computer)
+	     [attacker-and-computer ?attacker ?]
+	     [protocol-for remote-execution remote-shell ?protocol])
+  :typing ((?victim-os-instance operating-system)
+	   (?victim-computer computer)
+	   (?victim-user user))
+  :plan (:sequential
+         (:trace "Trying to log into ~a over protocol ~a" ?victim-os-instance ?protocol)
+	 (:goal [get-foothold ?victim-computer ?protocol])
+         (:bind [current-foothold ?current-foothold-computer ?current-foothold-role])
+         (:trace "Got foothold to ~a for ~a on ~a as ~a" ?victim-computer ?victim-user ?current-foothold-computer ?current-foothold-role)
+         (:trace "Trying to get password of ~a on ~a" ?victim-user ?victim-computer)
+	 (:goal [achieve-knowledge-of-password ?attacker ?victim-user ?victim-computer])
+         (:trace "Got knowledge of password ~a ~a ~a" ?attacker ?victim-user ?victim-computer)
+         (:action [login ?attacker ?victim-user ?victim-os-instance ?current-foothold-computer ?current-foothold-role])
+         (:trace "Logged into ~a over ~a" ?victim-os-instance ?protocol))
+  :post-conditions ([has-remote-execution ?attacker ?victim-computer ?victim-user])
+  )
 
 ;;; The stuff with noting place visited is there to prevet goal reduction loops
 ;;; We note that we've already tried to achieve execution on this computer and this
@@ -461,30 +471,35 @@
 
 ;;; Note that ?victim-process is an output and isn't bound at this point!
 (defattack-method remote-execution-to-code-injection
-    :to-achieve [achieve-remote-execution ?victim-computer ?victim-process]
-    :guards ([not [place-already-visited? ?victim-computer remote-execution ?victim-process]])
-    :bindings ((?victim-process ?victim-computer.os.processes))
-    :typing ((?victim-computer.os operating-system)
-             (?victim-computer computer)
-	     (?victim-computer.os.processes process))
-    :prerequisites ()
-    :plan (:sequential
-	   (:note [place-visited ?victim-computer remote-execution ?victim-process])
-	   (:goal [achieve-code-injection ?victim-process ?victim-computer.os])))
+  :to-achieve [achieve-remote-execution ?victim-computer ?victim-process]
+  :bindings ((?victim-process ?victim-computer.os.processes))
+  :output-variables (?victim-process)
+  :guards ([not [place-already-visited? ?victim-computer remote-execution ?victim-process]])
+  :typing ((?victim-computer.os operating-system)
+           (?victim-computer computer)
+	   (?victim-process process))
+  :prerequisites ()
+  :plan (:sequential
+	 (:note [place-visited ?victim-computer remote-execution ?victim-process])
+         (:trace "Remote-e-t-code-injection going against ~a on ~a" ?victim-process ?victim-computer.os)
+	 (:goal [achieve-code-injection ?victim-process ?victim-computer.os])
+         (:trace "remote-e-to-code-injection succeded ~a ~a" ?victim-process ?victim-computer.os)))
 
 ;;; Note that ?process is bound by the method above and is an input.
 (defattack-method code-injection-against-process
-    :to-achieve [achieve-code-injection ?process ?os-instance]
-    :bindings ([attacker-and-computer ?attacker ?])
-    :typing ((?process web-server-process))
-    :prerequisites ([bind ?process.host-os ?os-instance]
-                    [is-vulnerable-to ?process buffer-overflow-attack ?protocol])
-    :plan (:sequential
-	   (:goal [get-foothold ?process.computers ?protocol])
-           (:bind [current-foothold ?foothold-computer ?foothold-role])
-	   (:action [launch-code-injection-attack ?attacker ?process ?protocol ?foothold-computer ?foothold-role]))
-    :post-conditions ([has-remote-execution ?attacker ?process.computers ?process])
-    )
+  :to-achieve [achieve-code-injection ?process ?os-instance]
+  :bindings ([attacker-and-computer ?attacker ?])
+  :typing ((?process web-server-process))
+  :prerequisites ([bind ?process.host-os ?os-instance]
+                  [is-vulnerable-to ?process buffer-overflow-attack ?protocol])
+  :plan (:sequential
+         (:trace "Trying to get code injection into ~a on ~a" ?process ?os-instance)
+	 (:goal [get-foothold ?process.computers ?protocol])
+         (:bind [current-foothold ?foothold-computer ?foothold-role])
+	 (:action [launch-code-injection-attack ?attacker ?process ?protocol ?foothold-computer ?foothold-role])
+         (:trace "Code injection against ~a suceeded over protocol ~a" ?process ?protocol))
+  :post-conditions ([has-remote-execution ?attacker ?process.computers ?process])
+  )
 
 ;;; Note that ?victim-process is an output and isn't bound at this point!
 (defattack-method remote-execution-to-code-reuse
@@ -497,7 +512,9 @@
 	     (?victim-process process))
     :plan (:sequential
 	   (:note [place-visited ?victim-computer remote-execution ?victim-process])
-	   (:goal [achieve-code-reuse ?victim-process ?victim-computer.os])))
+	   (:goal [achieve-code-reuse ?victim-process ?victim-computer.os])
+           (:trace "Remote execution to code reuse succeeded against ~a on ~a" ?victim-process ?victim-computer.os)
+           ))
 
 ;;; Note that ?process is an input and is bound at this point
 (defattack-method code-reuse-against-web-server
@@ -511,7 +528,9 @@
     :plan (:sequential
 	   (:goal [get-foothold ?victim-computer ?protocol])
            (:bind [current-foothold ?foothold-computer ?foothold-role])
-	   (:action [launch-code-reuse-attack ?attacker ?process  ?protocol ?foothold-computer ?foothold-role])))
+	   (:action [launch-code-reuse-attack ?attacker ?process  ?protocol ?foothold-computer ?foothold-role])
+           (:trace "Code reuse against web server ~a succeeded over protocol ~a" ?process ?protocol)
+           ))
 
 ;;; Note that ?victim-user is an output and isn't bound on entry
 (defattack-method remote-execution-to-corrupt-attachment
@@ -629,50 +648,53 @@
 ;;; If your foothold role already has the access rights
 ;;; do nothing
 (defattack-method achieve-a-right-you-already-have
-    :to-achieve [achieve-access-right ?right ?object ?foothold-role]
-    :bindings ([current-foothold ? ?foothold-role])
-    :guards ([has-permission ?foothold-role ?right ?object])
-    :plan (:sequential
-           (:action [goal-already-satisfied [achieve-access-right ?right ?object ?foothold-role]]))
-    ;; for debugging purposes
-    ;;:attack-identifier "achieve-a-right-you-already-have"
-    )
+  :to-achieve [achieve-access-right ?right ?object ?foothold-role]
+  :bindings ([current-foothold ? ?foothold-role])
+  :guards ([has-permission ?foothold-role ?right ?object])
+  :plan (:sequential
+         (:action [goal-already-satisfied [achieve-access-right ?right ?object ?foothold-role]]))
+  ;; for debugging purposes
+  )
 
 ;;; Original version.
-;;; You're on the foothold machine and the role you have there
+;;; You're on the foothold machine which is the same as the machine that holds
+;;; the object you're trying to get access to.
+;;; The role you have on that machine
 ;;; doesn't give you access.  But there is someone who does have
 ;;; access.  So get that user's credentials.
 (defattack-method achieve-a-right-you-dont-have
-    :to-achieve [achieve-access-right ?right ?object ?other-user]
-    :output-variables (?other-user)
-    :bindings ([current-foothold ?foothold-computer ?foothold-role]
-	       [attacker-and-computer ?attacker ?]
-	       [has-permission ?other-user ?right ?object])
-    :guards ([not [has-permission ?foothold-role ?right ?object]])
-    :plan (:sequential
-           (:goal [achieve-knowledge-of-password ?attacker ?other-user ?foothold-computer]))
-    ;; for debugging purposes
-    ;; :attack-identifier "achieve-a-right-you-dont-have"
-    )
+  :to-achieve [achieve-access-right ?right ?object ?other-user]
+  :output-variables (?other-user)
+  :bindings ([current-foothold ?foothold-computer ?foothold-role]
+             (?victim-computer ?object.computers)
+	     [attacker-and-computer ?attacker ?]
+	     [has-permission ?other-user ?right ?object])
+  :guards ([not [has-permission ?foothold-role ?right ?object]]
+           [unifiable ?foothold-computer ?victim-computer]
+           )
+  :plan (:sequential
+         (:goal [achieve-knowledge-of-password ?attacker ?other-user ?foothold-computer]))
+  ;; for debugging purposes
+  )
 
 ;;; version that makes caldrea example happy.
 ;;; You're on the foothold machine in a role that doesn't have permission to the sensitive file
 ;;; Bur some other user does.
 ;;; The object is on some other machine.
-;;; So try to get the credentials of the user who doesn on that other machine.
+;;; So try to get the credentials of the user who doesnt on that other machine.
 (defattack-method achieve-a-right-you-dont-have-remote
-    :to-achieve [achieve-access-right ?right ?object ?other-user]
-    :output-variables (?other-user)
-    :bindings ([current-foothold ? ?foothold-role]
-               (?victim-computer ?object.computers)
-	       [attacker-and-computer ?attacker ?]
-	       [has-permission ?other-user ?right ?object])
-    :guards ([not [has-permission ?foothold-role ?right ?object]])
-    :plan (:sequential
-           (:goal [achieve-knowledge-of-password ?attacker ?other-user ?victim-computer]))
-    ;; for debugging purposes
-    ;; :attack-identifier "achieve-a-right-you-dont-have-remote"
-    )
+  :to-achieve [achieve-access-right ?right ?object ?other-user]
+  :output-variables (?other-user)
+  :bindings ([current-foothold ?foothold-computer ?foothold-role]
+             (?victim-computer ?object.computers)
+	     [attacker-and-computer ?attacker ?]
+	     [has-permission ?other-user ?right ?object])
+  :guards ([not [has-permission ?foothold-role ?right ?object]]
+           [not [unifiable ?foothold-computer ?victim-computer]])
+  :plan (:sequential
+         (:goal [achieve-knowledge-of-password ?attacker ?other-user ?victim-computer]))
+  ;; for debugging purposes
+  )
 
 ;;; This works when you're already logged in as some other user
 ;;; on the machine that has the file.  The user you're logged in as
@@ -689,7 +711,6 @@
     :plan (:sequential
            (:goal [achieve-knowledge-of-password ?attacker ?privileged-user ?victim-computer]))
     ;; for debugging purposes
-    ;; :attack-identifier "achieve-a-right-you-dont-have-when-logged-in"
     )
 
 ;;; A bit of a mess?
@@ -717,7 +738,6 @@
            (:action [decrypt ?attacker ?password ?key ?])
            (:action [launch-process ?attacker ?victim-computer ?victim-os shell ?domain-administrator ?victim-role]))
     ;; for debugging purposes
-    ;; :attack-identifier "achieve-domain-admin-rights"
     )
 
 ;;; The ?user part of this is actually to feed back to the higher
@@ -756,7 +776,6 @@
     :plan (:sequential
 	   (:goal [takes-direct-control-of ?attacker execution ?the-process]))
     ;; for debugging purposes
-    ;; :attack-identifier "achieve-domain-admin-rights"
     )
 
 (defattack-method achieve-access-right-by-server-process-subversion
@@ -764,7 +783,9 @@
     :output-variables (?user)
     ;; all this is asking is there a process in the workload
     ;; and if so with which user's permissions is it running
-    :bindings ((?the-process ?object.computers.os.workload.server-workload.processes)
+    :bindings ((?victim-computer ?object.computers)
+               (?victim-os ?victim-computer.os)
+               (?the-process ?victim-os.workload.server-workload.processes)
                [runs-with-permissions-of ?the-process ?user]
 	       [attacker-and-computer ?attacker ?]
                )
@@ -776,7 +797,6 @@
     :plan (:sequential
 	   (:goal [takes-direct-control-of ?attacker execution ?the-process]))
     ;; for debugging purposes
-    ;; :attack-identifier "achieve-access-right-by-server-process-subversion"
     )
 
 ;;; similar comment to above about foothold etc
@@ -801,7 +821,7 @@
     :plan (:sequential
            (:Goal [achieve-remote-shell ?foothold-os ?other-user]))
     ;; for debugging purposes
-    ;; attack-identifier "how-to-achieve-access-right-by-remote-shell-on-target"
+    ;attack-identifier "how-to-achieve-access-right-by-remote-shell-on-target"
     )
 
 
@@ -828,51 +848,92 @@
 ;;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
+
+;;; If he already knows the password, don't work on it anymore
+(defattack-method trivial-password-retrieval
+    :to-achieve [achieve-knowledge-of-password ?attacker ?victim-user ?computer]
+    :prerequisites ([knows-password ?attacker ?victim-user])
+    :plan (:sequential
+           (:action [goal-already-satisfied [achieve-knowledge-of-password ?attacker ?victim-user ?computer]]))
+    ;; for debugging purposes
+    )
+
 (defattack-method user-knows-own-password
     :to-achieve [achieve-knowledge-of-password ?attacker ?user ?victim-computer]
     :guards ([unifiable ?attacker ?user])
     :plan (:action [use-own-password ?user ?victim-computer])
     )
 
+;;; This one is used to guess the password of a typical user
+;;; of the ensemble
 (defattack-method how-to-get-password-by-guessing
-    :to-achieve [achieve-knowledge-of-password ?attacker ?user ?victim-computer]
-    :guards ((user-ensemble-has-typical-user ?user)
-             [is-typical-user ?user]
-	     [not [unifiable ?attacker ?user]]
-             [unknown [knows-password ?attacker ?user]]
-             )
-    :prerequisites ([value-of (?user has-weak-password) yes])
-    :plan (:action [guess-password ?attacker ?user ?victim-computer])
-    )
+  :to-achieve [achieve-knowledge-of-password ?attacker ?user ?victim-computer]
+  :typing ((?user user)
+           (?victim-computer computer))
+  :guards ((user-ensemble-has-typical-user ?user)
+           [is-typical-user ?user]
+	   [not [unifiable ?attacker ?user]]
+           [unknown [knows-password ?attacker ?user]]
+           )
+  :prerequisites ([value-of (?user has-weak-password) yes])
+  :plan (:action [guess-password ?attacker ?user ?victim-computer])
+  )
+
+;;; The two next methods are essentially the same
+;;; except that the second one is reserved for the superuser
+;;; and the first is used for non superusers when there isn't
+;;; a typical user.
+
+;;; The problem here is that we might not know the super-user
+(eval-when (:compile-toplevel :load-toplevel :execute)
+  (define-aplan-predicate super-user-or-nil (os superuser) ()))
+
+(defrule super-user-or-nil (:backward)
+  :then [in-state [super-user-or-nil ?os ?superuser] ?state]
+  :if [or [in-state [value-of (?os superuser) ?superuser] ?state]
+          [bind ?superuser nil]]
+  )
 
 (defattack-method how-to-get-password-by-guessing-of-not-typical-user
-    :to-achieve [achieve-knowledge-of-password ?attacker ?user ?victim-computer]
-    :guards ((not (user-ensemble-has-typical-user ?user))
-	     [not [unifiable ?attacker ?user]]
-             [unknown [knows-password ?attacker ?user]]
+  :to-achieve [achieve-knowledge-of-password ?attacker ?user ?victim-computer]
+  :typing ((?user user)
+           (?victim-computer computer))
+  :bindings ((?victim-os ?victim-computer.os)
+             ;; (prog1 t (format t "~%Bindings in how-to-get-pword ~a ~a ~a" ?user ?victim-computer ?victim-os))
+             [super-user-or-nil ?victim-os ?victim-superuser]
+             ;;(prog1 t (format t "~%Bindings in how-to-get-pword superuser ~a" ?victim-superuser))
              )
-    :prerequisites ([value-of (?user has-weak-password) yes])
-    :plan (:action [guess-password ?attacker ?user ?victim-computer])
-    )
-
-#|
-(defattack-method how-to-get-password-by-guessing
-    :to-achieve [achieve-knowledge-of-password ?attacker ?user ?victim-computer]
-    :guards ([is-typical-user ?user]
-	     [not [unifiable ?attacker ?user]])
-    :plan (:action [guess-password ?attacker ?user ?victim-computer])
-    )
-|#
+  :guards (;;(prog1 t (format t  "~%passed guards on password guessing ~a" ?user))
+           (not (user-ensemble-has-typical-user ?user))
+           [not [unifiable ?attacker ?user]]
+             ;; This is only for a normal user
+             ;; The method below is for the superuser
+	   [not [unifiable ?victim-superuser ?user]]
+           [unknown [knows-password ?attacker ?user]]
+           )
+  :prerequisites ([value-of (?user has-weak-password) yes])
+  :plan (:action [guess-password ?attacker ?user ?victim-computer])
+  )
 
 (defattack-method guess-superuser-passwords
-    :to-achieve [achieve-knowledge-of-password ?attacker ?user ?victim-computer]
-    :bindings ([value-of ?user.computers ?computer]
-	       [value-of ?computer.os.superuser  ?user])
-    :guards ([not [unifiable ?attacker ?user]])
-    :typing ((?user user)
-	     (?computer computer))
-    :plan (:action [guess-password ?attacker ?user ?victim-computer])
-    )
+  :to-achieve [achieve-knowledge-of-password ?attacker ?user ?victim-computer]
+  :bindings ((?victim-os ?victim-computer.os)
+             (?victim-superuser ?victim-os.superuser))
+  :guards ([not [unifiable ?attacker ?user]]
+           ;; This is only for a superuser
+           ;; the method above is for a normal user
+           ;; (prog1 t (format t "~%Testing if super user ~a is the same as ~a" ?victim-superuser ?user))
+           [unifiable ?victim-superuser ?user]
+           ;; (Prog1 t (format t "~%Superuser ~a User ~a" ?victim-superuser ?user))
+           [unknown [knows-password ?attacker ?user]]
+           )
+  :typing ((?user user)
+           (?victim-superuser user)
+	   (?victim-computer computer))
+  :plan (:sequential
+         (:trace "Guessing superuser password of ~a on ~a" ?user ?victim-computer)
+         (:action [guess-password ?attacker ?user ?victim-computer]))
+  )
 
  (defattack-method get-sysadmin-password-by-bricking
     :to-achieve [achieve-knowledge-of-password ?attacker ?victim-user ?victim-computer]
@@ -1002,56 +1063,57 @@
 ;;; Direct Method, applicable when you can get from your current foothold to the target-computer
 ;;; so the foothold is where this step is taking place from and the role is the attacker
 (defattack-method direct-foothold
-    :to-achieve [get-foothold ?victim-computer ?protocol-name]
-    :guards (;; [not [place-already-visited? ?victim-computer foothold nil]]
-             ;; Don't use one of the attacker's other computers
-             ;; I don't think that one of them would ever be a foothold because
-             ;; of the guard in lateral motion, but to be sure do it here too.
-             (not (member ?current-foothold-computer (owned-computers ?attacker)))
+  :to-achieve [get-foothold ?victim-computer ?protocol-name]
+  :guards (;; [not [place-already-visited? ?victim-computer foothold nil]]
+           ;; Don't use one of the attacker's other computers
+           ;; I don't think that one of them would ever be a foothold because
+           ;; of the guard in lateral motion, but to be sure do it here too.
+           (not (member ?current-foothold-computer (owned-computers ?attacker)))
+           )
+  :bindings ([current-foothold ?current-foothold-computer ?current-foothold-role]
+             [attacker-and-computer ?attacker ?]
              )
-    :bindings ([current-foothold ?current-foothold-computer ?current-foothold-role]
-               [attacker-and-computer ?attacker ?]
-               )
-    :typing ((?victim-computer computer)
-	     (?current-foothold-computer computer))
-    :prerequisites ([accepts-connection ?victim-computer ?protocol-name ?current-foothold-computer])
-    :plan (:action [connect-via ?current-foothold-computer ?current-foothold-role ?victim-computer ?protocol-name])
-    :post-conditions ([has-foothold ?victim-computer ?current-foothold-computer ?current-foothold-role ?protocol-name])
-    )
+  :typing ((?victim-computer computer)
+	   (?current-foothold-computer computer))
+  :prerequisites ([accepts-connection ?victim-computer ?protocol-name ?current-foothold-computer])
+  :plan (:action [connect-via ?current-foothold-computer ?current-foothold-role ?victim-computer ?protocol-name])
+  :post-conditions ([has-foothold ?victim-computer ?current-foothold-computer ?current-foothold-role ?protocol-name])
+  )
 
 (defattack-method lateral-motion
-    :to-achieve [get-foothold ?victim-computer ?protocol-name]
-    :bindings (;; (?victim-os ?victim-computer.os)
-	       ;; Now find somebody that can make the connection, accepts connection will find one if there is one
-	       [accepts-connection ?victim-computer ?protocol-name ?new-foothold-computer]
-               [current-foothold ?current-foothold-computer ?]
-               [attacker-and-computer ?attacker ?])
-    :guards ([not [place-already-visited? ?victim-computer foothold nil]]
-	     [foothold-doesnt-exist ?victim-computer]
-	     ;; Use this method only if you can't get a connection to the victim from where you are
-             [not [accepts-connection ?victim-computer ?protocol-name ?current-foothold-computer]]
-             ;; Owned computers are computers that the attacker controls other than
-             ;; his primary machine.  No point in trying to move to them since
-             ;; they have no more ability to get to the victim than the attacker's
-             ;; primary machine
-             (not (member ?new-foothold-computer (owned-computers ?attacker)))
-             )
-    :typing (;; (?victim-os operating-system)
-	     (?victim-computer computer)
-	     (?current-foothold-computer computer))
-    :plan (:sequential
+  :to-achieve [get-foothold ?victim-computer ?protocol-name]
+  :bindings (;; (?victim-os ?victim-computer.os)
+	     ;; Now find somebody that can make the connection, accepts connection will find one if there is one
+	     [accepts-connection ?victim-computer ?protocol-name ?new-foothold-computer]
+             [current-foothold ?current-foothold-computer ?]
+             [attacker-and-computer ?attacker ?])
+  :guards ([not [place-already-visited? ?victim-computer foothold nil]]
+	   [foothold-doesnt-exist ?victim-computer]
+	   ;; Use this method only if you can't get a connection to the victim from where you are
+           [not [accepts-connection ?victim-computer ?protocol-name ?current-foothold-computer]]
+           ;; Owned computers are computers that the attacker controls other than
+           ;; his primary machine.  No point in trying to move to them since
+           ;; they have no more ability to get to the victim than the attacker's
+           ;; primary machine
+           (not (member ?new-foothold-computer (owned-computers ?attacker)))
+           )
+  :typing (;; (?victim-os operating-system)
+	   (?victim-computer computer)
+	   (?current-foothold-computer computer))
+  :plan (:sequential
 	   ;; Make a note that we've already considered this place as a foothold to
            ;; prevent looping back to here while trying to achieve remote execution
-	   (:note [place-visited ?victim-computer foothold nil])
-	   ;; Now see if the attacker can gain remote execution on the new-foothold-computer and in what role
-           ;; (?new-foothold-role is a return value)
-           ;; (:break "~a ~a" ?new-foothold-computer ?current-foothold-computer)
-	   (:goal [achieve-remote-execution ?new-foothold-computer ?new-foothold-role])
-	   ;;If so then actually make the connection to the victim from the new foothold
-           ;; (:goal [make-connection ?victim-os-instance ?protocol-name ?remote-execution-state ?output-contet])
-           (:action [connect-via ?new-foothold-computer ?new-foothold-role ?victim-computer ?protocol-name])
-	   )
-    :post-conditions ([has-foothold ?victim-computer ?new-foothold-computer ?new-foothold-role ?protocol-name]))
+	 (:note [place-visited ?victim-computer foothold nil])
+	 ;; Now see if the attacker can gain remote execution on the new-foothold-computer and in what role
+         ;; (?new-foothold-role is a return value)
+         ;; (:break "~a ~a" ?new-foothold-computer ?current-foothold-computer)
+	 (:goal [achieve-remote-execution ?new-foothold-computer ?new-foothold-role])
+	 ;;If so then actually make the connection to the victim from the new foothold
+         ;; (:goal [make-connection ?victim-os-instance ?protocol-name ?remote-execution-state ?output-contet])
+         (:action [connect-via ?new-foothold-computer ?new-foothold-role ?victim-computer ?protocol-name])
+	 )
+  :post-conditions ([has-foothold ?victim-computer ?new-foothold-computer ?new-foothold-role ?protocol-name])
+  )
 
 
 
@@ -1158,7 +1220,8 @@ predicate promising the thing is known.
 
 (defattack-method fake-sensor-data
     :to-achieve [affect accuracy ?controller-process]
-    :bindings ((?controller-computer ?controller-process.computers)
+    :bindings (;;(prog1 t (format t "~%Enetering trudy rule ~a" ?controller-process))
+               (?controller-computer ?controller-process.computers)
 	       ;; does that computer play the part of a controller in some control system
 	       [system-role ?system controller ?controller-computer]
 	       ;; if so find a sensor in that same system
@@ -1188,15 +1251,19 @@ predicate promising the thing is known.
 	     (?bus unmastered-medium)
 	     ;; (?victim-os operating-system)
 	     )
-    :plan (:sequential
+  :plan (:sequential
+           (:trace "trudy rule going for remote execution on ~a as" ?victim-computer)
 	   ;; You have to specify what the entity here is
 	   ;; it can either be a user or a process
            ;; shouldn't really be in the operators that detemine how to do the remote execution
            ;; I guess it's bound by the relevant method here, but it's not used so I made it anonymous
-	   (:goal [achieve-remote-execution ?victim-computer ?])
+	   (:goal [achieve-remote-execution ?victim-computer ?user])
 	   ;; issue a false sensor data report to the controller from the attacker computer over the bus
 	   ;; of the sensor type
-	   (:action [issue-false-sensor-data-report ?controller-computer ?victim-computer ?bus ?signal]))
+           (:trace "trudy rule got remote execution on ~a as ~a" ?victim-computer ?user)
+	   (:action [issue-false-sensor-data-report ?controller-computer ?victim-computer ?bus ?signal])
+           (:trace "trudy rule took issued false data report ~a via ~a on bus ~a" ?signal ?victim-computer ?bus)
+           )
     )
 
 ; (defattack-method fake-command-data
@@ -1299,8 +1366,6 @@ predicate promising the thing is known.
            (:action [login-with-credentials ?victim-user ?victim-os ?loader-server ?attacker ?protocol-name ?credentials])
            (:goal [install-malware ?attacker ?loader-server ?victim-computer mirai-malware])
            )
-    ;; for debugging purposes
-    ;; :attack-identifier foo
     )
 
 (defattack-method find-other-victim-computers
