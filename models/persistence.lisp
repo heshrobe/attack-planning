@@ -54,8 +54,8 @@
 (defresource malicious-dll-attachment malicious-file)
 
 ;; Windows only 
-(defwhitelist (email windows-email-vm)
-  :pass everywhere)
+;;(defwhitelist (email windows-email-vm)
+;;  :pass everywhere)
 
 (defprocess email-server
   :process-type email-server-process

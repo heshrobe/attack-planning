@@ -1600,6 +1600,8 @@ predicate promising the thing is known.
     :post-conditions([malware-installed-on-computer ?attacker ?victim-computer ?extension])
     )
 
+|#
+
 ;; T1574.001
 (defattack-method dll-hijack-search-order
     ;; Exploits the way Windows loads software (Windows has a specific order in which it loads background processes)
@@ -1634,8 +1636,6 @@ predicate promising the thing is known.
     :post-conditions([has-remote-execution ?attacker ?victim-machine ?foothold-role] ;; Privilege escalation
                      [current-foothold ?current-foothold-machine ?current-foothold-role])
     )
-
-|#
 
 
 
