@@ -135,3 +135,5 @@
 (define-goal exfiltrate-data (actor data from-computer to-computer))
 
 (define-goal persistently-execute (attacker victim victim-computer))
+
+(define-goal achieve-persistent-remote-execution (victim-computer victim-role) :outputs (victim-role))

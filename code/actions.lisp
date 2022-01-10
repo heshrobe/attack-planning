@@ -360,3 +360,10 @@
   :prerequisites ()
   :post-conditions ()
   )
+
+(define-action drop-dll (?before-file ?dll-file ?after-file)
+  :typing ((?before-file file)
+           (?dll-file file)
+           (?after-file file)
+           )
+  :bindings ([value-of 

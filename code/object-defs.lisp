@@ -143,7 +143,8 @@
 
 (define-aplan-object file
   :super-types (has-directory-mixin path-mixin data-resource)
-  :slots ((filename :initarg :filename :initform nil)))
+  :slots ((directory :initarg :directory :set-valued t )
+           (filename :initarg :filename :initform nil)))
 
 (define-aplan-object dynamically-loadable-code-file
     :super-types (file))
@@ -1321,4 +1322,33 @@
 (define-aplan-object web-object
     :slots ((object-type))
     :super-types (data-resource)
-    )
+  )
+
+
+;; There is another definition of directory on line 139
+#|
+(define-aplan-object directory:
+   :super-types (data-resource)
+   :slots ((name :initarg :name)
+           (parent :initarg :parent)
+           (subdirectory :initarg :subdirectory :set-valued t)
+           (files :initarg :files :set-valued t))
+  )
+|#
+
+(define-aplan-object path:
+   :super-types (data-resource)
+   :slots ((name :initarg :name))
+  )
+
+
+(define-aplan-object before:
+   :super-types (data-resource)
+   :slots ((name :initarg :name))
+  )
+
+
+(define-aplan-object after:
+   :super-types (data-resource)
+   :slots ((name :initarg :name))
+  )

@@ -108,3 +108,8 @@ I think that the above does a better and simpler job of this
 
 
 |#
+
+(defrule order-transitivity (:forward)
+  if [and [precedes-in-search-path ?path ?before ?middle]
+          [precedes-in-search-path ?path ?middle ?after])
+  then [precedes-in-search-path ?path ?before ?after])

@@ -1605,8 +1605,9 @@ predicate promising the thing is known.
 ;; T1574.001
 (defattack-method dll-hijack-search-order
     ;; Exploits the way Windows loads software (Windows has a specific order in which it loads background processes)
-    ;; When software is downloaded, Windows will create new referecnes to directories in the PATH variable
-    :to-achieve [achieve-remote-execution ?victim-machine ?victim-user]
+  ;; When software is downloaded, Windows will create new referecnes to directories in the PATH variable
+  ;; achieve-persistent-remote-execution
+    :to-achieve [achieve-persistent-remote-execution ?victim-machine ?victim-user]
     :bindings([named-component ?victim-machine os ?victim-os]
               [value-of ?victim-os.users ?victim-user]
               [attacker-and-machine ?attacker ?]
@@ -1628,14 +1629,19 @@ predicate promising the thing is known.
           (:goal [get-foothold ?victim-machine ?protocol])
           ;; Malware is typically in a seemingly innocuous software
           ;; Once this malware is downloaded, Windows will create new references to directories in PATH
+         
           (:action [download-software malicious-dll ?download-server ?victim-machine ?role]) ;; Need to specify role
           ;; Once the malware is downloaded, Windows will create new references to directories in PATH, which will in turn load the DLL's (including the malicious one)
           ;; Load the software, leads to malicious DLL loading, done
           (:action [load-software malicious-dll ?victim-machine])
+          (:action [drop-dll ?before ?after])
+          ;; predicate- achieve persistent remote execution 
           )
-    :post-conditions([has-remote-execution ?attacker ?victim-machine ?foothold-role] ;; Privilege escalation
-                     [current-foothold ?current-foothold-machine ?current-foothold-role])
-    )
+  ;; has-persistent-remote-execution
+  :post-conditions([has-persistent-remote-execution ?attacker ?victim-machine ?foothold-role]
+                   )
+  :attack-identifier "T1574.001"
+  )
 
 
 
