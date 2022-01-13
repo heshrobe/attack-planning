@@ -42,7 +42,7 @@
 
 (defun dump-plan (root-node &optional (stream *standard-output*))
   (multiple-value-bind (computers users) (collect-computers-and-users root-node)
-    (json:with-object (stream) 
+    (json:with-object (stream)
       (format stream "~2%")
       (json:as-object-member ('computers stream) (dump-computers computers stream))
       (format stream "~2%")
@@ -59,14 +59,15 @@
 
 (defgeneric subordinates (graph-node))
 
-(defun traverse-merged-attack-graph (root-node action-fun)
+(defun traverse-merged-attack-graph (root-node action-fun &key cut-off-test)
   (let ((visited (make-hash-table)))
     (labels ((do-a-node (node)
 	       (unless (gethash node visited)
 		 (setf (gethash node visited) t)
 		 (funcall action-fun node)
-		 (loop for subordinate in (subordinates node)
-		     do (do-a-node subordinate)))))
+                 (unless (and cut-off-test (funcall cut-off-test node))
+                   (loop for subordinate in (subordinates node)
+                       do (do-a-node subordinate))))))
       (do-a-node root-node))))
 
 (defmethod subordinates ((node attack-goal)) (supporting-plans node))
@@ -101,12 +102,12 @@
 
 (defgeneric dump-node (node &optional stream))
 
-(defun dump-nodes (root-node &optional (stream *standard-output*))
-  (flet ((do-a-node (node) 
+(defun dump-nodes (root-node &optional (stream *standard-output*) cut-off-function)
+  (flet ((do-a-node (node)
 	   (terpri stream)
 	   (json:as-array-member (stream) (dump-node node stream))))
     (json:with-array (stream)
-      (traverse-merged-attack-graph root-node #'do-a-node)
+      (traverse-merged-attack-graph root-node #'do-a-node cut-off-function)
       )))
 
 (defmethod dump-node ((node attack-goal) &optional (stream *standard-output*))
@@ -173,7 +174,7 @@
 
 
 (defun dump-links (root-node &optional (stream *standard-output*))
-  (flet ((do-a-node (node) 
+  (flet ((do-a-node (node)
 	   (unless (typep node 'attack-action)
 	     (terpri stream)
 	     (json:as-array-member (stream) (dump-link-set node stream)))))
@@ -238,7 +239,7 @@
 ;;;    and the range and mask for the ensemble's IP addresses
 ;;;
 ;;; Things to add what hardware/os/application suite...
-;;;  
+;;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 (defun dump-computers (computers stream)
@@ -257,7 +258,7 @@
     (json:encode-object-member 'attacker (typecase computer (attacker-computer 'true) (otherwise 'false)) stream)
     (terpri stream)
     (dump-subnet-data computer stream)
-    (terpri stream)))  
+    (terpri stream)))
 
 (defmethod dump-subnet-data ((computer attacker-computer) &optional (stream *standard-output*))
   (let* ((subnet (first (subnets computer))))
@@ -317,7 +318,7 @@
   (json:with-array (stream)
     (loop for user in users
 	do (terpri stream)
-	   (json:as-array-member (stream) 
+	   (json:as-array-member (stream)
 	     (dump-user user stream))))
   )
 
@@ -332,8 +333,68 @@
     (terpri stream)
     (json:as-object-member ('computers stream)
 	(json:with-array (stream)
-	  (Loop for computer in (computers user) 
+	  (Loop for computer in (computers user)
 		do (json:as-array-member (stream)
 		     (json:with-object (stream)
 		       (json:encode-object-member 'name (role-name computer) stream))))))
     (terpri stream)))
+
+
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;;
+;;; Some hacks for dumping in a format that's easier for Caldera integration
+;;; the idea is to only dump nodes that have ATT&CK identifiers (as opposed to attack-method names)
+;;; and to not traverse below those nodes that do
+;;;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+;;; The first thing we need is a cut-off function.
+;;; The cut-off criterion is that:
+;;; 1) the Node is an attack-plan node
+;;; 2) It's attack-identifer is in the caldera-mapping
+
+(defparameter *caldera-mapping* (create-caldera-mapping))
+
+(defun caldera-dumper-cutoff (node)
+  (and (typep node 'attack-plan)
+       (let* ((identifier (attack-identifier node))
+             (entry (gethash identifier *caldera-mapping* nil)))
+         entry)))
+
+(defun dump-caldera-plan (root-node &optional (stream *standard-output*))
+  (multiple-value-bind (computers users) (collect-computers-and-users root-node)
+    (json:with-object (stream)
+      (format stream "~2%")
+      (json:as-object-member ('computers stream) (dump-computers computers stream))
+      (format stream "~2%")
+      (json:as-object-member ('users stream) (dump-users users stream))
+      (format stream "~2%")
+      (json:as-object-member ('nodes stream) (dump-nodes root-node stream #'caldera-dumper-cutoff))
+      (format stream "~2%")
+      (json:as-object-member ('links stream) (dump-links root-node stream)))
+    ))
+
+(defgeneric find-ability-id (attack-id goal abilities))
+
+;;; default method handles the case when there's exactly one possibility
+;;; specific methods will disambiguate -- eql dispatch on attack-id
+(defmethod find-ability-id ((attack-id t) (goal attack-goal) abilities)
+  (loop for ability in abilities
+      collect (second ability)))
+
+
+(defun get-caldera-id-sequence (root-node)
+  (let ((answer nil))
+    (flet ((do-a-node (node)
+             (typecase node
+               (attack-plan
+                (let* ((attack-id (attack-identifier node))
+                       (entry (gethash (attack-identifier node) *caldera-mapping*)))
+                  (when entry
+                    (let ((id (find-ability-id (intern attack-id 'aplan) (supergoal node) entry)))
+                      (when id
+                        (push id answer))))))
+               (otherwise))))
+      (traverse-merged-attack-graph root-node #'do-a-node :cut-off-test #'caldera-dumper-cutoff)
+      (nreverse answer))))

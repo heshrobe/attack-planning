@@ -1,4 +1,4 @@
-;;; -*- Syntax: Ansi-common-lisp; Package: cl-USER; Base: 10; Mode: LISP -*- 
+;;; -*- Syntax: Ansi-common-lisp; Package: cl-USER; Base: 10; Mode: LISP -*-
 
 (in-package :cl-user)
 
@@ -11,11 +11,11 @@
          (device (pathname-device loading-file))
          (home-dir (pathname-directory loading-file))
          (wild-dir (append (butlast home-dir) (list :wild-inferiors))))
-    (setq *aplan-home-directory* (make-pathname :directory home-dir 
-                                                :host host 
+    (setq *aplan-home-directory* (make-pathname :directory home-dir
+                                                :host host
                                                 :device device)
           *aplan-wild-directory* (make-pathname :directory wild-dir
-                                                :host host 
+                                                :host host
                                                 :device device
                                                 :type :wild
                                                 :name :wild
@@ -38,7 +38,7 @@
 
 
 #+allegro
-(defsystem aplan 
+(defsystem aplan
     (:default-pathname "aplan:code;"
 	:default-module-class separate-destination-module)
   (:serial
@@ -57,18 +57,14 @@
    ("attack-methods" (:module-class separate-destination-joshua-module))
    ("core-reasoning"  (:module-class separate-destination-joshua-module))
    ("json-dumper" (:module-class separate-destination-joshua-module))
+   ("caldera-mapping" (:module-class separate-destination-module))
    ("editor" (:module-class separate-destination-joshua-module))
    ("attack-graphics" (:module-class separate-destination-joshua-module))
    ("plan-recognizer" (:module-class separate-destination-joshua-module))
    ("emacs-hacks" (:module-class separate-destination-joshua-module))
    ("aplan:models;ai-lab-description" (:module-class data-module))
-   ("aplan:models;jbi-example" (:module-class data-module))   
+   ("aplan:models;jbi-example" (:module-class data-module))
    ("aplan:models;cctv-network-description" (:module-class data-module))
    ("aplan:models;trudy-network-description" (:module-class data-module))
    ("aplan:models;wilee-example" (:module-class data-module))
    ))
-
-
-	       
-  
-

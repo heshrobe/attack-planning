@@ -421,3 +421,5 @@
 (define-aplan-predicate compressed-file-of (compressed-file input-file-1 input-file-2) (non-stateful-predicate-model))
 
 (define-aplan-predicate already-compromised (attacker victim) ())
+
+(define-aplan-predicate has-file-for-cracking (attacker-machine file) ())

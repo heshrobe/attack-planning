@@ -291,10 +291,12 @@
   :outputs ((?new-file (create-new-resource (make-name 'compressed-password-file) ?new-file-type ?victim-computer)))
   :post-conditions ([compressed-file-of ?new-file ?file1 ?file2]))
 
-(define-action crack-password (?attacker ?password-files ?victim ?c2-server ?cracker-computer)
+(define-action crack-password (?attacker ?password-file ?shadow-file ?victim ?c2-server ?cracker-computer)
   :bindings ((?victim-computer ?victim.computers))
-  :prerequisites ([data-exfiltrated ?password-files ? ?victim-computer ?c2-server])
-  :typing ((?password-files compressed-password-file))
+  :prerequisites ([has-file-for-cracking ?cracker-computer ?password-file]
+                  [has-file-for-cracking ?cracker-computer ?shadow-file])
+  :typing ((?password-file password-file)
+           (?shadow-file password-file))
   :post-conditions ([knows-password ?attacker ?victim]
                     [knows-credentials ?attacker ?victim]
                    )

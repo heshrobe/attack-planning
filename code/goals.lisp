@@ -134,4 +134,11 @@
   :outputs (other-victim))
 (define-goal exfiltrate-data (actor data from-computer to-computer))
 
+;;; this exists so that we can use use a unique attack-id for the methods
+;;; that achieve it.  This is all in support of Caldera-integration.
+(define-goal exfiltrate-password-data-to-cracker (actor data from-computer to-computer))
+;;; Again this is to facilitate the caldera integration.
+(define-goal hash-crack-password (attacker password-file shadow-file victim attacker-computer cracker-computer))
+
+
 (define-goal persistently-execute (attacker victim victim-computer))

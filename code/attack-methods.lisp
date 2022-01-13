@@ -1703,6 +1703,10 @@ predicate promising the thing is known.
 ;;; When you already have presence on the machine as another user
 ;;; We might want to have a guard that says not to use this if we already
 ;;; know the password.
+;;; Fix: Need to restructure the plan part of this so that there are two
+;;; exfiltrate with attack-id T1003.008 ID's, an exfiltrate with T1003.009 and
+;;; then a crack password with T1110.002
+
 (defattack-method crack-password-for-caldera
     :to-achieve [achieve-knowledge-of-password ?attacker ?victim ?victim-computer]
     :bindings ([attacker-computer-with-role ?attacker hashcat-server ?cracker-computer]
@@ -1722,15 +1726,33 @@ predicate promising the thing is known.
     :prerequisites ([value-of (?other-user has-weak-password) yes])
     :plan (:sequential
            (:goal [achieve-remote-execution ?victim-computer ?other-user])
-           ;; Hack to make the JSON dumper happy, compress is a 2 into 1 operation.
-           (:action [compress-files ?attacker ?victim-computer ?password-file ?shadow-file ?compressed-file compressed-password-file])
-           (:goal [exfiltrate-data ?other-user ?compressed-file ?victim-computer ?attacker-computer])
-           (:action [crack-password ?attacker ?compressed-file ?victim ?attacker-computer ?cracker-computer]))
+           (:goal [exfiltrate-password-data-to-cracker ?other-user ?password-file ?victim-computer ?cracker-computer])
+           (:goal [exfiltrate-password-data-to-cracker ?other-user ?shadow-file ?victim-computer ?cracker-computer])
+           ;; I think the real method might compress the two files and then exfiltrate the compressed file
+           ;; But Sam's code wants to "dump" the two file "T1003.008" twice into a local file,
+           ;; then "prepare the file" "T1003.009" (which doesn't actually either compress or exfiltrate it)
+           ;; and then crack the password "T1110.002"
+           ;; (:action [compress-files ?attacker ?victim-computer ?password-file ?shadow-file ?compressed-file compressed-password-file])
+           ;; (:goal [exfiltrate-data ?other-user ?compressed-file ?victim-computer ?attacker-computer])
+           (:goal [hash-crack-password ?attacker ?password-file ?shadow-file ?victim ?attacker-computer ?cracker-computer]))
     :post-conditions ([knows-password ?attacker ?victim]
                       [knows-credentials ?attacker ?victim])
-    :attack-identifier "T1003.008"
     )
 
+(defattack-method exfiltrate-password-data-for-cracking
+    :to-achieve [exfiltrate-password-data-to-cracker ?other-user ?file ?victim-computer ?cracker-computer]
+    :attack-identifier "T1003.008"
+    :plan (:goal [exfiltrate-data ?other-user ?file ?victim-computer ?cracker-computer])
+    :post-conditions ([has-file-for-cracking ?cracker-computer ?file]))
+
+(defattack-method hash-crack-password-files
+    :to-achieve [hash-crack-password ?attacker ?password-file ?shadow-file ?victim ?attacker-computer ?cracker-computer]
+    :prerequisites ([has-file-for-cracking ?cracker-computer ?password-file]
+                    [has-file-for-cracking ?cracker-computer ?shadow-file])
+    :attack-identifier "T1110.002"
+    :plan (:sequential
+           (:action [crack-password ?attacker ?password-file ?shadow-file ?victim ?attacker-computer ?cracker-computer]))
+    )
 
 ;;; This is used when you have foothold to the machine as some user
 ;;; that isn't admin level on the target machine but is a user on the
