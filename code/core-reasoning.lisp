@@ -47,6 +47,8 @@
     ;; This links the objects to a tree-structured set
     ;; of objects representing the plan with the
     ;; actions at the leaves
+    (setq plans (nreverse plans)
+          final-states (nreverse final-states))
     (values plans final-states (loop for plan in plans collect (structure-attack-plan plan))
             )))
 
@@ -292,13 +294,14 @@
   ((supergoal :initform nil :accessor supergoal :initarg :supergoal)
    (combinator :initform nil :accessor combinator :initarg :combinator)
    (attack-identifier :initform nil :accessor attack-identifier :initarg :attack-identifier)
+   (method-name :initform nil :accessor method-name :initarg :method-name)
    (steps :initform nil :accessor steps :initarg :steps)
    (subgoals :initform nil :accessor subgoals :initarg :subgoals)
    (actions :initform nil :accessor actions :initarg :actions)
    ))
 
 (defmethod print-object ((object attack-plan) stream)
-  (format stream "#<plan ~a>" (attack-identifier object)))
+  (format stream "#<plan ~a>" (or (attack-identifier object) (method-name object))))
 
 (defmethod json-id-key ((thing attack-plan)) 'plan)
 
@@ -327,7 +330,7 @@
                    (setq action (make-instance (if repeated? 'repeated-attack-action 'attack-action) :name name))
                    (setf (gethash name action-hash-table) action))
                  action))
-             (intern-plan (combinator steps supergoal attack-identifier)
+             (intern-plan (combinator steps supergoal attack-identifier method-name)
                (let ((the-plan (loop for plan in interned-plans
 				   when (and
 					 (eql (combinator plan) combinator)
@@ -336,6 +339,7 @@
                  (unless the-plan
                    (setq the-plan (make-instance 'attack-plan
                                     :attack-identifier attack-identifier
+                                    :method-name method-name
 				    :combinator combinator
 				    :steps steps
 				    :subgoals (loop for step in steps when (typep step 'attack-goal) collect step)
@@ -356,11 +360,12 @@
 			    the-interned-goal))
 		   ((:action :repeated-action) (intern-action (second step) (eq type :repeated-action)))
 		   ((:sequential :parallel :singleton :repeat)
-		    (let* ((attack-identifier (when (eql (first (second step)) :attack-identifier)
-                                                (second (second step))))
+		    (let* ((plist (second step))
+                           (attack-identifier (getf plist :attack-identifier))
+                           (method-name (getf plist :method-name))
                            (steps (loop for his-step in (if attack-identifier  (rest (rest step)) (rest step))
 				     collect (traverse his-step supergoal))))
-		      (intern-plan type steps supergoal attack-identifier)))
+		      (intern-plan type steps supergoal attack-identifier method-name)))
 		   (:otherwise (break "What is this ~a" step))
 		   ))))
       (loop for raw-plan in raw-plans

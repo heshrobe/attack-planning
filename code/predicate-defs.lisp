@@ -52,7 +52,7 @@
   (defparameter *all-aplan-predicates* nil)
   (defparameter *aplan-predicate-binding-map* (make-hash-table))
 
-  (define-predicate-model aplan-predicate-model () (ltms:ltms-predicate-model))
+  (define-predicate-model aplan-predicate-model () (joshua:no-variables-in-data-mixin ltms:ltms-predicate-model))
 
   (defun record-predicate-output-variable (predicate name)
     (pushnew name (gethash predicate *aplan-predicate-binding-map*)))
@@ -418,8 +418,8 @@
 
 (define-aplan-predicate user-visits-malicious-website (user) ())
 
-(define-aplan-predicate compressed-file-of (compressed-file input-file-1 input-file-2) (non-stateful-predicate-model))
-
 (define-aplan-predicate already-compromised (attacker victim) ())
 
-(define-aplan-predicate has-file-for-cracking (attacker-machine file) ())
+(define-aplan-predicate has-data-for-cracking (attacker-machine source-file concatenated-file) ())
+(define-aplan-predicate contains-data (concatenated-file source-file) ())
+(define-aplan-predicate has-prepared-password-data (file password-file shadow-file) ())

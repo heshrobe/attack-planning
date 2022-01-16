@@ -134,11 +134,15 @@
   :outputs (other-victim))
 (define-goal exfiltrate-data (actor data from-computer to-computer))
 
-;;; this exists so that we can use use a unique attack-id for the methods
+;;; These exists so that we can use use a unique attack-id for the methods
 ;;; that achieve it.  This is all in support of Caldera-integration.
-(define-goal exfiltrate-password-data-to-cracker (actor data from-computer to-computer))
-;;; Again this is to facilitate the caldera integration.
-(define-goal hash-crack-password (attacker password-file shadow-file victim attacker-computer cracker-computer))
+;;; Achieving this concatenates the data from the first file into the concatenate-file
+(define-goal dump-password-data-for-cracker (actor data-file cat-file from-computer))
+;;; This extracts the relevant entries from the concatenated passwd and shadow files
+;;; The extracted data is put into another file and then sent to the hashcat machine
+(define-goal extract-password-data-for-cracker (actor cat-file cracker-file from-computer))
 
+;;; Again this is to facilitate the caldera integration.
+(define-goal hash-crack-password (attacker victim victim-computer hash-cat-file attacker-computer cracker-computer))
 
 (define-goal persistently-execute (attacker victim victim-computer))

@@ -28,20 +28,33 @@
 	   (clim:surrounding-output-with-border (stream :shape :rectangle :ink clim:+green+)
 	     (clim:with-text-face (stream :bold)
 	       (format stream "~A" (first step))
-               (when (eql (first (second step)) :attack-identifier)
-                 (format stream "~%Attack-identifier: ~a" (second (second step))))
-               )))
+               (let* ((plist (second step))
+                      (identifier (getf plist :attack-identifier))
+                      (method (getf plist :method-name)))
+                 (when identifier
+                   (format stream "~%Attack-identifier: ~a"
+                           identifier))
+                 (when method
+                   (format stream "~%Method: ~a"
+                           method))))))
           (:attack-identifier)
 	  (:singleton
 	   (clim:surrounding-output-with-border (stream :shape :rectangle :ink clim:+green+)
 	     (clim:with-text-face (stream :bold)
 	       (format stream "reduces to")
-               (when (eql (first (second step)) :attack-identifier)
-                 (format stream "~%Attack-identifier: ~%~a" (second (second step)))))))
+               (let* ((plist (second step))
+                      (identifier (getf plist :attack-identifier))
+                      (method (getf plist :method-name)))
+               (when identifier
+                 (format stream "~%Attack-identifier: ~a"
+                         identifier))
+               (when method
+                 (format stream "~%Method: ~a"
+                         method))))))
           (:goal (clim:surrounding-output-with-border (stream :shape :rectangle :ink clim:+blue+)
                    (destructuring-bind (goal-type &rest values) (second step)
-		     ;; total hack to reduce space consumption
-		     ;; (let* ((arglist (ji::find-predicate-arglist goal-type)))
+                     ;; total hack to reduce space consumption
+                     ;; (let* ((arglist (ji::find-predicate-arglist goal-type)))
 		     (format stream "Goal: ~A" goal-type)
 		     (loop for value in values
 			 do (format stream "~%~a" value)))))

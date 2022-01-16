@@ -120,13 +120,17 @@
 
 (define-action login (?attacker ?victim-user ?victim-os-instance ?current-foothold-computer ?current-foothold-role)
   :bindings ([value-of ?victim-os-instance.computer ?victim-computer]
+             (:trace "victim os ~a victim computer ~a" ?victim-os-instance.computer ?victim-computer)
 	     [has-foothold ?victim-computer ?current-foothold-computer ?current-foothold-role ?protocol-name]
+             (:trace "foothold to ~a foothold ~a ~a ~a" ?victim-computer ?current-foothold-computer ?current-foothold-role ?protocol-name)
              )
   :prerequisites ([connection-established ?current-foothold-computer ?victim-computer ?protocol-name]
+                  (:trace "Connection established from ~a to ~a protocol ~a" ?current-foothold-computer ?victim-computer ?protocol-name)
                   ;; The user has to be an authorized user of the machine.
                   [value-of ?victim-computer.users ?victim-user]
-
+                  (:trace "victim user ~a" ?victim-user)
                   [knows-credentials ?attacker ?victim-user]
+                  (:trace "attacker ~a user ~a" ?attacker ?victim-user)
                   )
   :post-conditions ([is-logged-in ?attacker ?victim-user ?victim-os ?victim-computer])
   )
@@ -205,9 +209,10 @@
 
 (define-action guess-password (?attacker ?user ?victim-computer)
   :bindings ([current-foothold ?foothold-computer ?foothold]
+             (:trace "entering ~a ~a ~a" ?user ?victim-computer ?attacker)
 	     [protocol-for remote-execution remote-shell ?protocol-name]
-             (:trace "~%In guess password for ~a on ~a foothold ~a ~a"
-                     ?user ?victim-computer ?foothold-computer ?foothold)
+             (:trace "going for ~a on ~a foothold ~a ~a using protocol ~a"
+                     ?user ?victim-computer ?foothold-computer ?foothold ?protocol-name)
              )
   :prerequisites ([connection-established ?foothold-computer ?victim-computer ?protocol-name]
                   (:trace "Have conditions to guess password for ~a" ?user)
@@ -291,12 +296,29 @@
   :outputs ((?new-file (create-new-resource (make-name 'compressed-password-file) ?new-file-type ?victim-computer)))
   :post-conditions ([compressed-file-of ?new-file ?file1 ?file2]))
 
-(define-action crack-password (?attacker ?password-file ?shadow-file ?victim ?c2-server ?cracker-computer)
-  :bindings ((?victim-computer ?victim.computers))
-  :prerequisites ([has-file-for-cracking ?cracker-computer ?password-file]
-                  [has-file-for-cracking ?cracker-computer ?shadow-file])
-  :typing ((?password-file password-file)
-           (?shadow-file password-file))
+(define-action create-file (?attacker ?victim-computer ?new-file ?new-file-type)
+  :prerequisites ([has-remote-execution ?attacker ?victim-computer ?role])
+  :outputs ((?new-file (create-new-resource (make-name ?new-file-type) ?new-file-type ?victim-computer)))
+  :post-conditions ())
+
+(define-action concatenate-into-existing-file (?attacker ?victim-computer ?source-file ?destination-file)
+  :prerequisites ([has-remote-execution ?attacker ?victim-computer ?role])
+  :post-conditions ([contains-data ?destination-file ?source-file]))
+
+(define-action extract-new-user-data (?attacker ?victim-computer ?concatenated-file ?hash-crack-file)
+  :bindings ([resource-named ?victim-computer password-file ?password-file]
+             [resource-named ?victim-computer shadow-file ?shadow-file])
+  :prerequisites ([has-remote-execution ?attacker ?victim-computer ?role]
+                  [contains-data ?concatenated-file ?password-file]
+                  [contains-data ?concatentated-file ?shadow-file])
+  :outputs ((?hash-crack-file (create-new-resource (make-name 'hash-crack-file) 'password-file ?victim-computer)))
+  :post-conditions ([has-prepared-password-data ?hash-crack-file ?password-file ?shadow-file]))
+
+(define-action crack-password (?attacker ?victim ?victim-computer ?hash-crack-file ?c2-server ?cracker-computer)
+  :bindings ([resource-named ?victim-computer password-file ?password-file]
+             [resource-named ?victim-computer shadow-file ?shadow-file])
+  :prerequisites ([has-prepared-password-data ?hash-crack-file ?password-file ?shadow-file])
+  :typing ((?hash-crack-file password-file))
   :post-conditions ([knows-password ?attacker ?victim]
                     [knows-credentials ?attacker ?victim]
                    )

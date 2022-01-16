@@ -158,7 +158,7 @@
   :authorization-pools (victim-authorization-pool)
   :capabilities (sysadmin)
   :superuser-for (typical-worker-computer typical-admin-computer)
-  :has-weak-password 'yes
+  :has-weak-password 'no
   )
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
