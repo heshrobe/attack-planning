@@ -949,6 +949,8 @@
         ;; Also for each generate a new logic-variable-maker
         (multiple-value-bind (all-refs hidden-bindings-alist) (find-hidden-bindings nil prerequisites post-conditions late-typing nil bindings)
           (destructuring-bind (input-state-variable output-state-variable) state-logic-variables
+            (let ((usage-map (build-usage-map variables bindings typing nil prerequisites post-conditions outputs output-variables)))
+              (perform-usage-checks usage-map name))
             `(eval-when (:compile-toplevel :load-toplevel :execute)
                (pushnew ',name *all-actions*)
                ,@(when define-predicate `((define-predicate ,name ,names (ltms:ltms-predicate-model))))
