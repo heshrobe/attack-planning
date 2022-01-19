@@ -7,7 +7,7 @@
 ;;; for editor support
 
 ;;; This tells emacs how to kill defattack-method forms (fi:kill-definition C-c C-y)
-#+allegero
+#+allegro
 (defmethod lep::definition-undefining-form (fspec (type (eql 'defattack-method)))
   `(undefrule ',fspec))
 
@@ -16,12 +16,22 @@
 (defmethod lep::definition-undefining-form (fspec (type (eql 'define-action)))
   `(undefrule ',fspec))
 
+#+allegro
+(defmethod lep::definition-undefining-form (fspec (type (eql 'define-goal)))
+  `(progn (undefine-predicate ',fspec)
+          (remhash ',fspec *aplan-predicate-binding-map*)
+          (setq *all-goals* (remove ',fspec *all-goals*))))
+
+#+allegro
+(defmethod lep::definition-undefining-form (fspec (type (eql 'define-aplan-predicate)))
+  `(undefine-predicate ',fspec))
+
 ;;; This tells emacs how to kill define-aplan-object forms (fi:kill-definition C-c C-y)
 #+allegro
 (defmethod lep::definition-undefining-form (fspec (type (eql 'define-aplan-object)))
   `(ji::undefine-object-type ',fspec)
   )
-				       
+
 #+allegro
 (defparameter *aplans-predicates* '(value-of named-component object-type-of take-action in-state))
 
@@ -43,7 +53,7 @@
                    do (print pred stream)
                       (let ((callers nil))
                         (loop for thing in (lep::who-calls pred)
-                            for real-thing = (is-valid-caller pred thing)                                                    
+                            for real-thing = (is-valid-caller pred thing)
                             when real-thing
                             do (pushnew real-thing callers))
                         (cond

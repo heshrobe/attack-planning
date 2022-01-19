@@ -342,17 +342,8 @@
 (def-email-clients email-server server-administrator)
 
 
-#|
-
 (defun test-trudy ()
   (do-it :attacker (follow-path '(attacker))
 	 :property 'accuracy
 	 :computer (follow-path '(auto-pilot))
 	 :resource (follow-path '(auto-pilot-process))))
-
-
-
-
-
-
-|#

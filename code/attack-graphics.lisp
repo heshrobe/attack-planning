@@ -28,20 +28,33 @@
 	   (clim:surrounding-output-with-border (stream :shape :rectangle :ink clim:+green+)
 	     (clim:with-text-face (stream :bold)
 	       (format stream "~A" (first step))
-               (when (eql (first (second step)) :attack-identifier)
-                 (format stream "~%Attack-identifier: ~a" (second (second step))))
-               )))
+               (let* ((plist (second step))
+                      (identifier (getf plist :attack-identifier))
+                      (method (getf plist :method-name)))
+                 (when identifier
+                   (format stream "~%Attack-identifier: ~a"
+                           identifier))
+                 (when method
+                   (format stream "~%Method: ~a"
+                           method))))))
           (:attack-identifier)
 	  (:singleton
 	   (clim:surrounding-output-with-border (stream :shape :rectangle :ink clim:+green+)
 	     (clim:with-text-face (stream :bold)
 	       (format stream "reduces to")
-               (when (eql (first (second step)) :attack-identifier)
-                 (format stream "~%Attack-identifier: ~%~a" (second (second step)))))))
+               (let* ((plist (second step))
+                      (identifier (getf plist :attack-identifier))
+                      (method (getf plist :method-name)))
+               (when identifier
+                 (format stream "~%Attack-identifier: ~a"
+                         identifier))
+               (when method
+                 (format stream "~%Method: ~a"
+                         method))))))
           (:goal (clim:surrounding-output-with-border (stream :shape :rectangle :ink clim:+blue+)
                    (destructuring-bind (goal-type &rest values) (second step)
-		     ;; total hack to reduce space consumption
-		     ;; (let* ((arglist (ji::find-predicate-arglist goal-type)))
+                     ;; total hack to reduce space consumption
+                     ;; (let* ((arglist (ji::find-predicate-arglist goal-type)))
 		     (format stream "Goal: ~A" goal-type)
 		     (loop for value in values
 			 do (format stream "~%~a" value)))))
@@ -240,7 +253,7 @@
      (orientation '(clim:member-alist (("horizontal" . :horizontal) ("vertical" . :vertical))) :default :vertical)
      (pdf? 'clim:boolean :default nil :prompt "Generate to a pdf file")
      (file-name 'clim:pathname)
-     (text-size '(clim:member :very-small :small :normal :large :very-large))
+     (text-size '(clim:member :very-small :small :normal :large :very-large) :default :small)
      (actions-only 'clim:boolean :default nil :prompt "Only show actions?"))
   (show-plan (attack-plan-collector clim:*application-frame*) plan-number
              :orientation orientation
@@ -404,7 +417,7 @@
 
 (define-aplan-command (com-dump-plan-to-json :name t :menu t)
     ((plan-number 'integer)
-     &key (file-name 'clim:pathname)) 
+     &key (file-name 'clim:pathname))
   (let* ((plan (nth plan-number (attack-plans (attack-plan-collector clim:*application-frame*))))
          ;; this is a terrible hack, it's because the canonical format of plans is either list structure
          ;; or a different set of data structures from those used for the merged plan.  This is stupic, but

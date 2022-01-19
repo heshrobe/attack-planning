@@ -72,7 +72,7 @@
 ;;; being processed
 
 (defparameter *method-tracing* nil)
-(defun rebuild-plan-structure (plan-structure &optional (input-state `(logic-variable-maker .(intern (string-upcase "?input-state"))))
+(defun rebuild-plan-structure (method-name plan-structure &optional (input-state `(logic-variable-maker .(intern (string-upcase "?input-state"))))
 							(output-state `(logic-variable-maker ,(intern (string-upcase "?output-state")))))
   ;; traverse the plan-structure accumulating the forms to put in the Joshua rule
   ;; and the list-structure for the eventual plan
@@ -84,14 +84,14 @@
   (labels ((do-next-level (structure connective input-state output-state)
 	     ;; each level should either be a :sequential/:parallel/:repeat
 	     ;;  or a :goal/:plan pair
-             ;;  or an :action item 
+             ;;  or an :action item
              ;; or pseudo things like a :note :bind or :break
              (destructuring-bind (key . stuff) structure
                (ecase key
                  ((:sequential :repeat)
                   (loop for (thing . more-to-come) on stuff
-		      for last = (or (not more-to-come) 
-                                     (not (loop for (key) in more-to-come 
+		      for last = (or (not more-to-come)
+                                     (not (loop for (key) in more-to-come
                                               thereis (member key '(:sequential :parallel :repeat :goal :action)))))
 		      for next-input-state = input-state then his-output-state
 		      for next-output-state = (when last output-state)
@@ -137,7 +137,9 @@
 		 (:break (list (list `(prog1 t (break ,@stuff)))
 			       nil
 			       input-state))
-                 (:trace (list (list `(prog1 t (when *method-tracing* (terpri *trace-output*) (format *trace-output* ,@stuff))))
+                 (:trace (list (list `(prog1 t (when *method-tracing*
+                                                 (format t "~%~vtIn ~a, " (* 2 ji::*rule-depth*) ',method-name)
+                                                 (format t ,@stuff))))
 			       nil
 			       input-state))
                  ((:goal :plan)
@@ -201,33 +203,35 @@
     `((prog1 t
 	,@(loop for assertion in assertions collect `(tell [in-state ,assertion ,output-state])))))))
 
-(defun process-assertions (assertions input-state)
+(defun process-assertions (method-name assertions input-state)
   (labels ((do-one (assertion)
 	     (cond
-	      ;; special case for debugging
-	      ((and (listp assertion) (not (predication-maker-p assertion)))
-	       (if (eql (first assertion) 'break)
-		   `(prog1 t ,assertion)
-		 assertion))
-	      ((eql (predication-maker-predicate assertion) 'or)
-	       (with-predication-maker-destructured (&rest assertions) assertion
-		 (loop for assertion in assertions
-		     collect (do-one assertion) into processed-assertions
-		     finally (return `(predication-maker '(or ,@processed-assertions))))))
-	      ((and (listp assertion) (not (predication-maker-p assertion))) assertion)
-	      ((compile-without-state assertion) assertion)
-	      (t `(predication-maker '(in-state ,assertion ,input-state))))))
+	       ;; special cases for debugging
+	       ((and (listp assertion) (not (predication-maker-p assertion)) (eql (first assertion) :break))
+		`(prog1 t (break ,@(rest assertion))))
+               ((and (listp assertion) (not (predication-maker-p assertion)) (eql (first assertion) :trace))
+                `(prog1 t (when *method-tracing*
+                            (format t "~%~vtIn ~a, " (* 2 ji::*rule-depth*) ',method-name)
+                            (format t ,@(rest assertion)))))
+	       ((and (listp assertion) (predication-maker-p assertion) (eql (predication-maker-predicate assertion) 'or))
+	        (with-predication-maker-destructured (&rest assertions) assertion
+		  (loop for assertion in assertions
+		        collect (do-one assertion) into processed-assertions
+		        finally (return `(predication-maker '(or ,@processed-assertions))))))
+	       ((and (listp assertion) (not (predication-maker-p assertion))) assertion)
+	       ((compile-without-state assertion) assertion)
+	       (t `(predication-maker '(in-state ,assertion ,input-state))))))
     (loop for thing in assertions collect (do-one thing))))
 
 
-(defun process-guards (assertions input-state)
+(defun process-guards (method-name assertions input-state)
   (loop for assertion in assertions
         if (and (predication-maker-p assertion) (eql (predication-maker-predicate assertion) 'unknown))
         collect (second (predication-maker-statement assertion)) into unknown-guards
       else collect assertion into other-guards
-      finally (return (append (loop for assertion in (process-assertions unknown-guards input-state)
+      finally (return (append (loop for assertion in (process-assertions method-name unknown-guards input-state)
                                   collect `(predication-maker '(not (predication-maker '(known ,assertion)))))
-                              (process-assertions other-guards input-state)))))
+                              (process-assertions method-name other-guards input-state)))))
 
 
 
@@ -279,16 +283,16 @@
             (ji:make-predication-maker `(value-of ,expanded-path ,logic-variable)))))))))
 
 
-(defun process-bindings (assertions input-state)
+(defun process-bindings (method-name assertions input-state)
   (let ((expanded-bindings (loop for assertion in assertions
 			       collect (if (is-pretty-binding assertion)
 					   (de-prettify-binding assertion)
 					 assertion))))
-    (process-assertions expanded-bindings input-state)))
+    (process-assertions method-name expanded-bindings input-state)))
 
 
 
-(defun process-prerequisites (assertions input-state) (process-assertions assertions input-state))
+(defun process-prerequisites (method-name assertions input-state) (process-assertions method-name assertions input-state))
 
 (defun compile-without-state (form)
   (if (predication-maker-p form)
@@ -307,10 +311,14 @@
 ;;; are the simple (thing type) so there might not
 ;;; need be an escape hatch for more complex forms
 ;;; Except that it allows break forms
-(defun process-typing (forms)
+(defun process-typing (method-name forms)
   (loop for form in forms
       if (and (listp form) (eql (first form) :break))
-         collect `(break ,@(rest form))
+      collect `(prog1 t (break ,@(rest form)))
+      else if (and (listp form) (eql (first form) :trace))
+      collect `(prog1 t (when *method-tracing*
+                          (format t "~%~vtIn ~a, " (* 2 ji::*rule-depth*) ',method-name)
+                          (format t ,@(rest form))))
       else if (and (listp form) (= (length form) 2))
       collect (destructuring-bind (thing type) form
                 (ji:make-predication-maker `(object-type-of ,thing ,type)))
@@ -394,6 +402,7 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 (defparameter *all-attack-methods* nil)
+(defparameter *compile-for-debugging* t)
 
 (defmacro defattack-method (method-name &key to-achieve
 					     (input-state `(logic-variable-maker ,(intern (string-upcase "?input-state"))))
@@ -406,10 +415,16 @@
 					     post-conditions
                                              output-variables ;; Marks that variables in the to-achieve that are bound during execution
                                              attack-identifier
-					     )
+					  )
+  (setq bindings (loop for thing in bindings
+                     if (and (listp thing) (eql (first thing) :trace))
+                     collect `(prog1 t (when *method-tracing*
+                                         (format t "~%~vtIn ~a " (* 2 ji::*rule-depth*) ',method-name)
+                                         (format t ,@(rest thing))))
+                     else collect thing))
   (let* ((plan-variable `(logic-variable-maker ,(gensym "?PLAN")))
          (real-head `(predication-maker '(achieve-goal ,to-achieve ,input-state  ,output-state ,plan-variable)))
-         (rebuilt-plan-structure (rebuild-plan-structure plan input-state output-state))
+         (rebuilt-plan-structure (rebuild-plan-structure method-name plan input-state output-state))
          )
     ;; Pull out all typing that refers only to the inputs
     ;; And then leave the rest as late-typing.
@@ -436,8 +451,7 @@
         (destructuring-bind (goals-to-achieve plan-structure thing) (or rebuilt-plan-structure (list nil nil nil))
           (declare (ignore thing))
           (setq plan-structure (substitute-hidden-bindings plan-structure all-refs))
-          (when attack-identifier
-            (push `(list :attack-identifier ',attack-identifier) (rest (rest plan-structure))))
+          (push `(list :attack-identifier ',attack-identifier :method-name ',method-name) (rest (rest plan-structure)))
           `(eval-when (:load-toplevel :execute)
              (pushnew ',method-name *all-attack-methods*)
              ;; Now generate the backward rule
@@ -445,12 +459,12 @@
              ;; will have been removed so the process-bindings code can be simplified.
              (defrule ,method-name (:backward)
                then ,real-head
-               if [and
-                   ,@(process-typing early-typing)
-                   ,@(process-assertions (merge-and-substitute-hidden-bindings bindings all-refs hidden-bindings-alist 'bindings) input-state)
-                   ,@(merge-and-substitute-hidden-bindings (process-guards guards input-state) all-refs hidden-bindings-alist 'guards)
-                   ,@(merge-and-substitute-hidden-bindings (process-typing late-typing) all-refs hidden-bindings-alist 'typing)
-                   ,@(merge-and-substitute-hidden-bindings (process-prerequisites prerequisites input-state) all-refs hidden-bindings-alist 'prerequsities)
+               if [and;;; -*- Mode: LISP
+                   ,@(process-typing method-name early-typing)
+                   ,@(process-assertions method-name (merge-and-substitute-hidden-bindings bindings all-refs hidden-bindings-alist 'bindings) input-state)
+                   ,@(merge-and-substitute-hidden-bindings (process-guards method-name guards input-state) all-refs hidden-bindings-alist 'guards)
+                   ,@(merge-and-substitute-hidden-bindings (process-typing method-name late-typing) all-refs hidden-bindings-alist 'typing)
+                   ,@(merge-and-substitute-hidden-bindings (process-prerequisites method-name prerequisites input-state) all-refs hidden-bindings-alist 'prerequsities)
                    ,@(merge-and-substitute-hidden-bindings goals-to-achieve all-refs hidden-bindings-alist 'plan)
                    ,@(merge-and-substitute-hidden-bindings (process-post-conditions post-conditions output-state) all-refs hidden-bindings-alist 'post-conditions)
                    ,@(when (null rebuilt-plan-structure)
@@ -553,33 +567,33 @@
   ;; (break "~{~a~^, ~}~%~a~%~{~a~^,~}~%~a" set-of-stuff reference-alist bindings-by-set-type set-type)
   (let ((bindings-for-set-type (second (assoc set-type bindings-by-set-type))))
     (cond
-     ((and (null reference-alist) (eql set-type 'bindings))
-      (loop for thing in set-of-stuff
-          if (normal-binding? thing)
-          collect (de-prettify-binding thing)
-          else collect thing))
-     ((null reference-alist) set-of-stuff)
-     ((and (null bindings-for-set-type) (eql set-type 'bindings))
-      (loop for thing in set-of-stuff
-          if (normal-binding? thing)
-          collect (de-prettify-binding thing)
-          else collect (substitute-hidden-bindings thing reference-alist)))
-     ((null bindings-for-set-type)
-      (substitute-hidden-bindings set-of-stuff reference-alist))
-     (t (let ((already-emitted nil))
-          ;; loop over the forms
-          ;; for each check all the implicit bindings
-          ;; and if it's already been emitted skip it
-          ;; otherwise if it's in the form, emit it and remember that it's been emitted
-          (loop for thing in set-of-stuff
-              append (loop for (implicit-binding lv) in bindings-for-set-type
-                         when (and (mentioned-in? implicit-binding thing)
-                                   (not (member lv already-emitted)))
-                         collect (de-prettify-binding (ji:make-predication-maker `(value-of ,implicit-binding ,lv)))
-                         and do (push lv already-emitted))
-              if (normal-binding? thing)
-              collect (de-prettify-binding thing)
-              else collect (substitute-hidden-bindings thing reference-alist)))))))
+      ((and (null reference-alist) (eql set-type 'bindings))
+       (loop for thing in set-of-stuff
+             if (normal-binding? thing)
+               collect (de-prettify-binding thing)
+             else collect thing))
+      ((null reference-alist) set-of-stuff)
+      ((and (null bindings-for-set-type) (eql set-type 'bindings))
+       (loop for thing in set-of-stuff
+             if (normal-binding? thing)
+               collect (de-prettify-binding thing)
+             else collect (substitute-hidden-bindings thing reference-alist)))
+      ((null bindings-for-set-type)
+       (substitute-hidden-bindings set-of-stuff reference-alist))
+      (t (let ((already-emitted nil))
+           ;; loop over the forms
+           ;; for each check all the implicit bindings
+           ;; and if it's already been emitted skip it
+           ;; otherwise if it's in the form, emit it and remember that it's been emitted
+           (loop for thing in set-of-stuff
+                 append (loop for (implicit-binding lv) in bindings-for-set-type
+                              when (and (mentioned-in? implicit-binding thing)
+                                        (not (member lv already-emitted)))
+                                collect (de-prettify-binding (ji:make-predication-maker `(value-of ,implicit-binding ,lv)))
+                                and do (push lv already-emitted))
+                 if (normal-binding? thing)
+                   collect (de-prettify-binding thing)
+                 else collect (substitute-hidden-bindings thing reference-alist)))))))
 
 (defun substitute-hidden-bindings (set-of-stuff reference-alist)
   (labels ((do-one (form)
@@ -935,6 +949,8 @@
         ;; Also for each generate a new logic-variable-maker
         (multiple-value-bind (all-refs hidden-bindings-alist) (find-hidden-bindings nil prerequisites post-conditions late-typing nil bindings)
           (destructuring-bind (input-state-variable output-state-variable) state-logic-variables
+            (let ((usage-map (build-usage-map variables bindings typing nil prerequisites post-conditions outputs output-variables)))
+              (perform-usage-checks usage-map name))
             `(eval-when (:compile-toplevel :load-toplevel :execute)
                (pushnew ',name *all-actions*)
                ,@(when define-predicate `((define-predicate ,name ,names (ltms:ltms-predicate-model))))
@@ -944,10 +960,10 @@
                      collect `(record-predicate-output-variable ',name ',stripped-name))
                (defrule ,rule-name (:backward)
                  then ,real-head
-                 if [and ,@(process-typing early-typing)
-                         ,@(merge-and-substitute-hidden-bindings (process-bindings bindings input-state-variable) all-refs hidden-bindings-alist 'bindings)
-                         ,@(merge-and-substitute-hidden-bindings (process-typing late-typing) all-refs hidden-bindings-alist 'typing)
-                         ,@(merge-and-substitute-hidden-bindings (process-prerequisites prerequisites input-state-variable) all-refs hidden-bindings-alist 'prerequsities)
+                 if [and ,@(process-typing name early-typing)
+                         ,@(merge-and-substitute-hidden-bindings (process-bindings name bindings input-state-variable) all-refs hidden-bindings-alist 'bindings)
+                         ,@(merge-and-substitute-hidden-bindings (process-typing name late-typing) all-refs hidden-bindings-alist 'typing)
+                         ,@(merge-and-substitute-hidden-bindings (process-prerequisites name prerequisites input-state-variable) all-refs hidden-bindings-alist 'prerequsities)
                          ,@capec-statements
                          ;; so at this point we've checked that the prerequisites are satisfied
                          (prog1 t

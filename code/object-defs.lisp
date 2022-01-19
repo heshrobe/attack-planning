@@ -10,6 +10,8 @@
 ;;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
+(eval-when (:compile-toplevel :load-toplevel :execute)
+
 (define-object-type print-nicely-mixin)
 
 (defvar *print-object-nicely* nil)
@@ -28,10 +30,10 @@
     :slots ()
     )
 
-(eval-when (:compile-toplevel :load-toplevel :execute)
-  (defparameter *all-object-types* nil))
 
-(eval-when (:compile-toplevel :load-toplevel :execute)
+(defparameter *all-object-types* nil)
+
+
   (defmacro define-aplan-object (name &rest plist)
     (let* ((super-types (getf plist :super-types))
 	   (slots (getf plist :slots)))

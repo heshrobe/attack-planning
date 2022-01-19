@@ -114,13 +114,14 @@
 ;;; meaning they can read-or-write any resource that
 ;;; requires read or write capability
 (defuser typical-worker-bee
-    :user-type normal-user
-    :ensemble worker-computers
-    :computers (typical-worker-computer)
-    :typical t
-    :capabilities (user-write)
-    :authorization-pools (victim-authorization-pool)
-    )
+  :user-type normal-user
+  :ensemble worker-computers
+  :computers (typical-worker-computer)
+  :typical t
+  :capabilities (user-write)
+  :authorization-pools (victim-authorization-pool)
+  :has-weak-password 'yes
+  )
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;
@@ -157,6 +158,7 @@
   :authorization-pools (victim-authorization-pool)
   :capabilities (sysadmin)
   :superuser-for (typical-worker-computer typical-admin-computer)
+  :has-weak-password 'no
   )
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -204,11 +206,13 @@
   :ip-address-string "192.168.20.4"
   :typical nil
   :authorization-pool victim-authorization-pool
-  :ensemble server-computers)
+  :ensemble server-computers
+  :superuser typical-sysadmin
+  )
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;
-;;; The router, switches and "firewall" rules
+;;; The Router, switches and "firewall" rules
 ;;; The router is addressable at the 1 position in each subnet
 ;;; The switch is addressable at the 2 position in its subnet
 ;;; Vanilla computers start at 3 within their subnet

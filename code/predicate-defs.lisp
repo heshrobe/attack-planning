@@ -52,7 +52,7 @@
   (defparameter *all-aplan-predicates* nil)
   (defparameter *aplan-predicate-binding-map* (make-hash-table))
 
-  (define-predicate-model aplan-predicate-model () (ltms:ltms-predicate-model))
+  (define-predicate-model aplan-predicate-model () (joshua:no-variables-in-data-mixin ltms:ltms-predicate-model))
 
   (defun record-predicate-output-variable (predicate name)
     (pushnew name (gethash predicate *aplan-predicate-binding-map*)))
@@ -260,12 +260,12 @@
 ;;; (define-predicate vulnerable-to-overflow-attack (process protocol) (ltms:ltms-predicate-model))
 
 (define-aplan-predicate is-typical-user (user) (non-stateful-predicate-model))
+(define-aplan-predicate is-superuser (os user ) (non-stateful-predicate-model))
+
 
 ;;; I'm treating this as if it's not temporally contingent.  There's a
 ;;; temporally contingent predicate just below runs-with-permission-of
 ;;; that says someone is running with superuser privilege,
-
-(define-aplan-predicate is-superuser (user computer) (non-stateful-predicate-model))
 
 ;;; These could change over time (I think)
 
@@ -418,8 +418,11 @@
 
 (define-aplan-predicate user-visits-malicious-website (user) ())
 
-(define-aplan-predicate compressed-file-of (compressed-file input-file-1 input-file-2) (non-stateful-predicate-model))
-
 (define-aplan-predicate already-compromised (attacker victim) ())
 
+
 (define-aplan-predicate has-persistent-remote-execution (attacker victim-computer role) ())
+
+(define-aplan-predicate has-data-for-cracking (attacker-machine source-file concatenated-file) ())
+(define-aplan-predicate contains-data (concatenated-file source-file) ())
+(define-aplan-predicate has-prepared-password-data (file password-file shadow-file) ())
