@@ -488,3 +488,10 @@
 (defmethod child-of-action-or-state ((action action))
   (list (next-state action))
   )
+
+
+
+
+(defun get-editor-caldera-sequences ()
+  (caldera-sequences-from-attack-plans
+    (attack-plans (attack-plan-collector *editor*))))

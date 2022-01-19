@@ -363,7 +363,7 @@
 		    (let* ((plist (second step))
                            (attack-identifier (getf plist :attack-identifier))
                            (method-name (getf plist :method-name))
-                           (steps (loop for his-step in (if attack-identifier  (rest (rest step)) (rest step))
+                           (steps (loop for his-step in (rest (rest step))
 				     collect (traverse his-step supergoal))))
 		      (intern-plan type steps supergoal attack-identifier method-name)))
 		   (:otherwise (break "What is this ~a" step))
