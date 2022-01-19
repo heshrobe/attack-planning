@@ -113,7 +113,7 @@
 	   (terpri stream)
 	   (json:as-array-member (stream) (dump-node node stream))))
     (json:with-array (stream)
-      (traverse-merged-attack-graph root-node #'do-a-node cut-off-function)
+      (traverse-merged-attack-graph root-node #'do-a-node :cut-off-test  cut-off-function)
       )))
 
 (defmethod dump-node ((node attack-goal) &optional (stream *standard-output*))
