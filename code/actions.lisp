@@ -9,13 +9,15 @@
 
 (in-package :aplan)
 
-(define-action connect-via (?current-foothold-computer ? ?victim-computer ?protocol-name)
+(define-action connect-via (?current-foothold-computer ?current-foothold-role ?victim-computer ?protocol-name)
+  :ignore (?current-foothold-role)
   :prerequisites ([accepts-connection ?victim-computer ?protocol-name ?current-foothold-computer]
 		  [is-protocol ?protocol-name])
   :post-conditions ([connection-established ?current-foothold-computer ?victim-computer ?protocol-name])
   )
 
-(define-action submit-email (?type-of-email ? ?foothold-computer ?foothold-role)
+(define-action submit-email (?type-of-email ?process ?foothold-computer ?foothold-role)
+  :ignore (?process)
   :prerequisites ([current-foothold ?foothold-computer ?foothold-role]
 		  [accepts-connection ?victim-computer email ?foothold-computer])
   :post-conditions ([email-submitted ?victim-computer ?type-of-email ?foothold-computer])
@@ -31,7 +33,8 @@
   )
 
 
-(define-action create-malicious-browser-extension (? ? ?extension)
+(define-action create-malicious-browser-extension (?attacker ?process ?extension)
+  :ignore (?attacker ?process)
   :output-variables (?extension)
   :typing ((?extension extension))
   :prerequisites ()
@@ -39,9 +42,10 @@
   )
 
 ;;; This should be replaced by the one below and an action to create the phishing email
-(define-action send-phishing-email (?attacker ? ?email-server ?victim ?)
+(define-action send-phishing-email (?attacker ?attacker-foothold-computer ?email-server ?victim ?process)
+  :ignore (?process)
   :prerequisites ([has-foothold ?email-server ?sending-computer ?sending-role smtp]
-		  [attacker-and-computer ?attacker ?])
+		  [attacker-and-computer ?attacker ?attacker-foothold-computer])
   :post-conditions ([email-sent-to ?victim ?attacker ?sending-computer ?sending-role ?email-server]
 		    [knows-credentials ?attacker ?victim]
 		    )
@@ -50,7 +54,8 @@
 ;;; The attacker sends an email from his computer to the email server for eventual
 ;;; delivery to the victim-computer of the victim-user
 
-(define-action create-email-with-corrupt-attachment (? ?attachment-type ?email-message ?attachment)
+(define-action create-email-with-corrupt-attachment (?attacker ?attachment-type ?email-message ?attachment)
+  :ignore (?attacker)
   :output-variables (?email-message ?attachment)
   :prerequisites ()
   :outputs ((?attachment (make-object 'application-file :name (make-name 'attachment) :application ?attachment-type))
@@ -60,7 +65,8 @@
   )
 
 
-(define-action create-email-with-corrupt-link (? ?hyper-link ?email-message)
+(define-action create-email-with-corrupt-link (?attacker ?hyper-link ?email-message)
+  :ignore (?attacker)
   :output-variables (?email-message ?hyper-link)
   :prerequisites()
   :outputs ((?hyper-link (make-object 'hyper-link :name (make-name 'hyper-link)))
@@ -72,13 +78,15 @@
 (define-action send-email (?attacker ?email ?sending-computer ?email-server ?victim)
   :bindings ([value-of ?victim.computers ?victim-computer])
   :prerequisites ([has-foothold ?email-server ?sending-computer ?sending-role smtp]
-                  [attacker-and-computer ?attacker ?])
+                  [attacker-and-computer ?attacker ?attacker-computer])
+  :ignore (?attacker-computer)
   :post-conditions ([email-sent-to ?victim ?attacker ?sending-computer ?sending-role ?email-server]
                     [email-received ?victim ?email ?victim-computer]
 		    )
   )
 
-(define-action create-removable-media-with-corrupt-attachment (? ?attachment-type ?removable-media ?attachment)
+(define-action create-removable-media-with-corrupt-attachment (?attacker ?attachment-type ?removable-media ?attachment)
+  :ignore (?attacker)
   :output-variables (?removable-media ?attachment)
   :prerequisites ()
   :outputs ((?attachment (make-object 'application-file :name (make-name 'attachment) :application ?attachment-type))
@@ -87,7 +95,8 @@
   :post-conditions ()
   )
 
-(define-action user-clicks-on-attachment (?user ?user-computer ?email-message ?attachment ?)
+(define-action user-clicks-on-attachment (?user ?user-computer ?email-message ?attachment ?new-process)
+  :ignore (?new-process)
   :prerequisites ([email-received ?user ?email-message ?user-computer])
   :bindings ([value-of ?email-message.attachments ?attachment]
              [value-of ?attachment.application ?application-type])
@@ -96,7 +105,8 @@
   :post-conditions ([file-clicked-on ?user ?attachment ?application-type])
   )
 
-(define-action user-uses-removable-media (?user ? ?removable-media ?attachment ?)
+(define-action user-uses-removable-media (?user ?user-computer ?removable-media ?attachment ?new-process)
+  :ignore (?user-computer ?new-process)
   :prerequisites ()
   :bindings([value-of ?removable-media.attachments ?attachment]
             [value-of ?attachment.application ?application-type])
@@ -183,7 +193,8 @@
 	     [value-of ?victim-os.computer ?victim-computer])
   :prerequisites ([has-foothold ?victim-computer ?foothold-computer ?foothold-role ?protocol]
 		  [is-vulnerable-to ?victim-process buffer-overflow-attack ?protocol]
-		  [connection-established ?foothold-computer ?victim-computer ?])
+		  [connection-established ?foothold-computer ?victim-computer ?connection-type])
+  :ignore (?connection-type)
   :post-conditions ([controls-process ?attacker ?victim-process code-reuse])
   )
 
@@ -202,7 +213,8 @@
 (define-action use-own-password (?victim-user ?victim-computer)
   :bindings ((?victim-os-instance ?victim-computer.os)
              (?pool ?victim-os-instance.authorization-pool)
-	     [attacker-and-computer ?attacker ?])
+	     [attacker-and-computer ?attacker ?attacker-computer])
+  :ignore (?attacker-computer)
   :prerequisites ([value-of ?victim-os-instance.users ?victim-user]
 		  [value-of ?pool.users ?victim-user])
   :post-conditions ([knows-credentials ?attacker ?victim-user])
@@ -224,12 +236,13 @@
 		    [knows-password ?attacker ?user])
   )
 
-(define-action fill-disk (?attacker ? kill-disk)
-  :bindings ([attacker-and-computer ?attacker ?])
-  :prerequisites ([has-remote-execution ?attacker ?victim-computer ?]
+(define-action fill-disk (?attacker ?foothold-computer kill-disk)
+  :ignore (?foothold-computer ?attacker-computer ?victim-role)
+  :bindings ([attacker-and-computer ?attacker ?attacker-computer])
+  :prerequisites ([has-remote-execution ?attacker ?victim-computer ?victim-role]
 		  [Malware-installed-on-computer ?attacker ?victim-computer kill-disk])
-  :post-conditions ([disk-filled ?victim-computer])
-  )
+  :post-conditions ([disk-filled ?victim-computer]))
+
 
 (defrule sysadmin-forced-to-login (:forward)
   if [and [in-state [disk-filled ?victim-computer] ?state]
@@ -240,7 +253,8 @@
 	  ]
   then [in-state [user-forced-to-login ?victim-user ?victim-computer] ?state])
 
-(define-action use-access-right-to-modify (?attacker write ?whose-right ? ?victim-object ?)
+(define-action use-access-right-to-modify (?attacker write ?whose-right ?foothold-computer ?victim-object ?victim-computer)
+  :ignore (?foothold-computer ?victim-computer)
   :prerequisites ([has-permission ?whose-right write ?victim-object])
   :post-conditions ([modified-by ?attacker ?victim-object])
   )
@@ -256,20 +270,23 @@
 ;;;;   :prerequisites ([has-permission ?current-foothold-role write ?object])
 ;;;;   :post-conditions ([has-been-modified ?object]))
 
-(define-action download-software (?package ? ?destination-computer ?role)
-  :bindings ([attacker-and-computer ?attacker ?])
+(define-action download-software (?package ?source-computer ?destination-computer ?role)
+  :ignore (?source-computer ?attacker-computer)
+  :bindings ([attacker-and-computer ?attacker ?attacker-computer])
   :prerequisites ([has-remote-execution ?attacker  ?destination-computer ?role])
   :post-conditions ([software-downloaded ?package ?destination-computer]
 		    ))
 
 (define-action load-software (?package ?victim-computer)
   :bindings ([attacker-and-computer ?attacker ?])
-  :prerequisites ([has-remote-execution ?attacker ?victim-computer ?]
+  :prerequisites ([has-remote-execution ?attacker ?victim-computer ?role]
 		  [software-downloaded ?package ?victim-computer])
+  :ignore (?role)
   :post-conditions ([software-loaded ?package ?victim-computer]))
 
 
-(define-action open-ftp-connection (? ?from-computer ?to-computer)
+(define-action open-ftp-connection (?user ?from-computer ?to-computer)
+  :ignore (?user)
   :prerequisites ([accepts-connection ?to-computer ftp ?from-computer])
   :post-conditions ([connection-established ?from-computer ?to-computer ftp]))
 
@@ -285,37 +302,43 @@
 ;   :post-conditions ([malware-installed-on-computer ?attacker ?victim-computer ?malware-type]))
 
 (define-action capture-password-through-keylogger (?attacker ?victim-user ?victim-computer)
-  :prerequisites ([has-remote-execution ?attacker ?victim-computer ?]
+  :prerequisites ([has-remote-execution ?attacker ?victim-computer ?role]
 		  [malware-installed-on-computer ?attacker ?victim-computer key-logger]
 		  [user-forced-to-login ?victim-user ?victim-computer])
+  :ignore (?role)
   :post-conditions ([knows-password ?attacker ?victim-user]
                     [knows-credentials ?attacker ?victim-user])
   )
 
 (define-action compress-files (?attacker ?victim-computer ?file1 ?file2 ?new-file ?new-file-type)
-  :prerequisites ([has-remote-execution ?attacker ?victim-computer ?])
+  :prerequisites ([has-remote-execution ?attacker ?victim-computer ?role])
+  :ignore (?role)
   :outputs ((?new-file (create-new-resource (make-name 'compressed-password-file) ?new-file-type ?victim-computer)))
   :post-conditions ([compressed-file-of ?new-file ?file1 ?file2]))
 
 (define-action create-file (?attacker ?victim-computer ?new-file ?new-file-type)
-  :prerequisites ([has-remote-execution ?attacker ?victim-computer ?])
+  :prerequisites ([has-remote-execution ?attacker ?victim-computer ?role])
+  :ignore (?role)
   :outputs ((?new-file (create-new-resource (make-name ?new-file-type) ?new-file-type ?victim-computer)))
   :post-conditions ())
 
 (define-action concatenate-into-existing-file (?attacker ?victim-computer ?source-file ?destination-file)
-  :prerequisites ([has-remote-execution ?attacker ?victim-computer ?])
+  :prerequisites ([has-remote-execution ?attacker ?victim-computer ?role])
+  :ignore (?role)
   :post-conditions ([contains-data ?destination-file ?source-file]))
 
 (define-action extract-new-user-data (?attacker ?victim-computer ?concatenated-file ?hash-crack-file)
   :bindings ([resource-named ?victim-computer password-file ?password-file]
              [resource-named ?victim-computer shadow-file ?shadow-file])
-  :prerequisites ([has-remote-execution ?attacker ?victim-computer ?]
+  :prerequisites ([has-remote-execution ?attacker ?victim-computer ?role]
                   [contains-data ?concatenated-file ?password-file]
                   [contains-data ?concatenated-file ?shadow-file])
+  :ignore (?role)
   :outputs ((?hash-crack-file (create-new-resource (make-name 'hash-crack-file) 'password-file ?victim-computer)))
   :post-conditions ([has-prepared-password-data ?hash-crack-file ?password-file ?shadow-file]))
 
-(define-action crack-password (?attacker ?victim ?victim-computer ?hash-crack-file ? ?)
+(define-action crack-password (?attacker ?victim ?victim-computer ?hash-crack-file ?c2-server ?cracker-computer)
+  :ignore (?c2-server ?cracker-computer)
   :bindings ([resource-named ?victim-computer password-file ?password-file]
              [resource-named ?victim-computer shadow-file ?shadow-file])
   :prerequisites ([has-prepared-password-data ?hash-crack-file ?password-file ?shadow-file])
@@ -325,8 +348,9 @@
                    )
   )
 
-(define-action modify-data-structures (?process ?data-set ? ?)
-  :bindings ([attacker-and-computer ?attacker ?])
+(define-action modify-data-structures (?process ?data-set ?foothold-computer ?foothold-role)
+  :ignore (?foothold-computer ?foothold-role ?attacker-computer)
+  :bindings ([attacker-and-computer ?attacker ?attacker-computer])
   :prerequisites ([has-control-of ?attacker execution ?process])
   :post-conditions ([modified-by ?attacker ?data-set])
   )
@@ -352,7 +376,8 @@
            (?victim admin-user)
            (?attacker-computer computer))
   :bindings ([attacker-and-computer ?attacker ?attacker-computer])
-  :prerequisites ([data-exfiltrated ?admin-script ? ? ?attacker-computer])
+  :prerequisites ([data-exfiltrated ?admin-script ?actor ?source ?attacker-computer])
+  :ignore (?actor ?source)
   :post-conditions ([knows-password ?attacker ?victim]
                     [knows-credentials ?attacker ?victim]))
 
@@ -381,13 +406,15 @@
 ;; (define-action trasmit-data (actor data target))
 
 (define-action issue-false-sensor-data-report (?controller-computer ?victim-computer ?bus ?sensor-type)
+  :ignore (?controller-computer ?victim-computer ?bus ?sensor-type)
   :prerequisites ()
   :post-conditions ()
   )
 
 
 
-(define-action goal-already-satisfied (?)
+(define-action goal-already-satisfied (?the-goal)
+  :ignore (?the-goal)
   :prerequisites ()
   :post-conditions ()
   )

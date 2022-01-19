@@ -415,6 +415,7 @@
 					     post-conditions
                                              output-variables ;; Marks that variables in the to-achieve that are bound during execution
                                              attack-identifier
+                                             ignore
 					  )
   (setq bindings (loop for thing in bindings
                      if (and (listp thing) (eql (first thing) :trace))
@@ -434,7 +435,7 @@
     ;; which isn't what we intended for a typing statement.  This requires us to declare any variable in the to-achieve
     ;; form that won't be bound as an "output".  That's probably a good thing to do anyhow, rather than just have it in a comment.
     (let ((usage-map (build-usage-map to-achieve bindings typing guards prerequisites post-conditions plan output-variables)))
-      (perform-usage-checks usage-map method-name))
+      (perform-usage-checks usage-map method-name ignore))
     (multiple-value-bind (early-typing late-typing)
         (loop for type in typing
             for variable = (first type)
@@ -672,14 +673,15 @@
 ;;; All others anything def'd should be checked against all followers plus the head.
 ;;; Fix: I use compiler::warn here which is the right thing for ACL, need to shadow warn
 ;;; and import the right thing as warn for each implementation (mainly S-BCL).
-(defun perform-usage-checks (alist method)
+(defun perform-usage-checks (alist method &optional ignore-list)
   (let* ((head (second (assoc 'head alist)))
          (bindings (second (assoc 'bindings alist)))
          (typing (second (assoc 'typing alist)))
          (plan (second (assoc 'plan alist)))
          (guards (second (assoc 'guards alist)))
          (prerequisites (second (assoc 'prerequisites alist)))
-         (post-conditions (second (assoc 'post-conditions alist))))
+         (post-conditions (second (assoc 'post-conditions alist)))
+         (ignore-list (loop for lv in ignore-list collect (ji::logic-variable-maker-name lv))))
     (macrolet ((do-checks (set-name)
                  (let* ((position (position set-name *set-names*))
                         (before (subseq *set-names* 0 (1+ position)))
@@ -694,13 +696,14 @@
                                 (ref (unless (or def (check-for-over-sets var (list ,@after) 'def))
                                        (compiler-warn "In ~a, Variable ~a is referenced in the head but is not defined after"
                                                        method var)))
-                                (def (unless (or ref (check-for-over-sets var (list typing ,@after) 'ref))
+                                (def
+                                    (unless (or ref (check-for-over-sets var (list typing ,@after) 'ref) (member var ignore-list))
                                        (compiler-warn "In ~a, Varable ~a is defined in the head but is not referenced after"
                                                        method var)))))
                              (t `(cond
                                   (ref (unless (or def (check-for-over-sets var (list ,@before) 'def))
                                          (compiler-warn "In ~a, Variable ~a is referenced in the ~a but is not defined earlier" method var ',set-name)))
-                                  (def (unless (or ref (check-for-over-sets var (list head ,@after) 'ref))
+                                  (def (unless (or ref (check-for-over-sets var (list head ,@after) 'ref) (member var ignore-list))
                                          (compiler-warn "In ~a, Variable ~a is defined in the ~a but is not used"
                                                         method var ',set-name))))))))))
       (labels ((check-for (variable-name set type)
@@ -709,7 +712,14 @@
                          ((eql type 'def) (def entry))
                          ((eql type 'ref) (ref entry)))))
                (check-for-over-sets (variable-name sets type)
-                 (loop for set in sets thereis (check-for variable-name set type))))
+                 (loop for set in sets thereis (check-for variable-name set type)))
+               (is-used (var)
+                 (let ((used-in nil))
+                   (loop for (set-name entries) in alist
+                       for entry = (find var entries :key #'variable-name)
+                       when (and entry (ref entry))
+                       do (push set-name used-in))
+                   used-in)))
         ;; 1) for variables in the head, make sure that all variables are referenced
         (do-checks head)
         ;; 2) for variables in bindings, if it's defined make sure it's referenced somewhere
@@ -725,6 +735,10 @@
         ;; 5) Variables referenced in the post-conditions should have been defined in head, bindings, prerequs, plan or post-conditions
         ;;    Variables defined in the post-conditions should be used in the post-conditions
         (do-checks post-conditions)
+        (loop for var in ignore-list
+            for used-in = (is-used var)
+            when used-in
+            do (compiler-warn "In ~a, variable ~a is ignored but it is used in ~{~a, ~^and ~}" method var used-in))
         ))))
 
 (defun build-usage-map (head bindings typing guards prerequisites post-conditions plan output-variables)
@@ -912,7 +926,7 @@
 
 (defparameter *all-actions* nil)
 
-(defmacro define-action (name variables &key bindings prerequisites post-conditions (define-predicate t) capecs outputs typing output-variables)
+(defmacro define-action (name variables &key bindings prerequisites post-conditions (define-predicate t) capecs outputs typing output-variables ignore)
   (flet ((make-logic-variables (names)
 	   (loop for var in names
 	       if (logic-variable-maker-p var)
@@ -950,7 +964,7 @@
         (multiple-value-bind (all-refs hidden-bindings-alist) (find-hidden-bindings nil prerequisites post-conditions late-typing nil bindings)
           (destructuring-bind (input-state-variable output-state-variable) state-logic-variables
             (let ((usage-map (build-usage-map variables bindings typing nil prerequisites post-conditions outputs output-variables)))
-              (perform-usage-checks usage-map name))
+              (perform-usage-checks usage-map name ignore))
             `(eval-when (:compile-toplevel :load-toplevel :execute)
                (pushnew ',name *all-actions*)
                ,@(when define-predicate `((define-predicate ,name ,names (ltms:ltms-predicate-model))))

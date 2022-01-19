@@ -59,15 +59,21 @@
 
 (defgeneric subordinates (graph-node))
 
-(defun traverse-merged-attack-graph (root-node action-fun &key cut-off-test)
+(defun traverse-merged-attack-graph (root-node action-fun &key cut-off-test reverse-order)
   (let ((visited (make-hash-table)))
     (labels ((do-a-node (node)
 	       (unless (gethash node visited)
 		 (setf (gethash node visited) t)
-		 (funcall action-fun node)
-                 (unless (and cut-off-test (funcall cut-off-test node))
+                 (cond
+                  (reverse-order
+                   (do-subordinates node)
+                   (funcall action-fun node))
+                  (t (funcall action-fun node)
+                     (do-subordinates node)))))
+             (do-subordinates (node)
+               (unless (and cut-off-test (funcall cut-off-test node))
                    (loop for subordinate in (subordinates node)
-                       do (do-a-node subordinate))))))
+                       do (do-a-node subordinate)))))
       (do-a-node root-node))))
 
 (defmethod subordinates ((node attack-goal)) (supporting-plans node))
