@@ -1652,7 +1652,7 @@ predicate promising the thing is known.
 
 (defattack-method BITS-Jobs
     :to-achieve [persistently-execute ?attacker ?victim ?victim-computer]
-    :bindings([attacker-and-computer ?attacker ?attacker-computer])
+    :bindings([attacker-and-machine ?attacker ?])
     :typing((?victim-computer computer)
             (?victim user)
             (?malware-package malware-package))
