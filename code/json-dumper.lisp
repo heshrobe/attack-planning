@@ -344,3 +344,15 @@
 		     (json:with-object (stream)
 		       (json:encode-object-member 'name (role-name computer) stream))))))
     (terpri stream)))
+
+
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;;
+;;; CALDERA json dump format
+;;;
+;;; Dumps Computers Users (but not the graph)
+;;;
+;;; Then dumps all CALDERA ID sequences
+;;;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
