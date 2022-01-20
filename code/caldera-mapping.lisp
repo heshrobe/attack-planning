@@ -90,7 +90,7 @@
       (format stream "~2%")
       (json:as-object-member ('users stream) (dump-users users stream))
       (format stream "~2%")
-      (json:as-object-member ('nodes stream) (dump-nodes root-node stream #'caldera-dumper-cutoff))
+      (json:as-object-member ('nodes stream) (dump-nodes root-node stream))
       (format stream "~2%")
       (json:as-object-member ('links stream) (dump-links root-node stream)))
     ))

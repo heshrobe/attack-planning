@@ -492,6 +492,50 @@
 
 
 
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;;
+;;; Specialized dumper for CALDERA tranfer
+;;;
+;;; Dumps the computers and network info
+;;; But not the attack graph
+;;; Dumps all CALDERA ID sequences instead
+;;;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+(define-aplan-command (com-dump-for-caldera :name t :menu t)
+    (&key (file-name 'clim:pathname))
+  (with-open-file (file file-name :direction :output :if-exists :supersede :if-does-not-exist :create)
+    (dump-caldera-plan file)))
+
+(defun dump-caldera-plan (&optional (stream *standard-output*))
+  (let* ((caldera-sequences (get-editor-caldera-sequences))
+         (goals (merged-attack-plan (attack-plan-collector clim:*application-frame*)))
+         (root-node (first goals)))
+    (multiple-value-bind (computers users) (collect-computers-and-users root-node)
+      (json:with-object (stream)
+        (format stream "~2%")
+        (json:as-object-member ('computers stream) (dump-computers computers stream))
+        (format stream "~2%")
+        (json:as-object-member ('users stream) (dump-users users stream))
+        (format stream "~2%")
+        (json:as-object-member ('id-sequences stream) (dump-id-sequences caldera-sequences stream))
+        ))))
+
+(defun dump-id-sequences (id-sequences stream)
+  (json:with-array (stream)
+    (loop for sequence in id-sequences
+	do (format stream "~2%")
+	   (json:as-array-member (stream) (dump-id-sequence sequence stream)))))
+
+(defun dump-id-sequence (id-sequence stream)
+  (json:with-array (stream)
+    (loop for pair in id-sequence
+        do (format stream "~2%")
+        do (json:as-array-member (stream)
+             (json:with-object (stream)
+               (json:encode-object-member 'attack-id (first pair) stream)
+               (json:encode-object-member 'caldera-id (second pair) stream))))))
+
 (defun get-editor-caldera-sequences ()
   (caldera-sequences-from-attack-plans
     (attack-plans (attack-plan-collector *editor*))))
