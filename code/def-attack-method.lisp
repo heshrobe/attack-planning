@@ -667,7 +667,7 @@
   #+allegro
   `(compiler::warn ,format-string ,@args)
   #+sbcl
-  `(sb-c:compiler-warn  ,format-string ,@args))
+  `(sb-c:compiler-style-warn  ,format-string ,@args))
 
 ;;; The head is special: Any ref in the head should be def'd in the body
 ;;; All others anything def'd should be checked against all followers plus the head.
