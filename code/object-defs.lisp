@@ -140,7 +140,7 @@
 
 (define-aplan-object directory
     :super-types (path-mixin has-directory-mixin file-collection)
-    :slots ((files :set-valued t ))
+    :slots ((files :set-valued t :Initarg :files))
     )
 
 (define-aplan-object file
