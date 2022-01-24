@@ -150,6 +150,9 @@
 (define-aplan-object dynamically-loadable-code-file
     :super-types (file))
 
+(define-aplan-object dll
+    :super-types (dynamically-loadable-code-file))
+
 (define-aplan-object class-file
     :super-types (dynamically-loadable-code-file)
     :slots ((source-file )
@@ -662,6 +665,7 @@
             (logon-controller logon-controller)
             (access-controller access-controller)
             (network-monitor network-stack)
+            (search-path search-path)
 	    )
     :super-types (in-authorization-pool print-nicely-mixin))
 

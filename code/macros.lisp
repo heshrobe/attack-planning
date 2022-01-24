@@ -321,6 +321,41 @@
     (tell `[value-of (,computer resources) ,new-thing])
     new-thing))
 
+
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;;
+;;; Defsearchpath
+;;;
+;;; Let's you specify directories that are on a search path
+;;; together with their ordering
+;;;
+;;; The search path is a part of the os already, so we just need to tell which
+;;; OS
+;;;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+(defmacro defsearchpath (computer &key directories search-order)
+  (let* ((directory-create-forms (loop for (name resource-spec) in directories
+                                     collect `(defresource ,name ,resource-spec :computers (,computer))))
+         (directory-names (loop for (name) in directories collect name))
+         (is-in-search-path-tells (loop for name in directory-names
+                                      collect `(tell `[is-in-search-path ,search-path ,(follow-path '(,name))])))
+         (orderings (loop for (before after) on search-order
+                        when (not (null after))
+                        collect `(tell `[precedes-in-search-path ,search-path ,(follow-path '(,before)) ,(follow-path '(,after))])))
+         )
+    `(progn
+       ,@directory-create-forms
+       (let ((search-path (follow-path '(,computer os search-path))))
+         ,@is-in-search-path-tells
+         ,@orderings
+         ))))
+
+
+
+
+
 #|
 
 ;;; From Eric

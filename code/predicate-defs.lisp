@@ -404,6 +404,7 @@
 
 
 
+(define-aplan-predicate is-in-search-path (path directory) (non-stateful-predicate-model))
 (define-aplan-predicate precedes-in-search-path (path before after) (non-stateful-predicate-model))
 
 
