@@ -559,8 +559,8 @@
 
 
 (defsearchpath typical-worker-computer
-    :directories ((victim (directory :files victim-dll))
-                  (preceder directory))
+    :directories ((victim :files (victim-dll))
+                  (preceder))
     :search-order (preceder victim))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
