@@ -336,9 +336,14 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 (defmacro defsearchpath (computer &key directories search-order)
-  (let* ((directory-create-forms (loop for (name resource-spec) in directories
-                                     collect `(defresource ,name ,resource-spec :computers (,computer))))
-         (directory-names (loop for (name) in directories collect name))
+  (let* ((directory-names (loop for (name) in directories collect name))
+         (directory-create-forms (loop for (name . original-resource-spec) in directories
+                                     for resource-spec = (copy-seq original-resource-spec)
+                                     for file-spec = (getf resource-spec :files)
+                                     for real-file-spec = `(list ,@(loop for file in file-spec collect `(follow-path '(,file))))
+                                     when file-spec
+                                     do (setf (getf resource-spec :files) real-file-spec)
+                                     collect `(defresource ,name (directory ,@resource-spec) :computers (,computer))))
          (is-in-search-path-tells (loop for name in directory-names
                                       collect `(tell `[is-in-search-path ,search-path ,(follow-path '(,name))])))
          (orderings (loop for (before after) on search-order
