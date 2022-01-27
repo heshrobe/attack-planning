@@ -28,20 +28,33 @@
 	   (clim:surrounding-output-with-border (stream :shape :rectangle :ink clim:+green+)
 	     (clim:with-text-face (stream :bold)
 	       (format stream "~A" (first step))
-               (when (eql (first (second step)) :attack-identifier)
-                 (format stream "~%Attack-identifier: ~a" (second (second step))))
-               )))
+               (let* ((plist (second step))
+                      (identifier (getf plist :attack-identifier))
+                      (method (getf plist :method-name)))
+                 (when identifier
+                   (format stream "~%Attack-identifier: ~a"
+                           identifier))
+                 (when method
+                   (format stream "~%Method: ~a"
+                           method))))))
           (:attack-identifier)
 	  (:singleton
 	   (clim:surrounding-output-with-border (stream :shape :rectangle :ink clim:+green+)
 	     (clim:with-text-face (stream :bold)
 	       (format stream "reduces to")
-               (when (eql (first (second step)) :attack-identifier)
-                 (format stream "~%Attack-identifier: ~%~a" (second (second step)))))))
+               (let* ((plist (second step))
+                      (identifier (getf plist :attack-identifier))
+                      (method (getf plist :method-name)))
+               (when identifier
+                 (format stream "~%Attack-identifier: ~a"
+                         identifier))
+               (when method
+                 (format stream "~%Method: ~a"
+                         method))))))
           (:goal (clim:surrounding-output-with-border (stream :shape :rectangle :ink clim:+blue+)
                    (destructuring-bind (goal-type &rest values) (second step)
-		     ;; total hack to reduce space consumption
-		     ;; (let* ((arglist (ji::find-predicate-arglist goal-type)))
+                     ;; total hack to reduce space consumption
+                     ;; (let* ((arglist (ji::find-predicate-arglist goal-type)))
 		     (format stream "Goal: ~A" goal-type)
 		     (loop for value in values
 			 do (format stream "~%~a" value)))))
@@ -240,7 +253,7 @@
      (orientation '(clim:member-alist (("horizontal" . :horizontal) ("vertical" . :vertical))) :default :vertical)
      (pdf? 'clim:boolean :default nil :prompt "Generate to a pdf file")
      (file-name 'clim:pathname)
-     (text-size '(clim:member :very-small :small :normal :large :very-large))
+     (text-size '(clim:member :very-small :small :normal :large :very-large) :default :small)
      (actions-only 'clim:boolean :default nil :prompt "Only show actions?"))
   (show-plan (attack-plan-collector clim:*application-frame*) plan-number
              :orientation orientation
@@ -404,7 +417,7 @@
 
 (define-aplan-command (com-dump-plan-to-json :name t :menu t)
     ((plan-number 'integer)
-     &key (file-name 'clim:pathname)) 
+     &key (file-name 'clim:pathname))
   (let* ((plan (nth plan-number (attack-plans (attack-plan-collector clim:*application-frame*))))
          ;; this is a terrible hack, it's because the canonical format of plans is either list structure
          ;; or a different set of data structures from those used for the merged plan.  This is stupic, but
@@ -475,3 +488,54 @@
 (defmethod child-of-action-or-state ((action action))
   (list (next-state action))
   )
+
+
+
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;;
+;;; Specialized dumper for CALDERA tranfer
+;;;
+;;; Dumps the computers and network info
+;;; But not the attack graph
+;;; Dumps all CALDERA ID sequences instead
+;;;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+(define-aplan-command (com-dump-for-caldera :name t :menu t)
+    (&key (file-name 'clim:pathname))
+  (with-open-file (file file-name :direction :output :if-exists :supersede :if-does-not-exist :create)
+    (dump-caldera-plan file)))
+
+(defun dump-caldera-plan (&optional (stream *standard-output*))
+  (let* ((caldera-sequences (get-editor-caldera-sequences))
+         (goals (merged-attack-plan (attack-plan-collector clim:*application-frame*)))
+         (root-node (first goals)))
+    (multiple-value-bind (computers users) (collect-computers-and-users root-node)
+      (json:with-object (stream)
+        (format stream "~2%")
+        (json:as-object-member ('computers stream) (dump-computers computers stream))
+        (format stream "~2%")
+        (json:as-object-member ('users stream) (dump-users users stream))
+        (format stream "~2%")
+        (json:as-object-member ('id-sequences stream) (dump-id-sequences caldera-sequences stream))
+        ))))
+
+(defun dump-id-sequences (id-sequences stream)
+  (json:with-array (stream)
+    (loop for sequence in id-sequences
+	do (format stream "~2%")
+	   (json:as-array-member (stream) (dump-id-sequence sequence stream)))))
+
+(defun dump-id-sequence (id-sequence stream)
+  (json:with-array (stream)
+    (loop for pair in id-sequence
+        do (format stream "~2%")
+        do (json:as-array-member (stream)
+             (json:with-object (stream)
+               (json:encode-object-member 'attack-id (first pair) stream)
+               (json:encode-object-member 'caldera-id (second pair) stream))))))
+
+(defun get-editor-caldera-sequences ()
+  (caldera-sequences-from-attack-plans
+    (attack-plans (attack-plan-collector *editor*))))

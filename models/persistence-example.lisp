@@ -553,6 +553,16 @@
   :capability-requirements ((write data-low-write) (read data-low-read))
   )
 
+(defresource victim-dll dll
+             :computers (typical-worker-computer)
+             :capability-requirements ((write data-low-write) (read data-low-read)))
+
+
+(defsearchpath typical-worker-computer
+    :directories ((victim :files (victim-dll))
+                  (preceder))
+    :search-order (preceder victim))
+
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;
 ;;; Typical query is high-datavase-server data-integrity high-database

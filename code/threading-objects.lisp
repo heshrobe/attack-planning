@@ -521,11 +521,21 @@
 	   [value-of (?user typical-p) t]]
   )
 
-(defrule check-superuser (:backward)
-  :then [is-superuser ?user ?os]
-  :if [and [object-type-of ?user user]
-	   [object-type-of ?os operating-system]
-	   [value-of (?os superuser) ?user]])
+(defrule is-superuser (:backward)
+  :then [is-superuser ?os ?user]
+  :if (block find-it
+        (ask* `[value-of (,?os superuser) ?super]
+          (when (eql ?super ?user)
+            (return-from find-it t)))
+        nil))
+
+(defrule isnt-superuser (:backward)
+  :then [not [is-superuser ?os ?user]]
+  :if (block find-it
+        (ask* `[value-of (,?os superuser) ?super]
+          (when (eql ?super ?user)
+            (return-from find-it nil)))
+        t))
 
 
 ;;; this forces the user to "own" every computer at his site

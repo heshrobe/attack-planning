@@ -7,9 +7,8 @@
   (:shadowing-import-from "CL-USER" "THROW")
   (:import-from ltms "ASSUME")
   (:export "DO-IT"
+           "DO-A-CASE"
 	   "ATTACK-PLAN-COLLECTOR" "ATTACK-PLANS" "MERGED-ATTACK-PLAN"  "MERGE-ATTACK-PLANS"
 	   "DUMP-PLAN"
-	   )      
+	   )
   (:USE COMMON-LISP JOSHUA))
-
-

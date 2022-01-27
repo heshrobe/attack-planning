@@ -3,11 +3,11 @@
 (in-package :swank)
 
 
+(defmethod form-parser ((key (eql 'aplan::defattack-method)) form)
+  (values (second form) :joshua-defrule))
+
 (defmethod form-parser ((key (eql 'aplan::define-aplan-predicate)) form)
   (values (second form) :joshua-predicate))
-
-(defmethod form-parer ((key (eql 'aplan::defattack-method)) form)
-  (values (second form) :joshua-defrule))
 
 (defmethod form-parser ((key (eql 'aplan::define-action)) form)
   (values (second form) :joshua-defrule))

@@ -78,6 +78,7 @@
 	       (:joshua-file "attack-methods" :depends-on ("ip-locations-and-masks"))
 	       (:joshua-file "core-reasoning" :depends-on ("attack-methods"))
 	       (:joshua-file "json-dumper" :depends-on ("core-reasoning"))
+               (:joshua-file "caldera-mapping" :depends-on ("json-dumper"))
 	       ))
 
 (asdf:defsystem aplan/ui

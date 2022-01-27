@@ -2,9 +2,9 @@
 
 (in-package :aplan)
 
-;;; Notes: The interaction with negation makes this tricky.  
+;;; Notes: The interaction with negation makes this tricky.
 ;;; Initially I thought you'd just like to have the predication
-;;; without explicity mention of context and hide the context in a 
+;;; without explicity mention of context and hide the context in a
 ;;; slot.  But then you'd have to deal with truth-values differently
 ;;; since something can be true in one context and false in another
 ;;; and therefore the +true+, +false+ predication bits can't be used
@@ -71,9 +71,9 @@
        (when (null state)
 	 (setq state (make-instance 'state :state-name state-identifier))
 	 (setf (gethash state-identifier *state-ht*) state)
-	 (if prior-state-supplied-p 
+	 (if prior-state-supplied-p
 	     (when (and (symbolp prior-state) (not (null prior-state)))
-	       ;; if prior state is explictly NIL we don't want to intern 
+	       ;; if prior state is explictly NIL we don't want to intern
 	       ;; a state name NIL
 	       (setq prior-state (intern-state prior-state)))
 	   (setq prior-state *initial-state*))
@@ -115,12 +115,12 @@
       (call-next-method `[,(predication-predicate self) ,internal-pred ,(intern-state state)] truth-value justification))))
 
 (define-predicate-method (insert stateful-predicate-mixin) ()
-  (with-statement-destructured (internal-pred state) self    
+  (with-statement-destructured (internal-pred state) self
     (let* ((canonical-state (intern-state state))
 	   (canonicalized-internal-pred (insert internal-pred))
 	   (canonicalized-pred `[,(predication-predicate self) ,canonicalized-internal-pred ,canonical-state])
 	   (truth-map (gethash canonicalized-internal-pred *truth-value-ht*)))
-      (unless truth-map 
+      (unless truth-map
 	(setq truth-map (make-instance 'state-truth-map))
 	(setf (gethash canonicalized-internal-pred *truth-value-ht*) truth-map))
       (let ((internal-pred-entry (gethash canonicalized-internal-pred *state-predicate-interning-ht*)))
@@ -159,7 +159,7 @@
 		 (funcall continuation just))
 		 ))
 	  (when (eql truth-value +false+) (setq truth-value (negate-truth-value truth-value)))
-	  (ji:ask-internal internal-pred  truth-value #'my-continuation 
+	  (ji:ask-internal internal-pred  truth-value #'my-continuation
 			   do-backward-rules do-questions))
       (call-next-method))))
 
@@ -172,7 +172,7 @@
       (labels
 	  ((succeed (interned-internal-pred database-predication)
 	     ;; state is here for future expansion where it could be a variable
-	     (with-unification 
+	     (with-unification
 	      (typecase interned-internal-pred
 		(slot-value-mixin
 		  ;; this is necessary because slot-value-mixin interns
@@ -188,7 +188,7 @@
 		      (unify his-value value))))
 		(named-component
 		 (typecase internal-pred
-		   (value-of 
+		   (value-of
 		    (with-statement-destructured (path value) internal-pred
 		      (declare (ignore path))
 		      (with-statement-destructured (parent name sub-object) interned-internal-pred
@@ -217,7 +217,7 @@
 		    (false-states (when truth-map (false-states truth-map)))
 		    (true-states (when truth-map (true-states truth-map)))
 		    (negated (eql truth-value +false+)))
-	       ;; if the internal predication has never been told in a state 
+	       ;; if the internal predication has never been told in a state
 	       ;; But has been asserted in bare form
 	       ;; then just check
 	       ;; if it has the right truth-value
@@ -233,12 +233,12 @@
 		 (loop for winning-state in (if negated false-states true-states)
 		       do (with-unification
 			   (unify state-descriptor winning-state)
-			   (succeed interned-internal-pred 
+			   (succeed interned-internal-pred
 				    (gethash winning-state (gethash interned-internal-pred *state-predicate-interning-ht*))))))
 		(t ;; If we allow multiple predecessors, we want to search in breadth first order
                  ;; with the assumption that closest to the current state wins.  Could have an option
                  ;; to report a conflict?  Another approach is to do depth first and order then choose the answer
-                 ;; of the highest depth.  Makes it easier to detect a conflict.  If it's explicit in the current 
+                 ;; of the highest depth.  Makes it easier to detect a conflict.  If it's explicit in the current
                  ;; situation you do no search.
 		 (loop for this-state = (intern-state state-descriptor) then (predecessor this-state)
 		     until (null this-state)
@@ -249,7 +249,7 @@
 				 (or  (and negated (eql (predication-truth-value interned-internal-pred) +false+))
 				      (and (not negated) (eql (predication-truth-value interned-internal-pred) +true+)))))
 			;; should build a justification
-		     do (succeed interned-internal-pred 
+		     do (succeed interned-internal-pred
 				 (gethash this-state (gethash interned-internal-pred *state-predicate-interning-ht*)))
                         ;; you hit State where it's definitely matched
                         ;; don't look for predecessors
@@ -283,7 +283,7 @@
         ;; If the first element of the path is a variable
         ;; this will map over the object hierarchy otherwise just fetches
         ;; the single relevant slot-value assertion
-        (prefetch-forward-rule-matches 
+        (prefetch-forward-rule-matches
          internal-pred context
          #'(lambda (value-of-pred)
              ;; Now for each of those, find the stateful predication
@@ -294,10 +294,10 @@
                            (funcall continuation (ask-database-predication derivation))))))
       ;; for all other types of internal preds, just do the normal thing
       (call-next-method))))
-  
+
 
 
-(define-predicate in-state (predication state) (stateful-predicate-mixin ltms:ltms-predicate-model))
+(define-predicate in-state (predication state) (stateful-predicate-mixin no-variables-in-data-mixin ltms:ltms-predicate-model))
 
 (defun is-predecessor-of (state1 state2)
   (let ((target-depth (depth state1)))
@@ -335,7 +335,7 @@
 	   :query self
 	   :model (type-of self)))
   (with-predication-maker-destructured (final-variable &rest set) self
-    `(:procedure 
+    `(:procedure
       (let ((final-state (consistent-state (list ,@set))))
 	(when final-state
 	  (with-unification
@@ -357,7 +357,7 @@
 	      (loop for other-state in other-states
 		  thereis (unbound-logic-variable-p other-state)))
     (error 'ji::model-cant-handle-query
-	   :query self 
+	   :query self
 	   :model (type-of self)))
     (when (find-if #'unbound-logic-variable-p other-states)
       (error 'ji:model-cant-handle-query
@@ -422,7 +422,7 @@
   (ask `[action-taken ?action ?input-state ,state]
        #'(lambda (backward-support)
            (let ((predication (ask-database-predication backward-support)))
-             ;; kill all consequences which are the predications in 
+             ;; kill all consequences which are the predications in
              ;; the useless state
              (loop for consequence in (consequences predication)
                  do (untell consequence))
@@ -442,7 +442,7 @@
     (do-one *initial-state*)))
 
 (defun state-trace (final-state)
-  (nreverse 
+  (nreverse
     (loop for state = final-state then next-state
 	for next-state = (predecessor state)
 	collect state
@@ -477,8 +477,8 @@
 	    [foo 2 3 4]]
     then [foo 3 4 5])
 
-(defrule mumble (:forward) 
-  if [and [in-state [foo 1 2 3] ?state-1000] 
+(defrule mumble (:forward)
+  if [and [in-state [foo 1 2 3] ?state-1000]
 	  [in-state [foo 2 3 4] ?state-1001]
 	  [consistent-state ?final-state-1002 ?state-1000 ?state-1001]]
   then [in-state [foo 3 4 5] ?final-state-1002])
@@ -505,7 +505,7 @@ A test case for backward rules
 
 (ask [in-state [foo 1 3] state-2] #'print-query)
 
-This works but then goes into an infinite loop looking for other matches to [in-state [foo 1 ?b] state-2] which triggers 
+This works but then goes into an infinite loop looking for other matches to [in-state [foo 1 ?b] state-2] which triggers
 the same rule but not ?c is unbound.  This has nothing to do with "in-state" it's a classic case of transitivity rules
 not working in the backward direction for example:
 
@@ -532,5 +532,5 @@ also goes into infinite loop after finding the answer
 ;;; Forward Rules:
 ;;;  Outline (defrule xx (:forward) IF [and [in-state ... ?x] [in-state ...  ?x]] ...
 ;;;    turns into If [and [in-state ... ?x1] [in-state ... ?x2] (consistent-states ?x1 ?x2 pred-1 pred-2)
-;;;  Where consistent states gets the deepest state out of ?x1 ?x2 and then checks that for all the 
+;;;  Where consistent states gets the deepest state out of ?x1 ?x2 and then checks that for all the
 ;;;  embdeded preds they are have the desired truth-values in that deepest state.

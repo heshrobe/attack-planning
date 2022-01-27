@@ -25,8 +25,8 @@
       collect (action-sequence s)))
 
 (defun do-It (&key (attacker (follow-path '(attacker)))
-                   (property 'performance) 
-		   computer 
+                   (property 'performance)
+		   computer
                    resource)
   (clear-all-states)
   (let ((plans nil)
@@ -42,11 +42,13 @@
 		   (unless (member final-structure plans :test #'plan-equal)
 		     (mark-state-useful ?output-context)
 		     (Pushnew ?output-context final-states)
-		     (push final-structure plans)))))      
+		     (push final-structure plans)))))
       (clear-useless-states))
     ;; This links the objects to a tree-structured set
-    ;; of objects representing the plan with the 
+    ;; of objects representing the plan with the
     ;; actions at the leaves
+    (setq plans (nreverse plans)
+          final-states (nreverse final-states))
     (values plans final-states (loop for plan in plans collect (structure-attack-plan plan))
             )))
 
@@ -61,7 +63,7 @@
 ;;;
 ;;; Each does its local checks and then dispatches back through here
 ;;; for the sub-structure
-;;; 
+;;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 
@@ -91,7 +93,7 @@
   (declare (ignore ignore1 ignore2))
   ;; Here the step is a list of the connective followed by substeps
   ;; Check that it's actually a cons before popping
-  ;; probably not necessary because it's already decided that 
+  ;; probably not necessary because it's already decided that
   ;; its a plan structure
   (let ((keyword1 (first plan1))
 	(keyword2 (first plan2))
@@ -117,15 +119,15 @@
                                    :typical-p typical?)))
     (tell `[value-of (,attacker computers) ,his-computer])
     (unless server?
-      (tell `[uses-computer ,attacker ,his-computer]))    
+      (tell `[uses-computer ,attacker ,his-computer]))
     (when location
-      (tell `[value-of (,location computers) ,his-computer]) 
+      (tell `[value-of (,location computers) ,his-computer])
       (tell `[value-of (,his-computer subnets) ,location]))
     his-computer))
-    
 
-(defmacro define-attacker (name &key location 
-				     (computer nil computer-p) 
+
+(defmacro define-attacker (name &key location
+				     (computer nil computer-p)
 				     (other-computers nil other-computers-p)
 				     (download-servers nil download-servers-p)
 				     (adware-servers nil adware-servers-p)
@@ -134,7 +136,7 @@
 				     )
   `(create-attacker ',name
 		    :location (follow-path (list ',location))
-		    :other-computers ,(when other-computers-p 
+		    :other-computers ,(when other-computers-p
 					`(list ,@(loop for name in other-computers
 						     collect `(follow-path (list ',name)))))
 		    :adware-servers ,(when adware-servers-p
@@ -147,13 +149,13 @@
                                              `', download-servers
 					   `(list ,@(loop for name in download-servers
                                                         collect `(follow-path (list ',name))))))
-                    
+
 		    :command-and-control-servers ,(when command-and-control-servers-p
                                                     (if (symbolp command-and-control-servers)
                                                         `', command-and-control-servers
                                                       `(list ,@(loop for name in command-and-control-servers
                                                                    collect `(follow-path (list ',name))))))
-                    :servers-and-roles ,(when servers-p `',servers)                                          
+                    :servers-and-roles ,(when servers-p `',servers)
 		    :computer ,(when computer-p
                                  (if (symbolp computer)
                                      `(follow-path (list ',computer))
@@ -166,7 +168,7 @@
      (kill-redefined-object attacker-name)
      (let* ((attacker (make-object 'attacker :name attacker-name))
 	    (his-computer (cond
-                           ((null computer) 
+                           ((null computer)
                             (make-attacker-computer created-computer-name attacker
                                                     :server? nil
                                                     :location location))
@@ -210,15 +212,15 @@
                                        (make-attacker-computer computer-name attacker :ip-address ip-address :typical? nil)
                                        (make-attacker-computer computer-name attacker :typical? nil :location (or his-location location)))
            do (tell `[attacker-computer-with-role ,attacker ,role ,attacker-computer])
-              (tell `[value-of (,attacker owned-computers) ,attacker-computer]))  
+              (tell `[value-of (,attacker owned-computers) ,attacker-computer]))
        ;; there isn't one.  It's just a starting point.
        (tell `[in-state [has-foothold nil ,his-computer ,attacker foothold] initial])
        (tell `[in-state [attacker-and-computer ,attacker ,his-computer] initial])
        attacker))))
 
-(defun do-a-case (environment-pathname  &key attacker 
-					     property 
-					     computer 
+(defun do-a-case (environment-pathname  &key attacker
+					     property
+					     computer
 					     resource)
   (clear)
   (load environment-pathname)
@@ -292,10 +294,14 @@
   ((supergoal :initform nil :accessor supergoal :initarg :supergoal)
    (combinator :initform nil :accessor combinator :initarg :combinator)
    (attack-identifier :initform nil :accessor attack-identifier :initarg :attack-identifier)
+   (method-name :initform nil :accessor method-name :initarg :method-name)
    (steps :initform nil :accessor steps :initarg :steps)
    (subgoals :initform nil :accessor subgoals :initarg :subgoals)
    (actions :initform nil :accessor actions :initarg :actions)
    ))
+
+(defmethod print-object ((object attack-plan) stream)
+  (format stream "#<plan ~a>" (or (attack-identifier object) (method-name object))))
 
 (defmethod json-id-key ((thing attack-plan)) 'plan)
 
@@ -324,15 +330,16 @@
                    (setq action (make-instance (if repeated? 'repeated-attack-action 'attack-action) :name name))
                    (setf (gethash name action-hash-table) action))
                  action))
-             (intern-plan (combinator steps supergoal attack-identifier)
+             (intern-plan (combinator steps supergoal attack-identifier method-name)
                (let ((the-plan (loop for plan in interned-plans
-				   when (and 
+				   when (and
 					 (eql (combinator plan) combinator)
 					 (null (set-exclusive-or (steps plan) steps)))
 				   do (return plan))))
                  (unless the-plan
                    (setq the-plan (make-instance 'attack-plan
                                     :attack-identifier attack-identifier
+                                    :method-name method-name
 				    :combinator combinator
 				    :steps steps
 				    :subgoals (loop for step in steps when (typep step 'attack-goal) collect step)
@@ -353,14 +360,15 @@
 			    the-interned-goal))
 		   ((:action :repeated-action) (intern-action (second step) (eq type :repeated-action)))
 		   ((:sequential :parallel :singleton :repeat)
-		    (let* ((attack-identifier (when (eql (first (second step)) :attack-identifier)
-                                                (second (second step))))
-                           (steps (loop for his-step in (if attack-identifier  (rest (rest step)) (rest step))
+		    (let* ((plist (second step))
+                           (attack-identifier (getf plist :attack-identifier))
+                           (method-name (getf plist :method-name))
+                           (steps (loop for his-step in (rest (rest step))
 				     collect (traverse his-step supergoal))))
-		      (intern-plan type steps supergoal attack-identifier)))
+		      (intern-plan type steps supergoal attack-identifier method-name)))
 		   (:otherwise (break "What is this ~a" step))
 		   ))))
-      (loop for raw-plan in raw-plans 
+      (loop for raw-plan in raw-plans
 	  for goal = (intern-goal (getf raw-plan :goal))
 	  for plan = (getf raw-plan :plan)
 	  do (traverse plan goal)))
@@ -401,7 +409,7 @@
              (make-a-pass ()
                (loop for goal in top-level-goals
                      do (do-one-goal goal))))
-      (loop doing 
+      (loop doing
             (setq something-happened nil)
             (make-a-pass)
             Until (null something-happened)))
@@ -410,7 +418,7 @@
 ;;; Fix: This breaks when hitting a Plan-Or-Node
 ;;; because that doesn't have sub-goal
 (defmethod is-mergeable ((goal attack-goal))
-  (let* ((mergeable-subgoals nil) (sub-actions nil) 
+  (let* ((mergeable-subgoals nil) (sub-actions nil)
          (subplans (supporting-plans goal))
          (single-subplan (when (null (cdr subplans)) (first subplans)))
          (single-subplan-without-subgoals (and single-subplan (null (subgoals single-subplan)))))
@@ -422,8 +430,8 @@
           do (push first-subgoal mergeable-subgoals)
           when actions do (setq sub-actions t)
          )
-    (cond 
-     ((and mergeable-subgoals (null sub-actions)) 
+    (cond
+     ((and mergeable-subgoals (null sub-actions))
       (values mergeable-subgoals nil))
      ((and single-subplan-without-subgoals
            (null (cdr (actions single-subplan))))

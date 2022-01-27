@@ -42,7 +42,7 @@
 
 (defun dump-plan (root-node &optional (stream *standard-output*))
   (multiple-value-bind (computers users) (collect-computers-and-users root-node)
-    (json:with-object (stream) 
+    (json:with-object (stream)
       (format stream "~2%")
       (json:as-object-member ('computers stream) (dump-computers computers stream))
       (format stream "~2%")
@@ -59,14 +59,21 @@
 
 (defgeneric subordinates (graph-node))
 
-(defun traverse-merged-attack-graph (root-node action-fun)
+(defun traverse-merged-attack-graph (root-node action-fun &key cut-off-test reverse-order)
   (let ((visited (make-hash-table)))
     (labels ((do-a-node (node)
 	       (unless (gethash node visited)
 		 (setf (gethash node visited) t)
-		 (funcall action-fun node)
-		 (loop for subordinate in (subordinates node)
-		     do (do-a-node subordinate)))))
+                 (cond
+                  (reverse-order
+                   (do-subordinates node)
+                   (funcall action-fun node))
+                  (t (funcall action-fun node)
+                     (do-subordinates node)))))
+             (do-subordinates (node)
+               (unless (and cut-off-test (funcall cut-off-test node))
+                   (loop for subordinate in (subordinates node)
+                       do (do-a-node subordinate)))))
       (do-a-node root-node))))
 
 (defmethod subordinates ((node attack-goal)) (supporting-plans node))
@@ -101,12 +108,12 @@
 
 (defgeneric dump-node (node &optional stream))
 
-(defun dump-nodes (root-node &optional (stream *standard-output*))
-  (flet ((do-a-node (node) 
+(defun dump-nodes (root-node &optional (stream *standard-output*) cut-off-function)
+  (flet ((do-a-node (node)
 	   (terpri stream)
 	   (json:as-array-member (stream) (dump-node node stream))))
     (json:with-array (stream)
-      (traverse-merged-attack-graph root-node #'do-a-node)
+      (traverse-merged-attack-graph root-node #'do-a-node :cut-off-test  cut-off-function)
       )))
 
 (defmethod dump-node ((node attack-goal) &optional (stream *standard-output*))
@@ -173,7 +180,7 @@
 
 
 (defun dump-links (root-node &optional (stream *standard-output*))
-  (flet ((do-a-node (node) 
+  (flet ((do-a-node (node)
 	   (unless (typep node 'attack-action)
 	     (terpri stream)
 	     (json:as-array-member (stream) (dump-link-set node stream)))))
@@ -238,7 +245,7 @@
 ;;;    and the range and mask for the ensemble's IP addresses
 ;;;
 ;;; Things to add what hardware/os/application suite...
-;;;  
+;;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 (defun dump-computers (computers stream)
@@ -257,7 +264,7 @@
     (json:encode-object-member 'attacker (typecase computer (attacker-computer 'true) (otherwise 'false)) stream)
     (terpri stream)
     (dump-subnet-data computer stream)
-    (terpri stream)))  
+    (terpri stream)))
 
 (defmethod dump-subnet-data ((computer attacker-computer) &optional (stream *standard-output*))
   (let* ((subnet (first (subnets computer))))
@@ -317,7 +324,7 @@
   (json:with-array (stream)
     (loop for user in users
 	do (terpri stream)
-	   (json:as-array-member (stream) 
+	   (json:as-array-member (stream)
 	     (dump-user user stream))))
   )
 
@@ -332,7 +339,7 @@
     (terpri stream)
     (json:as-object-member ('computers stream)
 	(json:with-array (stream)
-	  (Loop for computer in (computers user) 
+	  (Loop for computer in (computers user)
 		do (json:as-array-member (stream)
 		     (json:with-object (stream)
 		       (json:encode-object-member 'name (role-name computer) stream))))))

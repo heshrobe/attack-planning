@@ -10,6 +10,8 @@
 ;;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
+(eval-when (:compile-toplevel :load-toplevel :execute)
+
 (define-object-type print-nicely-mixin)
 
 (defvar *print-object-nicely* nil)
@@ -28,10 +30,10 @@
     :slots ()
     )
 
-(eval-when (:compile-toplevel :load-toplevel :execute)
-  (defparameter *all-object-types* nil))
 
-(eval-when (:compile-toplevel :load-toplevel :execute)
+(defparameter *all-object-types* nil)
+
+
   (defmacro define-aplan-object (name &rest plist)
     (let* ((super-types (getf plist :super-types))
 	   (slots (getf plist :slots)))
@@ -138,7 +140,7 @@
 
 (define-aplan-object directory
     :super-types (path-mixin has-directory-mixin file-collection)
-    :slots ((files :set-valued t ))
+    :slots ((files :set-valued t :Initarg :files))
     )
 
 (define-aplan-object file
@@ -148,6 +150,9 @@
 
 (define-aplan-object dynamically-loadable-code-file
     :super-types (file))
+
+(define-aplan-object dll
+    :super-types (dynamically-loadable-code-file))
 
 (define-aplan-object class-file
     :super-types (dynamically-loadable-code-file)
@@ -661,6 +666,7 @@
             (logon-controller logon-controller)
             (access-controller access-controller)
             (network-monitor network-stack)
+            (search-path search-path)
 	    )
     :super-types (in-authorization-pool print-nicely-mixin))
 
