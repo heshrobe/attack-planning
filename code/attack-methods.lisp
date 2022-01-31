@@ -1685,7 +1685,8 @@ predicate promising the thing is known.
     ;; Exploits the way Windows loads software (Windows has a specific order in which it loads background processes)
   ;; When software is downloaded, Windows will create new referecnes to directories in the PATH variable
   ;; achieve-persistent-remote-execution
-    :to-achieve [achieve-persistent-remote-execution ?victim-machine ?victim-user]
+  :to-achieve [achieve-persistent-remote-execution ?victim-machine ?victim-user]
+  ;; bindings should get ahold of the search path
     :bindings([named-component ?victim-machine os ?victim-os]
               [value-of ?victim-os.users ?victim-user]
               [attacker-and-machine ?attacker ?]
@@ -1694,6 +1695,7 @@ predicate promising the thing is known.
     :typing((?victim-machine computer)
             (?victim-user user)
             (?victim-os windows)
+            (?victim-dll dll)
             )
 
     :prerequisites(
@@ -1701,7 +1703,6 @@ predicate promising the thing is known.
                    ;; Vulnerable to a foothold attack denoted by protocol, which gives
                    [is-vulnerable-to ?process ?protocol]
                    ;; Must also have write privileges to the directories present in the PATH variable - not so sure about this line
-                   [has-permission ?attacker write ?object] ;; Need to define write
                    )
     :plan(:sequential
           (:goal [get-foothold ?victim-machine ?protocol])
@@ -1712,8 +1713,11 @@ predicate promising the thing is known.
           ;; Once the malware is downloaded, Windows will create new references to directories in PATH, which will in turn load the DLL's (including the malicious one)
           ;; Load the software, leads to malicious DLL loading, done
           (:action [load-software malicious-dll ?victim-machine])
-          (:action [drop-dll ?before ?after])
-          ;; predicate- achieve persistent remote execution 
+          ;; dll is dropped before a specific file, dll lives in a directory
+          ;; 1. make a specific action
+          ;; 2. make a general action (storing a file in a directory)
+          ;; Rename action to storing file 
+          (:action [drop-dll ?preceder ?victim-dll])
           )
   ;; has-persistent-remote-execution
   :post-conditions([has-persistent-remote-execution ?attacker ?victim-machine ?foothold-role]
