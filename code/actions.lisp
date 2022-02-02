@@ -419,8 +419,8 @@
   :post-conditions ()
   )
 
-(define-action store-file (?search-path ?file)
-  :typing ((?search-path path)
-           )
-  :post-conditions ([is-in-search-path ?search-path ?file])
+(define-action store-file (?directory ?file)
+  :typing ((?directory directory)
+           (?file file))
+  :post-conditions ([value-of (?directory files) ?file])
   )

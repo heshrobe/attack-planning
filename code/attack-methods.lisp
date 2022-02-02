@@ -1689,13 +1689,13 @@ predicate promising the thing is known.
   :output-variables (?victim-user)
   ;; bindings should get ahold of the search path
     :bindings((?victim-os ?victim-computer.os)
-              [value-of ?victim-os.users ?victim-user]
+              (?victim-user ?victim-os.users)
               (?search-path ?victim-os.search-path)
               [is-in-search-path ?search-path ?victim-directory]
               (?victim-dll ?victim-directory.files)
               [attacker-and-computer ?attacker ?]
               [attacker-download-server ?attacker ?download-server]
-              [current-foothold ?current-foothold-computer ?current-foothold-role]
+              ;; [current-foothold ?current-foothold-computer ?current-foothold-role]
               )
     :typing((?victim-computer computer)
             (?victim-user user)
@@ -1707,30 +1707,29 @@ predicate promising the thing is known.
     :prerequisites(;; Must also have write privileges to the directories present in the PATH variable - not so sure about this line
                    [is-in-search-path ?search-path ?preceder]
                    [precedes-in-search-path ?search-path ?preceder ?victim-directory]
-                   (:break "Finished prerequisites ~a ~a ~a ~a" ?search-path ?preceder ?victim-directory ?victim-dll)
+                   ;; (:break "Finished prerequisites ~a ~a ~a ~a ~a" ?search-path ?preceder ?victim-user ?victim-directory ?victim-dll)
                    )
-  :plan(:sequential
-          ;; Assume initial access with getting foothold
-          (:goal [get-foothold ?victim-computer ?protocol])
-          ;; Malware is typically in a seemingly innocuous software
-          ;; Once this malware is downloaded, Windows will create new references to directories in PATH
-          (:break "Got foothold to ~a over ~a" ?victim-computer ?protocol)
-          (:action [download-software malicious-dll ?download-server ?victim-computer ?current-foothold-role]) ;; Need to specify role
-          ;; Once the malware is downloaded, Windows will create new references to directories in PATH, which will in turn load the DLL's (including the malicious one)
-          ;; Load the software, leads to malicious DLL loading, done
-          ;;(:break "downloading done")
-          (:action [load-software malicious-dll ?victim-computer])
-          ;;(:break "loading done")
-          ;; dll is dropped before a specific file, dll lives in a directory
-          ;; Rename action to storing file
-          (:action [store-file ?search-path ?preceder ?victim-dll])
-          ;;(:break "storing done")
-          )
-  ;; has-persistent-remote-execution
-  :post-conditions([has-persistent-remote-execution ?attacker ?victim-computer ?foothold-role]
-                   )
-  :attack-identifier "T1574.001"
-  )
+  :plan (:sequential
+         ;; Assume initial access with getting foothold
+         (:goal [achieve-remote-execution ?victim-computer ?victim-user])
+         ;; Malware is typically in a seemingly innocuous software
+         ;; Once this malware is downloaded, Windows will create new references to directories in PATH
+         (:action [download-software malicious-dll ?download-server ?victim-computer ?victim-user]) ;; Need to specify role
+         ;; Once the malware is downloaded, Windows will create new references to directories in PATH, which will in turn load the DLL's (including the malicious one)
+         ;; Load the software, leads to malicious DLL loading, done
+         ;;(:break "downloading done")
+         (:action [load-software malicious-dll ?victim-computer])
+         ;; (:break "loading done")
+         ;; dll is dropped before a specific file, dll lives in a directory
+         ;; Rename action to storing file
+         (:action [store-file ?preceder ?victim-dll])
+         (:break "storing done")
+         )
+         ;; has-persistent-remote-execution
+         :post-conditions([has-persistent-remote-execution ?attacker ?victim-computer ?victim-user]
+                          )
+         :attack-identifier "T1574.001"
+         )
 
 
 
