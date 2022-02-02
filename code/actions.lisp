@@ -419,16 +419,8 @@
   :post-conditions ()
   )
 
-(define-action drop-dll (?search-path ?preceder ?dll-file ?victim-dll ?victim-computer ?victim-role)
+(define-action store-file (?search-path ?file)
   :typing ((?search-path path)
            )
-  :bindings ([attacker-and-machine ?attacker ?attacker-machine]
-             [before ?preceder]
-             [after ?victim-dll])
-  :ignore (?attacker-machine)
-  :prerequisites ([is-in-search-path ?search-path ?before]
-                  [is-in-search-path ?search-path ?after]
-                  [precedes-in-search-path ?search-path ?before ?after])
-  ;; Would post condition be a revised search path instead of having persistent remote execution?
-  :post-conditions ([has-persistent-remote-execution ?attacker ?victim-computer ?victim-role])
+  :post-conditions (is-in-search-path ?search-path ?file])
   )

@@ -1691,33 +1691,40 @@ predicate promising the thing is known.
               [value-of ?victim-os.users ?victim-user]
               [attacker-and-machine ?attacker ?]
               [attacker-download-server ?attacker ?download-server]
+              [current-foothold ?current-foothold-computer ?current-foothold-role]
+              (:break "Finished bindings")
               )
     :typing((?victim-machine computer)
             (?victim-user user)
             (?victim-os windows)
             (?victim-dll dll)
+            (?search-path path)
+            (?preceder file)
+            (?victim-dll file)
+            ;;(:break "Finished typings")
             )
-
-    :prerequisites(
-                   [is-vulnerable-to ?process dll-hijack]
-                   ;; Vulnerable to a foothold attack denoted by protocol, which gives
-                   [is-vulnerable-to ?process ?protocol]
-                   ;; Must also have write privileges to the directories present in the PATH variable - not so sure about this line
+    :prerequisites(;; Must also have write privileges to the directories present in the PATH variable - not so sure about this line
+                   [is-in-search-path ?search-path ?preceder]
+                   [is-in-search-path ?search-path ?victim-dll]
+                   [precedes-in-search-path ?search-path ?preceder ?victim-dll]
+                   ;;(:break "Finished prerequisites")
                    )
-    :plan(:sequential
+  :plan(:sequential
+          ;; Assume initial access with getting foothold
           (:goal [get-foothold ?victim-machine ?protocol])
           ;; Malware is typically in a seemingly innocuous software
           ;; Once this malware is downloaded, Windows will create new references to directories in PATH
          
-          (:action [download-software malicious-dll ?download-server ?victim-machine ?role]) ;; Need to specify role
+          (:action [download-software malicious-dll ?download-server ?victim-machine ?current-foothold-role]) ;; Need to specify role
           ;; Once the malware is downloaded, Windows will create new references to directories in PATH, which will in turn load the DLL's (including the malicious one)
           ;; Load the software, leads to malicious DLL loading, done
+          ;;(:break "downloading done")
           (:action [load-software malicious-dll ?victim-machine])
+          ;;(:break "loading done")
           ;; dll is dropped before a specific file, dll lives in a directory
-          ;; 1. make a specific action
-          ;; 2. make a general action (storing a file in a directory)
           ;; Rename action to storing file 
-          (:action [drop-dll ?preceder ?victim-dll])
+          (:action [store-file ?search-path ?preceder ?victim-dll])
+          ;;(:break "storing done")
           )
   ;; has-persistent-remote-execution
   :post-conditions([has-persistent-remote-execution ?attacker ?victim-machine ?foothold-role]
