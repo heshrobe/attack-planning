@@ -1685,49 +1685,49 @@ predicate promising the thing is known.
     ;; Exploits the way Windows loads software (Windows has a specific order in which it loads background processes)
   ;; When software is downloaded, Windows will create new referecnes to directories in the PATH variable
   ;; achieve-persistent-remote-execution
-  :to-achieve [achieve-persistent-remote-execution ?victim-machine ?victim-user]
+  :to-achieve [achieve-persistent-remote-execution ?victim-computer ?victim-user]
+  :output-variables (?victim-user)
   ;; bindings should get ahold of the search path
-    :bindings([named-component ?victim-machine os ?victim-os]
+    :bindings((?victim-os ?victim-computer.os)
               [value-of ?victim-os.users ?victim-user]
-              [attacker-and-machine ?attacker ?]
+              (?search-path ?victim-os.search-path)
+              [is-in-search-path ?search-path ?victim-directory]
+              (?victim-dll ?victim-directory.files)
+              [attacker-and-computer ?attacker ?]
               [attacker-download-server ?attacker ?download-server]
               [current-foothold ?current-foothold-computer ?current-foothold-role]
-              (:break "Finished bindings")
               )
-    :typing((?victim-machine computer)
+    :typing((?victim-computer computer)
             (?victim-user user)
             (?victim-os windows)
+            (?victim-directory directory)
             (?victim-dll dll)
-            (?search-path path)
-            (?preceder file)
-            (?victim-dll file)
-            ;;(:break "Finished typings")
+            (?search-path search-path)
             )
     :prerequisites(;; Must also have write privileges to the directories present in the PATH variable - not so sure about this line
                    [is-in-search-path ?search-path ?preceder]
-                   [is-in-search-path ?search-path ?victim-dll]
-                   [precedes-in-search-path ?search-path ?preceder ?victim-dll]
-                   ;;(:break "Finished prerequisites")
+                   [precedes-in-search-path ?search-path ?preceder ?victim-directory]
+                   (:break "Finished prerequisites ~a ~a ~a ~a" ?search-path ?preceder ?victim-directory ?victim-dll)
                    )
   :plan(:sequential
           ;; Assume initial access with getting foothold
-          (:goal [get-foothold ?victim-machine ?protocol])
+          (:goal [get-foothold ?victim-computer ?protocol])
           ;; Malware is typically in a seemingly innocuous software
           ;; Once this malware is downloaded, Windows will create new references to directories in PATH
-         
-          (:action [download-software malicious-dll ?download-server ?victim-machine ?current-foothold-role]) ;; Need to specify role
+          (:break "Got foothold to ~a over ~a" ?victim-computer ?protocol)
+          (:action [download-software malicious-dll ?download-server ?victim-computer ?current-foothold-role]) ;; Need to specify role
           ;; Once the malware is downloaded, Windows will create new references to directories in PATH, which will in turn load the DLL's (including the malicious one)
           ;; Load the software, leads to malicious DLL loading, done
           ;;(:break "downloading done")
-          (:action [load-software malicious-dll ?victim-machine])
+          (:action [load-software malicious-dll ?victim-computer])
           ;;(:break "loading done")
           ;; dll is dropped before a specific file, dll lives in a directory
-          ;; Rename action to storing file 
+          ;; Rename action to storing file
           (:action [store-file ?search-path ?preceder ?victim-dll])
           ;;(:break "storing done")
           )
   ;; has-persistent-remote-execution
-  :post-conditions([has-persistent-remote-execution ?attacker ?victim-machine ?foothold-role]
+  :post-conditions([has-persistent-remote-execution ?attacker ?victim-computer ?foothold-role]
                    )
   :attack-identifier "T1574.001"
   )

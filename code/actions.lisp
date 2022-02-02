@@ -422,5 +422,5 @@
 (define-action store-file (?search-path ?file)
   :typing ((?search-path path)
            )
-  :post-conditions (is-in-search-path ?search-path ?file])
+  :post-conditions ([is-in-search-path ?search-path ?file])
   )
