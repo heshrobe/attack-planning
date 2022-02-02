@@ -1333,7 +1333,7 @@
 
 ;; There is another definition of directory on line 139
 #|
-(define-aplan-object directory:
+(define-aplan-object directory
    :super-types (data-resource)
    :slots ((name :initarg :name)
            (parent :initarg :parent)
@@ -1342,19 +1342,19 @@
   )
 |#
 
-(define-aplan-object path:
+(define-aplan-object path
    :super-types (data-resource)
    :slots ((name :initarg :name))
   )
 
 
-(define-aplan-object before:
+(define-aplan-object before
    :super-types (data-resource)
    :slots ((name :initarg :name))
   )
 
 
-(define-aplan-object after:
+(define-aplan-object after
    :super-types (data-resource)
    :slots ((name :initarg :name))
   )

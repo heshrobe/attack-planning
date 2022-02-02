@@ -1652,7 +1652,7 @@ predicate promising the thing is known.
 
 (defattack-method BITS-Jobs
     :to-achieve [persistently-execute ?attacker ?victim ?victim-computer]
-    :bindings([attacker-and-computer ?attacker ?attacker-computer])
+    :bindings([attacker-and-machine ?attacker ?])
     :typing((?victim-computer computer)
             (?victim user)
             (?malware-package malware-package))
@@ -1685,35 +1685,46 @@ predicate promising the thing is known.
     ;; Exploits the way Windows loads software (Windows has a specific order in which it loads background processes)
   ;; When software is downloaded, Windows will create new referecnes to directories in the PATH variable
   ;; achieve-persistent-remote-execution
-    :to-achieve [achieve-persistent-remote-execution ?victim-machine ?victim-user]
+  :to-achieve [achieve-persistent-remote-execution ?victim-machine ?victim-user]
+  ;; bindings should get ahold of the search path
     :bindings([named-component ?victim-machine os ?victim-os]
               [value-of ?victim-os.users ?victim-user]
               [attacker-and-machine ?attacker ?]
               [attacker-download-server ?attacker ?download-server]
+              [current-foothold ?current-foothold-computer ?current-foothold-role]
+              (:break "Finished bindings")
               )
     :typing((?victim-machine computer)
             (?victim-user user)
             (?victim-os windows)
+            (?victim-dll dll)
+            (?search-path path)
+            (?preceder file)
+            (?victim-dll file)
+            ;;(:break "Finished typings")
             )
-
-    :prerequisites(
-                   [is-vulnerable-to ?process dll-hijack]
-                   ;; Vulnerable to a foothold attack denoted by protocol, which gives
-                   [is-vulnerable-to ?process ?protocol]
-                   ;; Must also have write privileges to the directories present in the PATH variable - not so sure about this line
-                   [has-permission ?attacker write ?object] ;; Need to define write
+    :prerequisites(;; Must also have write privileges to the directories present in the PATH variable - not so sure about this line
+                   [is-in-search-path ?search-path ?preceder]
+                   [is-in-search-path ?search-path ?victim-dll]
+                   [precedes-in-search-path ?search-path ?preceder ?victim-dll]
+                   ;;(:break "Finished prerequisites")
                    )
-    :plan(:sequential
+  :plan(:sequential
+          ;; Assume initial access with getting foothold
           (:goal [get-foothold ?victim-machine ?protocol])
           ;; Malware is typically in a seemingly innocuous software
           ;; Once this malware is downloaded, Windows will create new references to directories in PATH
          
-          (:action [download-software malicious-dll ?download-server ?victim-machine ?role]) ;; Need to specify role
+          (:action [download-software malicious-dll ?download-server ?victim-machine ?current-foothold-role]) ;; Need to specify role
           ;; Once the malware is downloaded, Windows will create new references to directories in PATH, which will in turn load the DLL's (including the malicious one)
           ;; Load the software, leads to malicious DLL loading, done
+          ;;(:break "downloading done")
           (:action [load-software malicious-dll ?victim-machine])
-          (:action [drop-dll ?before ?after])
-          ;; predicate- achieve persistent remote execution 
+          ;;(:break "loading done")
+          ;; dll is dropped before a specific file, dll lives in a directory
+          ;; Rename action to storing file 
+          (:action [store-file ?search-path ?preceder ?victim-dll])
+          ;;(:break "storing done")
           )
   ;; has-persistent-remote-execution
   :post-conditions([has-persistent-remote-execution ?attacker ?victim-machine ?foothold-role]
