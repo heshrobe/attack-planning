@@ -290,30 +290,37 @@
           (tell `[value-of (,user location) ,negative-mask])))))
 
 (defmacro defresource (name resource-type &key capability-requirements
-                                               computers authorization-pool
-                                               (primary-computer nil primary-p)
-                                               (role nil role-p))
+                                            computers authorization-pool
+                                            (primary-computer nil primary-p)
+                                            (role nil role-p))
   (let ((true-resource-type (if (symbolp resource-type) resource-type (first resource-type)))
         (resource-type-args (if (symbolp resource-type) nil
-                              (loop for (key value) on (rest resource-type) by #'cddr
-                                  collect key
-                                  collect (if (symbolp value) `(follow-path '(,value)) value)))))
+                                (loop for (key value) on (rest resource-type) by #'cddr
+                                      collect key
+                                      collect (cond ((symbolp value)
+                                                     `(follow-path '(,value)))
+                                                    ((and (listp value) (eql (first value) 'quote))
+                                                     `',(second value))
+                                                    ((listp value)
+                                                     `(list
+                                                       ,@(loop for thing in value collect `(follow-path '(,thing)))))
+                                                    (t value))))))
     `(with-atomic-action
-      (kill-redefined-object ',name)
-      (let* ((resource (make-object ',true-resource-type :name ',name ,@resource-type-args)))
-        ,@(when primary-p
-            `((tell `[value-of (,resource primary-computer) ,(follow-path '(,primary-computer))])))
-        ,@(loop for computer in computers
-              collect `(tell `[value-of (,resource computers) ,(follow-path '(,computer))]))
-        ,@(loop for (operation capability) in capability-requirements
-              collect `(tell `[value-of (,resource capability-requirements) (,',operation ,(follow-path '(,capability)))]))
-        ,@(when authorization-pool
-         `((tell `[value-of (,resource authorization-pool) ,(follow-path '(,authorization-pool))])))
-        ,@ (when role-p
-             (destructuring-bind (role-name object) role
-               (unless (listp object) (setq object (list object)))
-               `((tell `[system-role ,(Follow-path ',object) ,',role-name ,resource]))))
-        resource))))
+       (kill-redefined-object ',name)
+       (let* ((resource (make-object ',true-resource-type :name ',name ,@resource-type-args)))
+         ,@(when primary-p
+             `((tell `[value-of (,resource primary-computer) ,(follow-path '(,primary-computer))])))
+         ,@(loop for computer in computers
+                 collect `(tell `[value-of (,resource computers) ,(follow-path '(,computer))]))
+         ,@(loop for (operation capability) in capability-requirements
+                 collect `(tell `[value-of (,resource capability-requirements) (,',operation ,(follow-path '(,capability)))]))
+         ,@(when authorization-pool
+             `((tell `[value-of (,resource authorization-pool) ,(follow-path '(,authorization-pool))])))
+         ,@ (when role-p
+              (destructuring-bind (role-name object) role
+                (unless (listp object) (setq object (list object)))
+                `((tell `[system-role ,(Follow-path ',object) ,',role-name ,resource]))))
+         resource))))
 
 (defun create-new-resource (name type computer &rest initargs)
   (let ((new-thing (apply #'make-object type :name name initargs)))

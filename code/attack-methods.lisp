@@ -1682,33 +1682,36 @@ predicate promising the thing is known.
 
 ;; T1574.001
 (defattack-method dll-hijack-search-order
-    ;; Exploits the way Windows loads software (Windows has a specific order in which it loads background processes)
+  ;; Exploits the way Windows loads software (Windows has a specific order in which it loads background processes)
   ;; When software is downloaded, Windows will create new referecnes to directories in the PATH variable
   ;; achieve-persistent-remote-execution
   :to-achieve [achieve-persistent-remote-execution ?victim-computer ?victim-user]
   :output-variables (?victim-user)
   ;; bindings should get ahold of the search path
-    :bindings((?victim-os ?victim-computer.os)
-              (?victim-user ?victim-os.users)
-              (?search-path ?victim-os.search-path)
-              [is-in-search-path ?search-path ?victim-directory]
-              (?victim-dll ?victim-directory.files)
-              [attacker-and-computer ?attacker ?]
-              [attacker-download-server ?attacker ?download-server]
-              ;; [current-foothold ?current-foothold-computer ?current-foothold-role]
-              )
-    :typing((?victim-computer computer)
-            (?victim-user user)
-            (?victim-os windows)
-            (?victim-directory directory)
-            (?victim-dll dll)
-            (?search-path search-path)
+  :bindings((?victim-os ?victim-computer.os)
+            (?victim-user ?victim-os.users)
+            (?search-path ?victim-os.search-path)
+            [is-in-search-path ?search-path ?victim-directory]
+            (?victim-dll ?victim-directory.files)
+            [attacker-and-computer ?attacker ?]
+            [attacker-download-server ?attacker ?download-server]
+            (?malicious-dll ?download-server.resources)
+            ;; [current-foothold ?current-foothold-computer ?current-foothold-role]
             )
-    :prerequisites(;; Must also have write privileges to the directories present in the PATH variable - not so sure about this line
-                   [is-in-search-path ?search-path ?preceder]
-                   [precedes-in-search-path ?search-path ?preceder ?victim-directory]
-                   ;; (:break "Finished prerequisites ~a ~a ~a ~a ~a" ?search-path ?preceder ?victim-user ?victim-directory ?victim-dll)
-                   )
+  :typing((?malicious-dll dkll)
+          (?victim-computer computer)
+          (?victim-user user)
+          (?victim-os windows)
+          (?victim-directory directory)
+          (?victim-dll dll)
+          (?search-path search-path)
+          )
+  :prerequisites(;; Must also have write privileges to the directories present in the PATH variable - not so sure about this line
+                 [is-in-search-path ?search-path ?preceder]
+                 [precedes-in-search-path ?search-path ?preceder ?victim-directory]
+                 (eql (filename ?malicious-dll) (filename ?victim-dll))
+                 ;; (:break "Finished prerequisites ~a ~a ~a ~a ~a" ?search-path ?preceder ?victim-user ?victim-directory ?victim-dll)
+                 )
   :plan (:sequential
          ;; Assume initial access with getting foothold
          (:goal [achieve-remote-execution ?victim-computer ?victim-user])
@@ -1723,13 +1726,13 @@ predicate promising the thing is known.
          ;; dll is dropped before a specific file, dll lives in a directory
          ;; Rename action to storing file
          (:action [store-file ?preceder ?victim-dll])
-         (:break "storing done")
+         (:break "storing done ~a ~a ~a" ?preceder ?victim-dll ?victim-user)
          )
-         ;; has-persistent-remote-execution
-         :post-conditions([has-persistent-remote-execution ?attacker ?victim-computer ?victim-user]
-                          )
-         :attack-identifier "T1574.001"
-         )
+  ;; has-persistent-remote-execution
+  :post-conditions([has-persistent-remote-execution ?attacker ?victim-computer ?victim-user]
+                   )
+  :attack-identifier "T1574.001"
+  )
 
 
 

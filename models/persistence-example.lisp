@@ -16,9 +16,15 @@
 
 ;;; Our attacker lives somewhere out there
 (define-attacker attacker
-    :location outside
-    :download-servers attacker-download-server
-    :adware-servers attacker-adware-server)
+  :location outside
+  :download-servers attacker-download-server
+  :adware-servers attacker-adware-server)
+
+(defresource malicious-dll (dll :filename 'sensitive-dll
+                                :directory (attacker-download-server.malware-directory))
+  :computers (attacker-download-server)
+  :primary-computer attacker-download-server)
+
 
 ;;; This is the name of our enterprise
 (define-enterprise victim)
@@ -553,7 +559,7 @@
   :capability-requirements ((write data-low-write) (read data-low-read))
   )
 
-(defresource victim-dll dll
+(defresource victim-dll (dll :filename 'sensitive-dll)
              :computers (typical-worker-computer)
              :capability-requirements ((write data-low-write) (read data-low-read)))
 

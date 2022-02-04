@@ -127,7 +127,7 @@
   (format stream "#<~a ~a>" (type-of thing) (role-name thing)))
 
 (define-aplan-object has-directory-mixin
-    :slots ((directory :initarg :directory :initform nil)))
+    :slots ((directory :initarg :directory :set-valued t :initform nil)))
 
 (defmethod file-path-string ((thing has-directory-mixin) &optional (delimiter "/"))
   (labels ((do-one-more (this-guy path-so-far)
@@ -145,8 +145,7 @@
 
 (define-aplan-object file
   :super-types (has-directory-mixin path-mixin data-resource)
-  :slots ((directory :initarg :directory :set-valued t )
-           (filename :initarg :filename :initform nil)))
+  :slots ((filename :initarg :filename :initform nil)))
 
 (define-aplan-object dynamically-loadable-code-file
     :super-types (file))
@@ -799,7 +798,8 @@
     :super-types (has-resources-mixin has-policy-mixin hardware can-be-typical-mixin print-nicely-mixin))
 
 (define-aplan-object attacker-computer
-    :super-types (computer))
+  :parts ((malware-directory directory))
+  :super-types (computer))
 
 ;;; Note: These are computers that are always on all of its subnets
 (define-aplan-object fixed-computer
