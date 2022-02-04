@@ -1694,8 +1694,9 @@ predicate promising the thing is known.
             [is-in-search-path ?search-path ?victim-directory]
             (?victim-dll ?victim-directory.files)
             [attacker-and-computer ?attacker ?]
-            [attacker-download-server ?attacker ?download-server]
-            (?malicious-dll ?download-server.resources)
+            [attacker-download-server ?attacker ?attacker-download-server]
+            (?attacker-malware-directory ?attacker-download-server.malware)
+            (?malicious-dll ?attacker-malware-directory.files)
             ;; [current-foothold ?current-foothold-computer ?current-foothold-role]
             )
   :typing((?malicious-dll dkll)
@@ -1717,7 +1718,7 @@ predicate promising the thing is known.
          (:goal [achieve-remote-execution ?victim-computer ?victim-user])
          ;; Malware is typically in a seemingly innocuous software
          ;; Once this malware is downloaded, Windows will create new references to directories in PATH
-         (:action [download-software malicious-dll ?download-server ?victim-computer ?victim-user]) ;; Need to specify role
+         (:action [download-software ?malicious-dll ?attacker-download-server ?victim-computer ?victim-user]) ;; Need to specify role
          ;; Once the malware is downloaded, Windows will create new references to directories in PATH, which will in turn load the DLL's (including the malicious one)
          ;; Load the software, leads to malicious DLL loading, done
          ;;(:break "downloading done")
