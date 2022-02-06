@@ -148,3 +148,5 @@
 (define-goal persistently-execute (attacker victim victim-computer))
 
 (define-goal achieve-persistent-remote-execution (victim-computer victim-role) :outputs (victim-role))
+
+(define-goal achieve-persistence-on (entity))
