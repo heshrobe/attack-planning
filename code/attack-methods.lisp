@@ -1680,57 +1680,64 @@ predicate promising the thing is known.
 
 |#
 
+;; Create a method to specify a desirable property to persist on
+;; no-apt (advanced persistent threat)
+
+(defattack-method property-to-persist
+  :to-achieve [affect indepedence ?os-instance]
+  :prerequisites ([desirable-property-of ?os-instance independence])
+  :typing ((?os-instance operating-system))
+  :plan (:goal [achieve-persistence-on ?os-instance])
+    )
+
 ;; T1574.001
 (defattack-method dll-hijack-search-order
-  ;; Exploits the way Windows loads software (Windows has a specific order in which it loads background processes)
+    ;; Exploits the way Windows loads software (Windows has a specific order in which it loads background processes)
   ;; When software is downloaded, Windows will create new referecnes to directories in the PATH variable
   ;; achieve-persistent-remote-execution
-  :to-achieve [achieve-persistent-remote-execution ?victim-computer ?victim-user]
-  :output-variables (?victim-user)
+  :to-achieve [achieve-persistent-remote-execution ?victim-machine ?victim-user]
   ;; bindings should get ahold of the search path
-  :bindings((?victim-os ?victim-computer.os)
-            (?victim-user ?victim-os.users)
-            (?search-path ?victim-os.search-path)
-            [is-in-search-path ?search-path ?victim-directory]
-            (?victim-dll ?victim-directory.files)
-            [attacker-and-computer ?attacker ?]
-            [attacker-download-server ?attacker ?attacker-download-server]
-            (?attacker-malware-directory ?attacker-download-server.malware)
-            (?malicious-dll ?attacker-malware-directory.files)
-            ;; [current-foothold ?current-foothold-computer ?current-foothold-role]
+    :bindings([named-component ?victim-machine os ?victim-os]
+              [value-of ?victim-os.users ?victim-user]
+              [attacker-and-machine ?attacker ?]
+              [attacker-download-server ?attacker ?download-server]
+              [current-foothold ?current-foothold-computer ?current-foothold-role]
+              ;;(:break "Finished bindings")
+              )
+    :typing((?victim-machine computer)
+            (?victim-user user)
+            (?victim-os windows)
+            (?victim-dll dll)
+            (?search-path path)
+            (?preceder file)
+            (?victim-dll file)
+            ;;(:break "Finished typings")
             )
-  :typing((?malicious-dll dkll)
-          (?victim-computer computer)
-          (?victim-user user)
-          (?victim-os windows)
-          (?victim-directory directory)
-          (?victim-dll dll)
-          (?search-path search-path)
+    :prerequisites(;; Must also have write privileges to the directories present in the PATH variable - not so sure about this line
+                   [is-in-search-path ?search-path ?preceder]
+                   [is-in-search-path ?search-path ?victim-dll]
+                   [precedes-in-search-path ?search-path ?preceder ?victim-dll]
+                   ;;(:break "Finished prerequisites")
+                   )
+  :plan(:sequential
+          ;; Assume initial access with getting foothold
+          (:goal [get-foothold ?victim-machine ?protocol])
+          ;; Malware is typically in a seemingly innocuous software
+          ;; Once this malware is downloaded, Windows will create new references to directories in PATH
+         
+          (:action [download-software malicious-dll ?download-server ?victim-machine ?current-foothold-role]) ;; Need to specify role
+          ;; Once the malware is downloaded, Windows will create new references to directories in PATH, which will in turn load the DLL's (including the malicious one)
+          ;; Load the software, leads to malicious DLL loading, done
+          ;;(:break "downloading done")
+          (:action [load-software malicious-dll ?victim-machine])
+          ;;(:break "loading done")
+          ;; dll is dropped before a specific file, dll lives in a directory
+          ;; Rename action to storing file 
+          (:action [store-file ?search-path ?preceder ?victim-dll])
+          ;;(:break "storing done")
           )
-  :prerequisites(;; Must also have write privileges to the directories present in the PATH variable - not so sure about this line
-                 [is-in-search-path ?search-path ?preceder]
-                 [precedes-in-search-path ?search-path ?preceder ?victim-directory]
-                 (eql (filename ?malicious-dll) (filename ?victim-dll))
-                 ;; (:break "Finished prerequisites ~a ~a ~a ~a ~a" ?search-path ?preceder ?victim-user ?victim-directory ?victim-dll)
-                 )
-  :plan (:sequential
-         ;; Assume initial access with getting foothold
-         (:goal [achieve-remote-execution ?victim-computer ?victim-user])
-         ;; Malware is typically in a seemingly innocuous software
-         ;; Once this malware is downloaded, Windows will create new references to directories in PATH
-         (:action [download-software ?malicious-dll ?attacker-download-server ?victim-computer ?victim-user]) ;; Need to specify role
-         ;; Once the malware is downloaded, Windows will create new references to directories in PATH, which will in turn load the DLL's (including the malicious one)
-         ;; Load the software, leads to malicious DLL loading, done
-         ;;(:break "downloading done")
-         (:action [load-software malicious-dll ?victim-computer])
-         ;; (:break "loading done")
-         ;; dll is dropped before a specific file, dll lives in a directory
-         ;; Rename action to storing file
-         (:action [store-file ?preceder ?victim-dll])
-         (:break "storing done ~a ~a ~a" ?preceder ?victim-dll ?victim-user)
-         )
   ;; has-persistent-remote-execution
-  :post-conditions([has-persistent-remote-execution ?attacker ?victim-computer ?victim-user]
+  :post-conditions([has-persistent-remote-execution ?attacker ?victim-machine ?foothold-role]
                    )
   :attack-identifier "T1574.001"
   )
