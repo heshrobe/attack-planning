@@ -301,6 +301,8 @@
                                                      `(follow-path '(,value)))
                                                     ((and (listp value) (eql (first value) 'quote))
                                                      `',(second value))
+                                                    ((and (listp value) (eq (first value) 'list))
+                                                     value)
                                                     ((listp value)
                                                      `(list
                                                        ,@(loop for thing in value collect `(follow-path '(,thing)))))
