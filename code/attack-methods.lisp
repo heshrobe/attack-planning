@@ -1684,11 +1684,14 @@ predicate promising the thing is known.
 ;; no-apt (advanced persistent threat)
 
 (defattack-method property-to-persist
-  :to-achieve [affect indepedence ?os-instance]
-  :prerequisites ([desirable-property-of ?os-instance independence])
-  :typing ((?os-instance operating-system))
-  :plan (:goal [achieve-persistence-on ?os-instance])
-    )
+  :to-achieve [affect indepedence ?cycle-pool]
+  :bindings ((?victim-computer ?cycle-pool.computers)
+             (?victim-user ?victim-computer.users))
+  :prerequisites ([desirable-property-of ?cycle-pool independence])
+  :typing ((?victim-computer computer)
+           (?cycle-pool cycle-pool))
+  :plan (:goal [achieve-persistent-remote-execution ?victim-computer ?victim-user])
+  )
 
 ;; T1574.001
 (defattack-method dll-hijack-search-order
