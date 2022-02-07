@@ -1660,7 +1660,14 @@ predicate promising the thing is known.
     :plan(:sequential
           (:action [download-software ?malware-package ?attacker-computer ?victim-computer ?])
           (:action [load-software ?malware-package ?victim-computer]))
-    :post-conditions ([malware-installed-on-computer ?attacker ?victim-computer ?malware-package])
+    :post-conditions ([malware-installed-on-computer ?attacker ?victim-computer ?malware-package])    :to-achieve [affect independence ?cycle-pool]
+    :bindings ([attacker-and-computer ?attacker ?]
+               [attacker-computer-with-role ?attacker report-server ?report-server]
+               [attacker-computer-with-role ?attacker loader ?loader-server]
+               (?victim-computer ?cycle-pool.computers)
+               ;; (?victim-os ?victim-computer.os)
+               [current-foothold ?current-foothold-computer ?current-foothold-role]
+               [protocol-for remote-execution remote-shell ?protocol-name])
     )
 
 ;;T1176
@@ -1684,10 +1691,11 @@ predicate promising the thing is known.
 ;; no-apt (advanced persistent threat)
 
 (defattack-method property-to-persist
-  :to-achieve [affect indepedence ?cycle-pool]
+  :to-achieve [affect independence ?cycle-pool]
   :bindings ((?victim-computer ?cycle-pool.computers)
+             (?victim-os ?victim-computer.os)
              (?victim-user ?victim-computer.users))
-  :prerequisites ([desirable-property-of ?cycle-pool independence])
+  :prerequisites ([desirable-property-of ?victim-os independence])
   :typing ((?victim-computer computer)
            (?cycle-pool cycle-pool))
   :plan (:goal [achieve-persistent-remote-execution ?victim-computer ?victim-user])
@@ -1698,54 +1706,54 @@ predicate promising the thing is known.
   ;; Exploits the way Windows loads software (Windows has a specific order in which it loads background processes)
   ;; When software is downloaded, Windows will create new referecnes to directories in the PATH variable
   ;; achieve-persistent-remote-execution
-  :to-achieve [achieve-persistent-remote-execution ?victim-machine ?victim-user]
+  :to-achieve [achieve-persistent-remote-execution ?victim-computer ?victim-user]
   :output-variables (?victim-user)
   ;; bindings should get ahold of the search path
-  :bindings((?victim-os ?victim-machine.os)
-            (?victim-user ?victim-os.users)
+  :bindings((?victim-user ?victim-computer.users)
+            (?victim-os ?victim-computer.os)
             (?search-path ?victim-os.search-path)
             [attacker-and-computer ?attacker ?]
             [attacker-download-server ?attacker ?download-server]
             (?malware-directory ?download-server.malware-directory)
             (?malicious-dll ?malware-directory.files)
             ;; [current-foothold ?current-foothold-computer ?current-foothold-role]
-            ;;(:break "Finished bindings")
+            ;; (:break "Finished bindings")
             )
-  :typing((?victim-machine computer)
+  :typing((?victim-computer computer)
           (?victim-user user)
           (?victim-os windows)
           (?malicious-dll dll)
           (?search-path search-path)
-          (?preceder file)
-          (?victim-dll file)
-          ;;(:break "Finished typings")
+          (?preceder directory)
+          (?victim-dll directory)
+          ;; (:break "Finished typings")
           )
   :prerequisites(;; Must also have write privileges to the directories present in the PATH variable - not so sure about this line
                  [is-in-search-path ?search-path ?preceder]
                  [is-in-search-path ?search-path ?victim-dll]
                  [precedes-in-search-path ?search-path ?preceder ?victim-dll]
-                 ;;(:break "Finished prerequisites")
+                 ;; (:break "Finished prerequisites")
                  )
   :plan(:sequential
           ;; Assume initial access with getting foothold
-        (:goal [achieve-remote-execution ?victim-machine ?victim-user])
+        (:goal [achieve-remote-execution ?victim-computer ?victim-user])
         ;; Malware is typically in a seemingly innocuous software
         ;; Once this malware is downloaded, Windows will create new references to directories in PATH
 
-        (:action [download-software ?malicious-dll ?download-server ?victim-machine ?victim-user]) ;; Need to specify role
+        (:action [download-software ?malicious-dll ?download-server ?victim-computer ?victim-user]) ;; Need to specify role
         ;; Once the malware is downloaded, Windows will create new references to directories in PATH, which will in turn load the DLL's (including the malicious one)
         ;; Load the software, leads to malicious DLL loading, done
         ;;(:break "downloading done")
-        (:action [load-software ?malicious-dll ?victim-machine])
+        (:action [load-software ?malicious-dll ?victim-computer])
         ;;(:break "loading done")
         ;; dll is dropped before a specific file, dll lives in a directory
         ;; Rename action to storing file
-        (:action [store-file ?search-path ?preceder ?malicious-dll])
-        ;;(:break "storing done")
+        (:action [store-file ?preceder ?malicious-dll])
+        ;; (:break "plan done")
         )
+
   ;; has-persistent-remote-execution
-  :post-conditions([has-persistent-remote-execution ?attacker ?victim-machine ?victim-user]
-                   )
+  :post-conditions([has-persistent-remote-execution ?attacker ?victim-computer ?victim-user])
   :attack-identifier "T1574.001"
   )
 
