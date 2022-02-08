@@ -1748,7 +1748,8 @@ predicate promising the thing is known.
         ;;(:break "loading done")
         ;; dll is dropped before a specific file, dll lives in a directory
         ;; Rename action to storing file
-        (:action [store-file ?preceder ?malicious-dll])
+        (:goal [achieve-access-right write ?preceder ?victim-user])
+        (:action [store-file ?victim-user ?preceder ?malicious-dll])
         ;; (:break "plan done")
         )
 

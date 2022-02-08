@@ -560,14 +560,20 @@
   )
 
 (defresource victim-dll (dll :filename 'sensitive-dll)
-             :computers (typical-worker-computer)
-             :capability-requirements ((write data-low-write) (read data-low-read)))
+  :computers (typical-worker-computer)
+  :capability-requirements ((write data-low-write) (read data-low-read)))
 
+(defresource victim (directory :files (victim-dll))
+  :computers (typical-worker-computer)
+  :capability-requirements ((write data-low-write) (read data-low-read)))
+
+(defresource preceder directory
+  :computers (typical-worker-computer)
+  :capability-requirements ((write sysadmin) (read data-low-read)))
 
 (defsearchpath typical-worker-computer
-    :directories ((victim :files (victim-dll))
-                  (preceder))
-    :search-order (preceder victim))
+  :directories (victim preceder)
+  :search-order (preceder victim))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;

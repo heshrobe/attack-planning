@@ -419,8 +419,11 @@
   :post-conditions ()
   )
 
-(define-action store-file (?directory ?file)
+(define-action store-file (?actor ?directory ?file)
+  :bindings ()
+  :prerequisites ([has-permission ?actor write ?directory])
   :typing ((?directory directory)
+           (?actor user)
            (?file file))
   :post-conditions ([value-of (?directory files) ?file])
   )
