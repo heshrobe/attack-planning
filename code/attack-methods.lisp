@@ -687,7 +687,7 @@
 ;;; do nothing
 (defattack-method achieve-a-right-you-already-have
   :to-achieve [achieve-access-right ?right ?object ?foothold-role]
-  :bindings ([current-foothold ? ?foothold-role])
+  ;; :bindings ([current-foothold ? ?foothold-role])
   :guards ([has-permission ?foothold-role ?right ?object])
   :plan (:sequential
          (:action [goal-already-satisfied [achieve-access-right ?right ?object ?foothold-role]]))
@@ -709,7 +709,7 @@
 	     [has-permission ?other-user ?right ?object]
              (:trace  "other user ~a has the right ~a to object ~a" ?other-user ?right ?object)
              )
-  :guards ([not [has-permission ?foothold-role ?right ?object]]
+  :guards ([not [has-permission ?other-user ?right ?object]]
            (:trace "Passed guard in ~a ~a" ?foothold-computer ?foothold-role)
            ;; [unifiable ?foothold-computer ?victim-computer]
            ;; (:trace "Passed guard 2 in achieve-a-right-you-dont-have")
@@ -732,10 +732,9 @@
     :output-variables (?privileged-user)
     :bindings ((?victim-computer ?object.computers)
 	       [attacker-and-computer ?attacker ?]
-	       [has-permission ?privileged-user ?right ?object]
                [has-remote-execution ?attacker ?victim-computer ?other-user])
     :guards ([not [has-permission ?other-user ?right ?object]])
-    :prerequisites ()
+    :prerequisites ([has-permission ?privileged-user ?right ?object])
     :plan (:sequential
            (:goal [achieve-knowledge-of-password ?attacker ?privileged-user ?victim-computer]))
     ;; for debugging purposes
@@ -834,6 +833,7 @@
              (?os-workload os-workload)
              (?the-process process)
              )
+  :guards ([not [has-permission ?user ?right ?object]])
     ;; This is the key pre-req: The process has the desired right to the object
     :prerequisites ([has-permission ?the-process ?right ?object])
     :plan (:sequential
@@ -842,50 +842,52 @@
     )
 
 (defattack-method achieve-access-right-by-server-process-subversion
-    :to-achieve [achieve-access-right ?right ?object ?user]
-    :output-variables (?user)
-    ;; all this is asking is there a process in the workload
-    ;; and if so with which user's permissions is it running
-    :bindings ((?victim-computer ?object.computers)
-               (?victim-os ?victim-computer.os)
-               (?the-process ?victim-os.workload.server-workload.processes)
-               [runs-with-permissions-of ?the-process ?user]
-	       [attacker-and-computer ?attacker ?]
-               )
-    :typing ((?object computer-resource)
-             (?the-process process)
+  :to-achieve [achieve-access-right ?right ?object ?user]
+  :output-variables (?user)
+  ;; all this is asking is there a process in the workload
+  ;; and if so with which user's permissions is it running
+  :guards ([not [has-permission ?user ?right ?object]])
+  :bindings ((?victim-computer ?object.computers)
+             (?victim-os ?victim-computer.os)
+             (?the-process ?victim-os.workload.server-workload.processes)
+             [runs-with-permissions-of ?the-process ?user]
+	     [attacker-and-computer ?attacker ?]
              )
-    ;; This is the key pre-req: The process has the desired right to the object
-    :prerequisites ([has-permission ?the-process ?right ?object])
-    :plan (:sequential
-	   (:goal [takes-direct-control-of ?attacker execution ?the-process]))
-    ;; for debugging purposes
-    )
+  :typing ((?object computer-resource)
+           (?the-process process)
+           )
+  ;; This is the key pre-req: The process has the desired right to the object
+  :prerequisites ([has-permission ?the-process ?right ?object])
+  :plan (:sequential
+	 (:goal [takes-direct-control-of ?attacker execution ?the-process]))
+  ;; for debugging purposes
+  )
 
 ;;; similar comment to above about foothold etc
 ;;; ?other-user is an output variable that isn't bound at this point
 (defattack-method how-to-achieve-access-right-by-remote-shell-on-target
-    :to-achieve [achieve-access-right ?right ?object ?other-user]
-    :output-variables (?other-user)
-    :bindings ([value-of ?object.computers ?computer]
-               [value-of ?computer.os ?os-instance]
-               [requires-access-right ?object ?right ?capability]
-	       [value-of ?os-instance.authorization-pool ?pool]
-	       [value-of ?pool.users ?other-user]
-	       [current-foothold ?foothold-computer ?]
-	       [value-of ?foothold-computer.os ?foothold-os])
-    :typing ((?object computer-resource)
-             (?computer computer)
-             (?os-instance operating-system)
-	     (?pool authorization-pool)
-             (?other-user user))
-    ;; Note: has-capability is a function not an assertion
-    :prerequisites ((has-capability ?other-user ?capability))
-    :plan (:sequential
-           (:Goal [achieve-remote-shell ?foothold-os ?other-user]))
-    ;; for debugging purposes
-    ;attack-identifier "how-to-achieve-access-right-by-remote-shell-on-target"
-    )
+  :to-achieve [achieve-access-right ?right ?object ?other-user]
+  :output-variables (?other-user)
+  :guards ([not [has-permission ?other-user ?right ?object]])
+  :bindings ([value-of ?object.computers ?computer]
+             [value-of ?computer.os ?os-instance]
+             [requires-access-right ?object ?right ?capability]
+	     [value-of ?os-instance.authorization-pool ?pool]
+	     [value-of ?pool.users ?other-user]
+	     [current-foothold ?foothold-computer ?]
+	     [value-of ?foothold-computer.os ?foothold-os])
+  :typing ((?object computer-resource)
+           (?computer computer)
+           (?os-instance operating-system)
+	   (?pool authorization-pool)
+           (?other-user user))
+  ;; Note: has-capability is a function not an assertion
+  :prerequisites ((has-capability ?other-user ?capability))
+  :plan (:sequential
+         (:Goal [achieve-remote-shell ?foothold-os ?other-user]))
+  ;; for debugging purposes
+                                        ;attack-identifier "how-to-achieve-access-right-by-remote-shell-on-target"
+  )
 
 
 
@@ -1748,6 +1750,7 @@ predicate promising the thing is known.
         ;;(:break "loading done")
         ;; dll is dropped before a specific file, dll lives in a directory
         ;; Rename action to storing file
+        ;; (:break "Going for write access ~a ~a" ?preceder ?victim-user )
         (:goal [achieve-access-right write ?preceder ?victim-user])
         (:action [store-file ?victim-user ?preceder ?malicious-dll])
         ;; (:break "plan done")

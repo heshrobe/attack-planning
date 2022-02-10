@@ -840,6 +840,14 @@
      (define-predicate ,name ,variables (ltms:ltms-predicate-model))
      (setf (gethash ',name *aplan-predicate-binding-map*) ',outputs)))
 
+
+;;; It might be better to have an ask method for this that first checks if the goal-to-achieve
+;;; is true in the input-state (i.e does an ask with do-backward-rules nil)
+;;; and if so: binds output-state to input-state and updates the plan
+;;; with a goal-already-satisfied action.   If goal-to-achieve isn't present then it does the full ask
+;;; with do-bacward-rules t.  This will remove the need to have guards on methods to prevent them from working
+;;; on something that has already been achieved.
+
 (define-predicate achieve-goal (goal-to-achieve input-state output-state plan) (ltms:ltms-predicate-model))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
