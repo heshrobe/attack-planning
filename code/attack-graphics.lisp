@@ -505,10 +505,10 @@
 (define-aplan-command (com-dump-for-caldera :name t :menu t)
     (&key (file-name 'clim:pathname))
   (with-open-file (file file-name :direction :output :if-exists :supersede :if-does-not-exist :create)
-    (dump-caldera-plan file)))
+    (dump-caldera-plan (attack-plan-collector *editor*) file)))
 
-(defun dump-caldera-plan (&optional (stream *standard-output*))
-  (let* ((caldera-sequences (get-editor-caldera-sequences))
+(defun dump-caldera-plan (attack-plan-collector &optional (stream *standard-output*))
+  (let* ((caldera-sequences (get-caldera-sequences attack-plan-collector))
          (goals (merged-attack-plan (attack-plan-collector clim:*application-frame*)))
          (root-node (first goals)))
     (multiple-value-bind (computers users) (collect-computers-and-users root-node)
@@ -536,6 +536,6 @@
                (json:encode-object-member 'attack-id (first pair) stream)
                (json:encode-object-member 'caldera-id (second pair) stream))))))
 
-(defun get-editor-caldera-sequences ()
+(defun get-caldera-sequences (attack-plan-collector)
   (caldera-sequences-from-attack-plans
-    (attack-plans (attack-plan-collector *editor*))))
+    (attack-plans attack-plan-collector)))
