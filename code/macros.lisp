@@ -314,7 +314,7 @@
              `((tell `[value-of (,resource primary-computer) ,(follow-path '(,primary-computer))])))
          ,@(loop for computer in computers
                  collect `(tell `[value-of (,resource computers) ,(follow-path '(,computer))]))
-         ,@(loop for (operation capability) in capability-requirements
+         ,@(loop for (operation capability) inc apability-requirements
                  collect `(tell `[value-of (,resource capability-requirements) (,',operation ,(follow-path '(,capability)))]))
          ,@(when authorization-pool
              `((tell `[value-of (,resource authorization-pool) ,(follow-path '(,authorization-pool))])))
@@ -323,6 +323,12 @@
                 (unless (listp object) (setq object (list object)))
                 `((tell `[system-role ,(Follow-path ',object) ,',role-name ,resource]))))
          resource))))
+
+(defmacro defcapability-requirement (resource apability-requirements)
+  `(let ((resource (follow-path ,(if (symbolp resource) `'(,resource) `'(,@resource)))))
+     ,@(loop for (operation capability) in apability-requirements
+           collect `(tell `[value-of (,resource capability-requirements) (,',operation ,(follow-path '(,capability)))]))
+     ))
 
 (defun create-new-resource (name type computer &rest initargs)
   (let ((new-thing (apply #'make-object type :name name initargs)))

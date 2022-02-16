@@ -114,6 +114,10 @@
   :superuser ()
   )
 
+(defcapability-requirement (typical-worker-computer os startup-directory)
+    ((read user-read) (write sysadmin)))
+
+
 ;;; Typical worker bee is a typical user of a typical
 ;;; computer in the worker-computers ensemble
 ;;; This user has "user-write" capabilities

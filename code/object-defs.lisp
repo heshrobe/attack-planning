@@ -712,7 +712,9 @@
 
 (define-aplan-object windows
     :super-types (operating-system)
-    :parts ((registry key-value-store)))
+    :parts ((registry key-value-store)
+            (startup-directory directory)))
+
 
 (define-aplan-object windows-95
   :super-types (windows))
